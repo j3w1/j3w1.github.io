@@ -11,12 +11,12 @@ appearanceTheme = "dark"
 appearanceDarkCodeThemeId = "raycast"
 
 [desktop.appearanceDarkChromeTheme]
-# j3w1.github.io: terminal #0c0909, prose #f4eeee, focus #e53935.
+# Codex target: black #000000, prose #f4eeee, focus #e53935.
 accent = "#e53935"
-contrast = 55
+contrast = 72
 ink = "#f4eeee"
 opaqueWindows = true
-surface = "#0c0909"
+surface = "#000000"
 
 [desktop.appearanceDarkChromeTheme.fonts]
 code = '"JetBrains Mono", "Cascadia Mono", Consolas, "Liberation Mono", monospace'
