@@ -6,18 +6,31 @@
   <title>Page not found — j3w1</title>
   <meta name="description" content="The requested page could not be found.">
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#0b0b0d">
+  <meta name="theme-color" content="#0c0909">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/css/site.css">
 </head>
 <body>
-  <a class="skip-link" href="#main-content">Skip to content</a>
-  <header class="site-header"><div class="shell header-inner"><a class="wordmark" href="/" aria-label="j3w1 home">j3w1<span aria-hidden="true">.</span></a></div></header>
-  <main id="main-content" class="not-found shell">
-    <p class="eyebrow">404 / Page not found</p>
-    <h1>This path leads nowhere.</h1>
-    <p>The page may have moved, or the address may be incorrect.</p>
-    <a class="button button-primary" href="/">Return home</a>
+  <a class="skip-link" href="#error-content">Skip to error</a>
+  <header class="wm-bar">
+    <nav class="workspace-strip" aria-label="Site navigation"><a class="workspace-link is-active" href="/#home"><span aria-hidden="true">1:</span>home</a></nav>
+    <div class="system-status" aria-label="Error status"><span id="status-workspace">404</span><span>path:not-found</span></div>
+  </header>
+  <main id="error-content" class="desktop-shell">
+    <section class="workspace is-active" aria-labelledby="error-title">
+      <article class="window terminal-window elsewhere-window is-focused">
+        <header class="window-titlebar"><span>j3w1@manjaro: error</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
+        <div class="terminal-buffer">
+          <p class="terminal-line"><span class="prompt-user">j3w1</span><span class="prompt-at">@</span><span class="prompt-host">manjaro</span><span class="prompt-path"> ~</span><span class="prompt-mark"> $ </span><span class="command">open requested-path</span></p>
+          <div class="terminal-output readable-output">
+            <h1 id="error-title">404: no such file or workspace</h1>
+            <p>The address may be incorrect or the content may have moved into the single-page workstation.</p>
+            <p><a href="/#home">Return to 1:home</a></p>
+          </div>
+        </div>
+        <footer class="terminal-statusline"><span>ERROR</span><span class="status-fill">exit 404</span></footer>
+      </article>
+    </section>
   </main>
 </body>
 </html>

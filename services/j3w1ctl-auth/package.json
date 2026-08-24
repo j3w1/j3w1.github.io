@@ -1,0 +1,29 @@
+{
+  "name": "j3w1ctl-auth",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Authentication broker and narrow repository API for j3w1ctl.",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js",
+    "test:browser-fixture": "node test/browser-fixture-server.mjs",
+    "content:new": "node bin/content-cli.mjs new",
+    "content:validate": "node bin/content-cli.mjs validate",
+    "content:rebuild": "node bin/content-cli.mjs rebuild",
+    "content:check": "node bin/content-cli.mjs check"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@fastify/helmet": "^13.1.1",
+    "@fastify/multipart": "^10.1.1",
+    "@fastify/rate-limit": "^11.2.0",
+    "fastify": "^5.12.1",
+    "jose": "^6.2.10",
+    "markdown-it": "^15.0.0",
+    "yaml": "^2.9.0"
+  }
+}

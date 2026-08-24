@@ -1,0 +1,66 @@
+name: j3w1ctl-auth
+region: fra
+services:
+  - name: api
+    source_dir: services/j3w1ctl-auth
+    github:
+      repo: j3w1/j3w1.github.io
+      branch: main
+      deploy_on_push: false
+    build_command: npm ci
+    run_command: npm start
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    http_port: 8080
+    health_check:
+      http_path: /healthz
+    envs:
+      - key: NODE_ENV
+        value: production
+        scope: RUN_TIME
+      - key: CMS_SITE_ORIGIN
+        value: https://j3w1.github.io
+        scope: RUN_TIME
+      - key: CMS_ALLOWED_GITHUB_LOGIN
+        value: ${CMS_ALLOWED_GITHUB_LOGIN}
+        type: SECRET
+        scope: RUN_TIME
+      - key: CMS_ALLOWED_GITHUB_USER_ID
+        value: ${CMS_ALLOWED_GITHUB_USER_ID}
+        type: SECRET
+        scope: RUN_TIME
+      - key: CMS_SESSION_SECRET
+        value: ${CMS_SESSION_SECRET}
+        type: SECRET
+        scope: RUN_TIME
+      - key: GITHUB_APP_ID
+        value: ${GITHUB_APP_ID}
+        type: SECRET
+        scope: RUN_TIME
+      - key: GITHUB_CLIENT_ID
+        value: ${GITHUB_CLIENT_ID}
+        type: SECRET
+        scope: RUN_TIME
+      - key: GITHUB_CLIENT_SECRET
+        value: ${GITHUB_CLIENT_SECRET}
+        type: SECRET
+        scope: RUN_TIME
+      - key: GITHUB_PRIVATE_KEY_BASE64
+        value: ${GITHUB_PRIVATE_KEY_BASE64}
+        type: SECRET
+        scope: RUN_TIME
+      - key: GITHUB_CALLBACK_URL
+        value: ${GITHUB_CALLBACK_URL}
+        type: SECRET
+        scope: RUN_TIME
+      - key: GITHUB_OWNER
+        value: j3w1
+        scope: RUN_TIME
+      - key: GITHUB_REPO
+        value: j3w1.github.io
+        scope: RUN_TIME
+      - key: GITHUB_BRANCH
+        value: cms-sandbox
+        scope: RUN_TIME
+

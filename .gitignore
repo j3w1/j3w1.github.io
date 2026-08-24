@@ -1,0 +1,7 @@
+node_modules/
+services/j3w1ctl-auth/node_modules/
+services/j3w1ctl-auth/.env
+services/j3w1ctl-auth/.env.*
+!services/j3w1ctl-auth/.env.example
+*.log
+
