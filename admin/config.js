@@ -1,4 +1,3 @@
 window.J3W1CTL_CONFIG = Object.freeze({
-  apiBaseUrl: "",
+  apiBaseUrl: "https://j3w1ctl-zwoms.ondigitalocean.app",
 });
-
