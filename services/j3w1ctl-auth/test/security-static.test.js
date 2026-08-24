@@ -32,6 +32,25 @@ test("browser bundles, configuration, and deployment examples contain no credent
     const source = await fs.readFile(file, "utf8");
     for (const pattern of forbidden) assert.equal(pattern.test(source), false, `${path.relative(repoRoot, file)} matched ${pattern}`);
   }
-  assert.match(await fs.readFile(path.join(repoRoot, "admin", "config.js"), "utf8"), /apiBaseUrl:\s*""/);
+  const configSource = await fs.readFile(path.join(repoRoot, "admin", "config.js"), "utf8");
+  const configMatch = configSource.match(/^\s*window\.J3W1CTL_CONFIG\s*=\s*Object\.freeze\(\{\s*apiBaseUrl:\s*"([^"]*)",\s*\}\);\s*$/s);
+  assert.ok(configMatch, "admin/config.js must contain only the public API base URL");
+  if (configMatch[1]) {
+    const apiBaseUrl = new URL(configMatch[1]);
+    assert.equal(apiBaseUrl.protocol, "https:");
+    assert.equal(apiBaseUrl.username, "");
+    assert.equal(apiBaseUrl.password, "");
+    assert.equal(apiBaseUrl.pathname, "/");
+    assert.equal(apiBaseUrl.search, "");
+    assert.equal(apiBaseUrl.hash, "");
+  }
 });
 
+test("browser OAuth handoff keeps exact origin, source, type, and channel checks", async () => {
+  const source = await fs.readFile(path.join(repoRoot, "admin", "j3w1ctl.js"), "utf8");
+  assert.match(source, /event\.origin !== this\.apiBase/);
+  assert.match(source, /event\.source !== this\.popup/);
+  assert.match(source, /event\.data\?\.channel !== channel/);
+  assert.match(source, /\["j3w1ctl:auth-success", "j3w1ctl:auth-error"\]\.includes\(event\.data\?\.type\)/);
+  assert.match(source, /sessionStorage\.setItem\(TOKEN_KEY, this\.token\)/);
+});

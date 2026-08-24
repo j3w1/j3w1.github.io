@@ -130,7 +130,13 @@ export const buildServer = async ({
     return reply.code(statusCode).type("text/html; charset=utf-8").send(callbackPage({ origin: config.siteOrigin, nonce, ...payload }));
   };
 
-  await app.register(helmet, { contentSecurityPolicy: false, crossOriginEmbedderPolicy: false });
+  await app.register(helmet, {
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    // The OAuth callback must retain the cross-origin Pages window as its opener
+    // so it can deliver the channel-bound CMS session with postMessage.
+    crossOriginOpenerPolicy: false,
+  });
   await app.register(cors, {
     credentials: false,
     origin(origin, callback) {

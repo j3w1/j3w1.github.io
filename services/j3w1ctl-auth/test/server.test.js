@@ -72,6 +72,9 @@ test("OAuth start uses PKCE and a host-only secure state cookie", async () => {
   assert.match(location.searchParams.get("code_challenge"), /^[A-Za-z0-9_-]{43}$/);
   assert.equal(location.searchParams.get("state").endsWith(`.${channel}`), true);
   assert.match(response.headers["set-cookie"], /^__Host-j3w1ctl-oauth=.*; Path=\/; HttpOnly; SameSite=Lax; Max-Age=600; Secure$/);
+  assert.equal(response.headers["cross-origin-opener-policy"], undefined);
+  assert.equal(response.headers["x-frame-options"], "SAMEORIGIN");
+  assert.equal(response.headers["x-content-type-options"], "nosniff");
   await app.close();
 });
 
@@ -80,7 +83,10 @@ test("OAuth callback errors notify only the exact configured origin and issue no
   const channel = "b".repeat(43);
   const response = await app.inject({ method: "GET", url: `/auth/github/callback?state=missing.${channel}&code=unused` });
   assert.equal(response.statusCode, 401);
+  assert.equal(response.headers["cross-origin-opener-policy"], undefined);
   assert.match(response.headers["content-security-policy"], /frame-ancestors 'none'/);
+  assert.equal(response.headers["x-frame-options"], "DENY");
+  assert.equal(response.headers["x-content-type-options"], "nosniff");
   assert.match(response.body, /j3w1ctl:auth-error/);
   assert.match(response.body, /https:\/\/j3w1\.github\.io/);
   assert.equal(response.body.includes("j3w1ctl:auth-success"), false);

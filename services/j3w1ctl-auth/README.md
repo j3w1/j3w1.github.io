@@ -27,6 +27,8 @@ The service serializes all mutations. It reads one exact branch head, enforces t
 
 Session credentials are 60-minute HS256 JWTs kept by the browser in `sessionStorage`. OAuth state uses a separate HKDF-derived key and a short-lived encrypted HttpOnly cookie. Logout removes the browser token first and revokes its JTI in this process best-effort. Run exactly one App Platform instance because the revocation set is intentionally in memory and the product is single-owner.
 
+The service keeps Helmet enabled but deliberately omits `Cross-Origin-Opener-Policy`. The GitHub OAuth callback is a popup on the service origin and must retain the Pages window as `window.opener` long enough to deliver its exact-origin, channel-bound `postMessage`. The callback remains protected by a nonce-restricted CSP, `frame-ancestors 'none'`, and `X-Frame-Options: DENY`.
+
 ## Deployment and activation
 
 The example app spec uses `npm ci`, `npm start`, `/healthz`, `process.env.PORT`, one instance, runtime secrets, and `deploy_on_push: false`. Owner-operated production activation is:
@@ -47,4 +49,3 @@ GitHub Pages continues to build from `main` at the repository root. `main` is cu
 - Disable access by suspending/uninstalling the App or removing the App Platform secrets. The public site and committed content remain available.
 - Recover content with normal Git history. Rebuild `assets/data/content-index.json` from the authoritative Markdown before publishing a manual correction.
 - Logs intentionally exclude headers, query strings, bodies, cookies, and tokens. API failures expose only a stable code, safe message, and request ID.
-
