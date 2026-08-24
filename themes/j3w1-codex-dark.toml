@@ -1,0 +1,30 @@
+# j3w1 Codex dark appearance preset
+#
+# This is a config fragment for C:\%USERNAME%\.codex\config.toml.
+# Merge only the [desktop] settings and the dark-theme tables below; do not
+# replace the rest of your Codex configuration.
+
+[desktop]
+appearanceTheme = "dark"
+# Preserve the current editor syntax theme. Codex customises its app chrome
+# separately from code-token themes.
+appearanceDarkCodeThemeId = "raycast"
+
+[desktop.appearanceDarkChromeTheme]
+# j3w1.github.io: terminal #0c0909, prose #f4eeee, focus #e53935.
+accent = "#e53935"
+contrast = 55
+ink = "#f4eeee"
+opaqueWindows = true
+surface = "#0c0909"
+
+[desktop.appearanceDarkChromeTheme.fonts]
+code = '"JetBrains Mono", "Cascadia Mono", Consolas, "Liberation Mono", monospace'
+ui = "Inter"
+
+[desktop.appearanceDarkChromeTheme.semanticColors]
+# Keep review signals distinct, while using the site's rose/red family where
+# semantic meaning permits it.
+diffAdded = "#8fbf8a"
+diffRemoved = "#ffa2a7"
+skill = "#e99499"
