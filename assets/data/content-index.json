@@ -10,7 +10,7 @@
         "date": "2026-08-25",
         "location": "forbidden forest",
         "camera": "memories",
-        "caption": "we were werewolves staring at the moon, and we had no idea what was there, but we knew it would be good",
+        "caption": "we were happy, we were werewolves staring at the moon, and we had no idea what was there, but we knew it would be good",
         "images": [
           {
             "id": "image-01",
@@ -31,7 +31,7 @@
             "thumbnailSrc": "/assets/photography/we-were-werewolves/image-02-thumb.webp"
           }
         ],
-        "contentDigest": "ab665f6687189c7c15f53931a135bb0187cb38009b68567d512a17dbdb965bdb"
+        "contentDigest": "135535b312797e375902fbdfb33de8a08586dc0a28a778e4a9ef3f695d9a7386"
       }
     ]
   }

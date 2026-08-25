@@ -4,7 +4,7 @@ slug: we-were-werewolves
 date: 2026-08-25
 location: forbidden forest
 camera: memories
-caption: we were werewolves staring at the moon, and we had no idea what was there, but we knew it would be good
+caption: we were happy, we were werewolves staring at the moon, and we had no idea what was there, but we knew it would be good
 images:
   - id: image-01
     file: image-01.webp
