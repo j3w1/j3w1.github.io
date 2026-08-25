@@ -30,4 +30,6 @@ JetBrains Mono is self-hosted under `assets/fonts/`; its OFL license is included
 
 Content can be added manually with the documented templates and CLI, or through the static `/admin/` j3w1ctl client after its service URL is configured. The small Node 24 service under [`services/j3w1ctl-auth/`](services/j3w1ctl-auth/README.md) owns authentication, validation, preview, and atomic expected-head GitHub commits. GitHub is the published-content database; the backend is not content storage.
 
+In production, j3w1ctl displays the backend-controlled `git:main · LIVE` target. Save draft remains browser-local, Preview does not publish, and Publish performs the single live GitHub mutation. Photography sources may be JPG, JPEG, PNG, or WebP; j3w1ctl creates the repository's full and thumbnail WebP files automatically and never commits the original source.
+
 No production service, GitHub App, credential, branch rule, or deployment is created by this repository.

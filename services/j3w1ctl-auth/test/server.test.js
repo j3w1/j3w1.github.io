@@ -62,6 +62,22 @@ test("mutations enforce exact origin and publish through one repository commit",
   await app.close();
 });
 
+test("authenticated session reports the server-controlled publication target", async () => {
+  const app = await buildServer({
+    environment: { ...productionEnvironment, GITHUB_OWNER: "j3w1", GITHUB_REPO: "j3w1.github.io", GITHUB_BRANCH: "cms-sandbox" },
+    sessionManager: { verify: async () => ({ sub: "42", login: "j3w1", exp: 999999, jti: "jti" }) },
+    githubClient: {},
+  });
+  const response = await app.inject({
+    method: "GET",
+    url: "/api/session?branch=main",
+    headers: { authorization: "Bearer token" },
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(response.json().repository, { owner: "j3w1", name: "j3w1.github.io", branch: "cms-sandbox" });
+  await app.close();
+});
+
 test("OAuth start uses PKCE and a host-only secure state cookie", async () => {
   const app = await buildServer({ environment: productionEnvironment, githubClient: {} });
   const channel = "a".repeat(43);

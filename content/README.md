@@ -18,12 +18,14 @@ npm --prefix services/j3w1ctl-auth run content:rebuild -- --repo-root ../..
 Use `books` or `photography` in place of `writing`. The `content:new` command
 copies a documented template and refuses to overwrite an existing entry.
 
-Photography requires an optimized WebP and thumbnail for each image:
+In j3w1ctl, select ordinary JPG, JPEG, PNG, or WebP photographs. The browser automatically removes the need for manual conversion by generating the optimized public pair below; original source files are not committed:
 
 ```text
 assets/photography/<entry-slug>/<image-id>.webp
 assets/photography/<entry-slug>/<image-id>-thumb.webp
 ```
+
+The full WebP is the bounded public photograph used by the viewer. The thumbnail WebP is the smaller list/grid image. When maintaining content without j3w1ctl, both normalized files must already exist before rebuilding the index.
 
 Run `content:check` before committing. It validates schemas, media paths and
 sizes, and confirms that `assets/data/content-index.json` matches the

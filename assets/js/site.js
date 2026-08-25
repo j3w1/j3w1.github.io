@@ -353,7 +353,7 @@
     const button = event.currentTarget;
     button.disabled = true;
     try {
-      const module = await import("/admin/j3w1ctl.js?v=20260824c");
+      const module = await import("/admin/j3w1ctl.js?v=20260825");
       await module.openJ3w1ctl({ mount: document.querySelector("#j3w1ctl-root"), launcher: button });
     } finally {
       button.disabled = false;

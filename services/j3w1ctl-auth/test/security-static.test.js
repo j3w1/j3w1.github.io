@@ -54,3 +54,32 @@ test("browser OAuth handoff keeps exact origin, source, type, and channel checks
   assert.match(source, /\["j3w1ctl:auth-success", "j3w1ctl:auth-error"\]\.includes\(event\.data\?\.type\)/);
   assert.match(source, /sessionStorage\.setItem\(TOKEN_KEY, this\.token\)/);
 });
+
+test("direct and i3bar launchers use the same CMS bundle cache key", async () => {
+  const adminIndex = await fs.readFile(path.join(repoRoot, "admin", "index.html"), "utf8");
+  const publicSite = await fs.readFile(path.join(repoRoot, "assets", "js", "site.js"), "utf8");
+  const adminVersion = adminIndex.match(/\/admin\/j3w1ctl\.js\?v=([A-Za-z0-9.-]+)/)?.[1];
+  const publicVersion = publicSite.match(/\/admin\/j3w1ctl\.js\?v=([A-Za-z0-9.-]+)/)?.[1];
+  assert.ok(adminVersion);
+  assert.equal(publicVersion, adminVersion);
+});
+
+test("CMS integration locks mutations, uses semantic editor sizing, and uploads generated WebP only", async () => {
+  const source = await fs.readFile(path.join(repoRoot, "admin", "j3w1ctl.js"), "utf8");
+  const imageSource = await fs.readFile(path.join(repoRoot, "admin", "j3w1ctl-images.js"), "utf8");
+  const css = await fs.readFile(path.join(repoRoot, "admin", "j3w1ctl.css"), "utf8");
+  assert.match(source, /if \(this\.mutation\.inFlight\) return;/);
+  assert.match(source, /try \{ result = await this\.request\(path, options\); \} catch \(error\) \{ failure = error; \} finally \{ this\.endMutation\(\); \}/);
+  assert.match(source, /setAttribute\("aria-busy", "true"\)/);
+  assert.match(source, /control\.disabled = true/);
+  assert.match(source, /ctl-textarea-summary/);
+  assert.match(source, /ctl-textarea-body/);
+  assert.match(source, /form\.append\(`full\.\$\{pair\.id\}`/);
+  assert.match(source, /form\.append\(`thumbnail\.\$\{pair\.id\}`/);
+  assert.doesNotMatch(source, /form\.append\([^\n]*(?:source|original)/);
+  assert.match(imageSource, /imageOrientation: "from-image"/);
+  assert.match(imageSource, /blob\.type !== "image\/webp"/);
+  assert.match(css, /:is\(input,textarea,select,button\):disabled/);
+  assert.match(css, /\.ctl-textarea-body \{ min-height: 380px; \}/);
+  assert.match(css, /\.ctl-textarea-summary \{ min-height: 92px; \}/);
+});

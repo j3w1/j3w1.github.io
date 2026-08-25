@@ -224,6 +224,11 @@ export const buildServer = async ({
   app.get("/api/session", readOptions, async (request) => ({
     owner: { id: request.cmsSession.sub, login: request.cmsSession.login },
     expiresAt: request.cmsSession.exp,
+    repository: {
+      owner: config.githubOwner,
+      name: config.githubRepo,
+      branch: config.githubBranch,
+    },
   }));
   app.post("/api/logout", { preHandler: [authenticate, mutationOrigin] }, async (request, reply) => {
     sessions.revoke(request.cmsSession);

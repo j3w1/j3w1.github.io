@@ -22,6 +22,9 @@ test("browser fixture models a cross-origin frontend and OAuth service", async (
     assert.match(callback.headers.get("content-security-policy"), /frame-ancestors 'none'/);
     assert.equal(callback.headers.get("x-frame-options"), "DENY");
     assert.match(await callback.text(), new RegExp(fixture.frontendOrigin.replaceAll(".", "\\.")));
+
+    const session = await fetch(`${fixture.authOrigin}/api/session`).then((response) => response.json());
+    assert.deepEqual(session.repository, { owner: "j3w1", name: "j3w1.github.io", branch: "main" });
   } finally {
     await fixture.close();
   }

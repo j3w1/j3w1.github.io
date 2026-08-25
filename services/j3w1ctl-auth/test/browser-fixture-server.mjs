@@ -13,6 +13,7 @@ const collections = {
   photography: [{ title: "Fixture Photographs", slug: "fixture-photographs", date: "2026-08-24", caption: "Browser-only fixture.", location: "Local test", images: [{ id: "image-01", file: "image-01.webp", thumbnail: "image-01-thumb.webp", alt: "One-pixel browser test image", src: "/fixture.webp", thumbnailSrc: "/fixture.webp" }], contentDigest: "fixture" }],
 };
 const index = { schemaVersion: 1, collections };
+const fixtureState = { post: 0, put: 0, delete: 0, failNext: 0, branch: "main", uploadNames: [] };
 const webp = Buffer.from("UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AA/v89WAAAAA==", "base64");
 const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".ttf": "font/ttf" };
 
@@ -26,6 +27,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   Vary: "Origin",
 };
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 const frontendServer = createServer(async (request, response) => {
   const url = new URL(request.url, frontendOrigin);
@@ -75,7 +77,11 @@ const authServer = createServer(async (request, response) => {
     });
     return response.end(`<!doctype html><title>fixture callback</title><script nonce="${nonce}">(()=>{const payload=${JSON.stringify(payload)};if(window.opener&&!window.opener.closed)window.opener.postMessage(payload,${JSON.stringify(frontendOrigin)});window.close()})()</script>`);
   }
-  if (url.pathname === "/api/session") return json(response, 200, { owner: { id: "42", login: "j3w1" }, expiresAt: 9999999999 }, corsHeaders);
+  if (url.pathname === "/__test/state") return json(response, 200, fixtureState, corsHeaders);
+  if (url.pathname === "/__test/fail-next" && request.method === "POST") { fixtureState.failNext = Number(url.searchParams.get("status") || 500); return json(response, 200, fixtureState, corsHeaders); }
+  if (url.pathname === "/__test/branch" && request.method === "POST") { fixtureState.branch = url.searchParams.get("value") === "cms-sandbox" ? "cms-sandbox" : "main"; return json(response, 200, fixtureState, corsHeaders); }
+  if (url.pathname === "/__test/reset" && request.method === "POST") { Object.assign(fixtureState, { post: 0, put: 0, delete: 0, failNext: 0, uploadNames: [] }); return json(response, 200, fixtureState, corsHeaders); }
+  if (url.pathname === "/api/session") return json(response, 200, { owner: { id: "42", login: "j3w1" }, expiresAt: 9999999999, repository: { owner: "j3w1", name: "j3w1.github.io", branch: fixtureState.branch } }, corsHeaders);
   if (url.pathname.match(/^\/api\/content\/(writing|books|photography)$/) && request.method === "GET") {
     const collection = url.pathname.split("/").at(-1);
     return json(response, 200, { collection, entries: collections[collection], headSha: "2".repeat(40) }, corsHeaders);
@@ -84,6 +90,38 @@ const authServer = createServer(async (request, response) => {
   if (detail && request.method === "GET") {
     const entry = collections[detail[1]].find(({ slug }) => slug === detail[2]);
     return entry ? json(response, 200, { entry, body: detail[1] === "writing" ? "Rendered from the same restricted AST." : "Private reading notes are not used here.", version: "1".repeat(40), headSha: "2".repeat(40) }, corsHeaders) : json(response, 404, { error: { code: "not_found", message: "Missing fixture.", requestId: "fixture" } }, corsHeaders);
+  }
+  const mutation = url.pathname.match(/^\/api\/content\/(writing|books|photography)(?:\/([^/]+))?$/);
+  if (mutation && ["POST", "PUT", "DELETE"].includes(request.method)) {
+    const [, collection, routeSlug] = mutation;
+    fixtureState[request.method.toLowerCase()] += 1;
+    await wait(650);
+    if (fixtureState.failNext) {
+      const status = fixtureState.failNext; fixtureState.failNext = 0;
+      return json(response, status, { error: { code: status === 409 ? "content_conflict" : "fixture_error", message: status === 409 ? "Remote content changed." : "Fixture mutation failed.", requestId: "fixture" } }, corsHeaders);
+    }
+    if (request.method === "DELETE") {
+      const index = collections[collection].findIndex(({ slug }) => slug === routeSlug);
+      if (index >= 0) collections[collection].splice(index, 1);
+    } else if (request.headers["content-type"]?.startsWith("application/json")) {
+      let body = ""; for await (const chunk of request) body += chunk;
+      const parsed = JSON.parse(body); const metadata = parsed.metadata;
+      const entry = { ...metadata, ...(collection === "writing" ? { blocks: ast(parsed.body) } : collection === "books" ? { notes: ast(parsed.body) } : {}), contentDigest: "mutation-fixture" };
+      const index = collections[collection].findIndex(({ slug }) => slug === (routeSlug || metadata.slug));
+      if (index >= 0) collections[collection][index] = entry; else collections[collection].push(entry);
+    } else if (request.headers["content-type"]?.startsWith("multipart/form-data")) {
+      const chunks = []; for await (const chunk of request) chunks.push(chunk);
+      const multipart = Buffer.concat(chunks).toString("latin1");
+      fixtureState.uploadNames = [...multipart.matchAll(/filename="([^"]+)"/g)].map((match) => match[1]);
+      const metadataMatch = multipart.match(/name="metadata"\r\n\r\n([^\r\n]+)\r\n/);
+      if (metadataMatch) {
+        const metadata = JSON.parse(metadataMatch[1]);
+        const entry = { ...metadata, images: metadata.images.map((image) => ({ ...image, src: `/assets/photography/${metadata.slug}/${image.file}`, thumbnailSrc: `/assets/photography/${metadata.slug}/${image.thumbnail}` })), contentDigest: "mutation-fixture" };
+        const index = collections.photography.findIndex(({ slug }) => slug === (routeSlug || metadata.slug));
+        if (index >= 0) collections.photography[index] = entry; else collections.photography.push(entry);
+      }
+    }
+    return json(response, request.method === "POST" ? 201 : 200, { commitSha: "3".repeat(40), headSha: "3".repeat(40) }, corsHeaders);
   }
   const preview = url.pathname.match(/^\/api\/preview\/(writing|books|photography)$/);
   if (preview && request.method === "POST") {

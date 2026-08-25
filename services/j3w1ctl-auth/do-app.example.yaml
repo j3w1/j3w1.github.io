@@ -61,6 +61,5 @@ services:
         value: j3w1.github.io
         scope: RUN_TIME
       - key: GITHUB_BRANCH
-        value: cms-sandbox
+        value: main
         scope: RUN_TIME
-
