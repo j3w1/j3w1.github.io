@@ -10,10 +10,22 @@ const ast = (text) => [{ type: "paragraph", children: [{ type: "text", value: te
 const collections = {
   writing: [{ title: "Browser fixture essay", slug: "fixture-essay", date: "2026-08-24", summary: "Safe AST browser fixture.", tags: ["test"], blocks: ast("Rendered from the same restricted AST."), contentDigest: "fixture" }],
   books: [{ title: "Fixture Book", slug: "fixture-book", author: "Test Author", year: 2026, status: "reading", tags: ["test"], notes: ast("Private reading notes are not used here."), contentDigest: "fixture" }],
-  photography: [{ title: "Fixture Photographs", slug: "fixture-photographs", date: "2026-08-24", caption: "Browser-only fixture.", location: "Local test", images: [{ id: "image-01", file: "image-01.webp", thumbnail: "image-01-thumb.webp", alt: "One-pixel browser test image", src: "/fixture.webp", thumbnailSrc: "/fixture.webp" }], contentDigest: "fixture" }],
+  photography: [{ title: "Fixture Photographs", slug: "fixture-photographs", date: "2026-08-24", caption: "Browser-only fixture.", location: "Local test", camera: "Fixture camera", images: [{ id: "image-01", file: "image-01.webp", thumbnail: "image-01-thumb.webp", alt: "First browser test image", caption: "First fixture photograph", src: "/fixture.webp", thumbnailSrc: "/fixture.webp" }, { id: "image-02", file: "image-02.webp", thumbnail: "image-02-thumb.webp", alt: "Second browser test image", caption: "Second fixture photograph", src: "/fixture.webp", thumbnailSrc: "/fixture.webp" }], contentDigest: "fixture" }],
 };
 const index = { schemaVersion: 1, collections };
-const fixtureState = { post: 0, put: 0, delete: 0, failNext: 0, branch: "main", uploadNames: [] };
+const fixtureState = {
+  post: 0,
+  put: 0,
+  delete: 0,
+  failNext: 0,
+  failNextRead: 0,
+  readDelay: 0,
+  collectionGets: { writing: 0, books: 0, photography: 0 },
+  detailGets: { writing: 0, books: 0, photography: 0 },
+  previewPosts: { writing: 0, books: 0, photography: 0 },
+  branch: "main",
+  uploadNames: [],
+};
 const webp = Buffer.from("UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AA/v89WAAAAA==", "base64");
 const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".ttf": "font/ttf" };
 
@@ -79,15 +91,23 @@ const authServer = createServer(async (request, response) => {
   }
   if (url.pathname === "/__test/state") return json(response, 200, fixtureState, corsHeaders);
   if (url.pathname === "/__test/fail-next" && request.method === "POST") { fixtureState.failNext = Number(url.searchParams.get("status") || 500); return json(response, 200, fixtureState, corsHeaders); }
+  if (url.pathname === "/__test/fail-next-read" && request.method === "POST") { fixtureState.failNextRead = Number(url.searchParams.get("status") || 500); return json(response, 200, fixtureState, corsHeaders); }
+  if (url.pathname === "/__test/read-delay" && request.method === "POST") { fixtureState.readDelay = Math.min(2000, Math.max(0, Number(url.searchParams.get("ms")) || 0)); return json(response, 200, fixtureState, corsHeaders); }
   if (url.pathname === "/__test/branch" && request.method === "POST") { fixtureState.branch = url.searchParams.get("value") === "cms-sandbox" ? "cms-sandbox" : "main"; return json(response, 200, fixtureState, corsHeaders); }
-  if (url.pathname === "/__test/reset" && request.method === "POST") { Object.assign(fixtureState, { post: 0, put: 0, delete: 0, failNext: 0, uploadNames: [] }); return json(response, 200, fixtureState, corsHeaders); }
+  if (url.pathname === "/__test/reset" && request.method === "POST") { Object.assign(fixtureState, { post: 0, put: 0, delete: 0, failNext: 0, failNextRead: 0, readDelay: 0, collectionGets: { writing: 0, books: 0, photography: 0 }, detailGets: { writing: 0, books: 0, photography: 0 }, previewPosts: { writing: 0, books: 0, photography: 0 }, uploadNames: [] }); return json(response, 200, fixtureState, corsHeaders); }
   if (url.pathname === "/api/session") return json(response, 200, { owner: { id: "42", login: "j3w1" }, expiresAt: 9999999999, repository: { owner: "j3w1", name: "j3w1.github.io", branch: fixtureState.branch } }, corsHeaders);
   if (url.pathname.match(/^\/api\/content\/(writing|books|photography)$/) && request.method === "GET") {
     const collection = url.pathname.split("/").at(-1);
+    fixtureState.collectionGets[collection] += 1;
+    await wait(fixtureState.readDelay);
+    if (fixtureState.failNextRead) { const status = fixtureState.failNextRead; fixtureState.failNextRead = 0; return json(response, status, { error: { code: "fixture_read_error", message: "Fixture read failed.", requestId: "fixture" } }, corsHeaders); }
     return json(response, 200, { collection, entries: collections[collection], headSha: "2".repeat(40) }, corsHeaders);
   }
   const detail = url.pathname.match(/^\/api\/content\/(writing|books|photography)\/([^/]+)$/);
   if (detail && request.method === "GET") {
+    fixtureState.detailGets[detail[1]] += 1;
+    await wait(fixtureState.readDelay);
+    if (fixtureState.failNextRead) { const status = fixtureState.failNextRead; fixtureState.failNextRead = 0; return json(response, status, { error: { code: "fixture_read_error", message: "Fixture read failed.", requestId: "fixture" } }, corsHeaders); }
     const entry = collections[detail[1]].find(({ slug }) => slug === detail[2]);
     return entry ? json(response, 200, { entry, body: detail[1] === "writing" ? "Rendered from the same restricted AST." : "Private reading notes are not used here.", version: "1".repeat(40), headSha: "2".repeat(40) }, corsHeaders) : json(response, 404, { error: { code: "not_found", message: "Missing fixture.", requestId: "fixture" } }, corsHeaders);
   }
@@ -125,7 +145,10 @@ const authServer = createServer(async (request, response) => {
   }
   const preview = url.pathname.match(/^\/api\/preview\/(writing|books|photography)$/);
   if (preview && request.method === "POST") {
+    fixtureState.previewPosts[preview[1]] += 1;
     let body = ""; for await (const chunk of request) body += chunk;
+    await wait(fixtureState.readDelay);
+    if (fixtureState.failNextRead) { const status = fixtureState.failNextRead; fixtureState.failNextRead = 0; return json(response, status, { error: { code: "fixture_read_error", message: "Fixture preview failed.", requestId: "fixture" } }, corsHeaders); }
     const parsed = JSON.parse(body);
     return json(response, 200, { metadata: parsed.metadata, blocks: ast(parsed.body || parsed.metadata.caption || "Photography preview metadata is valid.") }, corsHeaders);
   }

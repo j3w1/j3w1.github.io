@@ -68,7 +68,7 @@ test("CMS integration locks mutations, uses semantic editor sizing, and uploads 
   const source = await fs.readFile(path.join(repoRoot, "admin", "j3w1ctl.js"), "utf8");
   const imageSource = await fs.readFile(path.join(repoRoot, "admin", "j3w1ctl-images.js"), "utf8");
   const css = await fs.readFile(path.join(repoRoot, "admin", "j3w1ctl.css"), "utf8");
-  assert.match(source, /if \(this\.mutation\.inFlight\) return;/);
+  assert.match(source, /if \(this\.loading\.inFlight\) return false;\s+if \(!this\.mutation\.enter\(action\)\) return false;/);
   assert.match(source, /try \{ result = await this\.request\(path, options\); \} catch \(error\) \{ failure = error; \} finally \{ this\.endMutation\(\); \}/);
   assert.match(source, /setAttribute\("aria-busy", "true"\)/);
   assert.match(source, /control\.disabled = true/);
@@ -81,5 +81,37 @@ test("CMS integration locks mutations, uses semantic editor sizing, and uploads 
   assert.match(imageSource, /blob\.type !== "image\/webp"/);
   assert.match(css, /:is\(input,textarea,select,button\):disabled/);
   assert.match(css, /\.ctl-textarea-body \{ min-height: 380px; \}/);
-  assert.match(css, /\.ctl-textarea-summary \{ min-height: 92px; \}/);
+  assert.match(css, /\.ctl-textarea-summary \{ min-height: 66px; \}/);
+});
+
+test("public photo viewer close is route-neutral, backdrop-scoped, and focus-restoring", async () => {
+  const source = await fs.readFile(path.join(repoRoot, "assets", "js", "public-content.js"), "utf8");
+  const closeBlock = source.match(/const closePhoto = \(\) => \{[\s\S]*?\n\};/)?.[0] ?? "";
+  assert.match(closeBlock, /closePhotoViewer\(dialog, returnFocus\)/);
+  assert.doesNotMatch(closeBlock, /history\.|location\.|hashchange/i);
+  assert.match(source, /openPhoto\(target, image, button\)/);
+  assert.match(source, /isPhotoViewerBackdropClick\(event\)/);
+});
+
+test("project table keeps its number column fixed while remaining columns absorb width", async () => {
+  const html = await fs.readFile(path.join(repoRoot, "index.html"), "utf8");
+  const css = await fs.readFile(path.join(repoRoot, "assets", "css", "site.css"), "utf8");
+  assert.match(html, /<col class="project-col-number">/);
+  assert.match(html, /<col class="project-col-repository">/);
+  assert.match(css, /\.project-table \.project-col-number \{ width: 38px; \}/);
+  assert.match(css, /\.project-table \.project-col-repository \{ width: auto; \}/);
+});
+
+test("CMS foreground reads use a distinct loading gate and photography preview renders image sources", async () => {
+  const source = await fs.readFile(path.join(repoRoot, "admin", "j3w1ctl.js"), "utf8");
+  const css = await fs.readFile(path.join(repoRoot, "admin", "j3w1ctl.css"), "utf8");
+  assert.match(source, /this\.loading = new ActivityGate\(\)/);
+  assert.match(source, /const activity = this\.beginLoading\(`reading \$\{name\}`\)/);
+  assert.match(source, /finally \{ this\.endLoading\(activity\); \}/);
+  assert.match(source, /renderPhotographyPreview\(result\.metadata\)/);
+  assert.match(source, /buildPhotographyPreviewItems\(/);
+  assert.match(source, /createObjectUrl: \(blob\) => this\.photoPreviewUrls\.create\(blob\)/);
+  assert.match(source, /this\.photoPreviewUrls\.revokeAll\(\)/);
+  assert.match(css, /\.is-loading-locked/);
+  assert.match(css, /\.ctl-photo-preview-item img/);
 });

@@ -25,6 +25,16 @@ test("browser fixture models a cross-origin frontend and OAuth service", async (
 
     const session = await fetch(`${fixture.authOrigin}/api/session`).then((response) => response.json());
     assert.deepEqual(session.repository, { owner: "j3w1", name: "j3w1.github.io", branch: "main" });
+
+    await fetch(`${fixture.authOrigin}/__test/reset`, { method: "POST" });
+    await fetch(`${fixture.authOrigin}/__test/read-delay?ms=10`, { method: "POST" });
+    await fetch(`${fixture.authOrigin}/api/content/books`);
+    await fetch(`${fixture.authOrigin}/api/content/books/fixture-book`);
+    await fetch(`${fixture.authOrigin}/api/preview/books`, { method: "POST", body: JSON.stringify({ metadata: {}, body: "" }) });
+    const state = await fetch(`${fixture.authOrigin}/__test/state`).then((response) => response.json());
+    assert.deepEqual(state.collectionGets, { writing: 0, books: 1, photography: 0 });
+    assert.deepEqual(state.detailGets, { writing: 0, books: 1, photography: 0 });
+    assert.deepEqual(state.previewPosts, { writing: 0, books: 1, photography: 0 });
   } finally {
     await fixture.close();
   }

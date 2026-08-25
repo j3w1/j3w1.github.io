@@ -251,6 +251,11 @@ dl {
   color: var(--prose);
 }
 
+#j3w1ctl-launch,
+.status-github {
+  gap: 6px;
+}
+
 .system-status #status-workspace {
   background: var(--selection-dark);
   color: var(--foreground-bright);
@@ -896,16 +901,17 @@ dl {
   font-weight: 400;
 }
 
-.project-table th:nth-child(1),
-.project-table td:nth-child(1) { width: 54px; text-align: center; }
-.project-table th:nth-child(2),
-.project-table td:nth-child(2) { width: 20%; }
-.project-table th:nth-child(3),
-.project-table td:nth-child(3) { width: 30%; }
-.project-table th:nth-child(4),
-.project-table td:nth-child(4) { width: 14%; }
-.project-table th:nth-child(5),
-.project-table td:nth-child(5) { width: 25%; }
+.project-table .project-col-number { width: 38px; }
+.project-table .project-col-name { width: 20%; }
+.project-table .project-col-stack { width: 30%; }
+.project-table .project-col-state { width: 14%; }
+.project-table .project-col-repository { width: auto; }
+
+.project-table th:first-child,
+.project-table td:first-child {
+  padding-inline: 4px;
+  text-align: center;
+}
 
 .project-table tbody tr:hover {
   background: var(--chrome-alt);
@@ -921,7 +927,7 @@ dl {
 }
 
 .project-selector {
-  width: 30px;
+  width: 28px;
   min-height: 22px;
   padding: 0;
   border: 1px solid transparent;
@@ -942,6 +948,7 @@ dl {
 }
 
 .project-filter-button {
+  gap: 5px;
   background: var(--terminal);
   cursor: pointer;
 }

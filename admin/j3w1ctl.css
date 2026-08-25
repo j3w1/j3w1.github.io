@@ -45,7 +45,7 @@
 .ctl-field-help { color: #9e7d7b; font-size: 12px; line-height: 1.4; }
 .ctl-field input,.ctl-field select,.ctl-field textarea { width: 100%; min-width: 0; padding: 6px; border: 1px solid var(--border); outline: 0; background: #090606; color: var(--prose); font: inherit; }
 .ctl-field textarea { resize: vertical; line-height: 1.5; }
-.ctl-textarea-summary { min-height: 92px; }
+.ctl-textarea-summary { min-height: 66px; }
 .ctl-textarea-body { min-height: 380px; }
 .ctl-field input:focus,.ctl-field select:focus,.ctl-field textarea:focus { border-color: var(--focus); }
 
@@ -56,6 +56,19 @@
 .ctl-photo-info { margin: 0; padding: 7px; overflow: auto; border-left: 2px solid var(--border-strong); background: #070505; color: #c79c99; font: inherit; line-height: 1.45; white-space: pre-wrap; }
 .ctl-photo-actions { display: flex; flex-wrap: wrap; gap: 5px; }
 .ctl-photo-empty,.ctl-photo-hint { margin: 0; padding: 9px; border: 1px dashed var(--border); color: var(--muted); line-height: 1.45; }
+
+.ctl-photo-preview { padding: 10px; }
+.ctl-photo-preview-heading { padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.ctl-photo-preview-heading h4 { margin: 0 0 3px; color: var(--prose); font-size: 15px; font-weight: 400; }
+.ctl-photo-preview-heading p,.ctl-photo-preview-caption { margin: 0; color: var(--muted); line-height: 1.45; }
+.ctl-photo-preview-caption { padding: 9px 0; }
+.ctl-photo-preview-grid { display: grid; gap: 10px; }
+.ctl-photo-preview-item { margin: 0; border: 1px solid var(--border); background: #090606; }
+.ctl-photo-preview-item img { display: block; width: 100%; max-height: 430px; background: #050303; object-fit: contain; }
+.ctl-photo-preview-item figcaption { display: grid; gap: 3px; padding: 7px 9px; border-top: 1px solid var(--border); }
+.ctl-photo-preview-image-caption { color: var(--foreground); }
+.ctl-photo-preview-alt { color: #9e7d7b; font-size: 12px; }
+.ctl-photo-preview-missing { margin: 0; padding: 18px 9px; color: var(--muted); }
 
 .ctl-actions { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 10px; border-top: 1px solid var(--border); background: var(--chrome); }
 .ctl-button { min-height: 29px; padding: 3px 9px; border: 1px solid var(--border); background: var(--surface-raised); color: var(--foreground); cursor: pointer; }
@@ -84,10 +97,12 @@
 .ctl-example { min-height: 38px; padding: 7px 10px; border: 0; border-top: 1px solid var(--border); background: var(--terminal); color: var(--foreground); text-align: left; cursor: pointer; }
 .ctl-example:hover { background: var(--chrome-alt); color: var(--prose); }
 .ctl-offline { color: #ffcc80; }
+.ctl-loading { padding-inline: 4px; background: #3a1714; color: #ffd1cf; }
 .ctl-modified { color: var(--prose); }
 
 /* Mutation locking is intentionally high-contrast and historical-looking. */
 .is-mutation-locked .ctl-pane { background: #0c0909; }
+.is-loading-locked .ctl-pane { background: #100b0b; }
 .j3w1ctl-window :is(input,textarea,select,button):disabled,
 .j3w1ctl-window [aria-disabled="true"] {
   border-color: #342221 !important;
@@ -101,6 +116,8 @@
 }
 .j3w1ctl-window :is(input,textarea,select,button):disabled:hover { border-color: #342221 !important; background: #211818 !important; color: #967d7b !important; }
 .is-mutation-locked .ctl-field span,.is-mutation-locked .ctl-field-help { color: #7f6967; }
+.is-loading-locked,.is-loading-locked :is(input,textarea,select,button):disabled { cursor: wait !important; }
+.is-loading-locked .ctl-field span,.is-loading-locked .ctl-field-help { color: #8d7472; }
 
 @media (max-width:1100px) {
   .ctl-main { grid-template-columns: 160px minmax(220px,.34fr) minmax(0,.66fr); }
@@ -120,7 +137,7 @@
   .ctl-mobile-buffers { display: flex; min-height: 35px; overflow-x: auto; border-bottom: 1px solid var(--border); }
   .ctl-mobile-buffers button { min-width: 96px; border: 0; border-right: 1px solid var(--border); background: var(--chrome); color: var(--muted); }
   .ctl-mobile-buffers button[aria-selected="true"] { background: var(--selection); color: var(--prose); }
-  .ctl-textarea-summary { min-height: 100px; }
+  .ctl-textarea-summary { min-height: 66px; }
   .ctl-textarea-body { min-height: 42dvh; }
   .ctl-status { gap: 7px; font-size: 12px; }
   .ctl-status-target { flex: 1 1 auto; }

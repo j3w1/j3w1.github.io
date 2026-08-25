@@ -1,5 +1,5 @@
 import { renderAst } from "/assets/js/content-renderer.js?v=20260824";
-import { MutationGate, publicationTarget, shortCommit } from "/admin/j3w1ctl-core.js?v=20260825";
+import { ActivityGate, buildPhotographyPreviewItems, MutationGate, ObjectUrlRegistry, publicationTarget, shortCommit } from "/admin/j3w1ctl-core.js?v=20260825b";
 import { EXAMPLES } from "/admin/j3w1ctl-examples.js?v=20260825";
 import { IMAGE_ACCEPT, IMAGE_LIMITS, generatedImageBytes, normalizePhotograph } from "/admin/j3w1ctl-images.js?v=20260825";
 
@@ -20,7 +20,7 @@ const ensureStyle = () => {
   const link = document.createElement("link");
   link.id = "j3w1ctl-style";
   link.rel = "stylesheet";
-  link.href = "/admin/j3w1ctl.css?v=20260825";
+  link.href = "/admin/j3w1ctl.css?v=20260825b";
   document.head.append(link);
 };
 
@@ -98,6 +98,8 @@ class J3w1ctl {
     this.conflicted = false;
     this.conflictKey = null;
     this.mutation = new MutationGate();
+    this.loading = new ActivityGate();
+    this.photoPreviewUrls = new ObjectUrlRegistry();
     this.deleteConfirmationInFlight = false;
     this.imageProcessingInFlight = false;
     this.repository = null;
@@ -114,8 +116,7 @@ class J3w1ctl {
     if (!this.apiBase) return this.renderLocked("Backend not configured. Set the permanent service URL in admin/config.js.", true);
     if (!this.token) return this.renderLocked();
     try {
-      this.setState("loading", "validating session");
-      const session = await this.request("/api/session");
+      const session = await this.validateSession();
       await this.unlock(session);
     } catch {
       sessionStorage.removeItem(TOKEN_KEY);
@@ -151,6 +152,7 @@ class J3w1ctl {
 
   close() {
     this.abortController?.abort();
+    this.photoPreviewUrls.revokeAll();
     if (this.popup && !this.popup.closed) this.popup.close();
     if (this.messageHandler) window.removeEventListener("message", this.messageHandler);
     this.mount.replaceChildren();
@@ -168,7 +170,7 @@ class J3w1ctl {
     this.state = state;
     const [mode, target, tail] = this.status.children;
     mode.textContent = state.toUpperCase();
-    mode.className = `ctl-status-mode${state === "offline" ? " ctl-offline" : state === "modified" ? " ctl-modified" : ""}`;
+    mode.className = `ctl-status-mode${state === "loading" ? " ctl-loading" : state === "offline" ? " ctl-offline" : state === "modified" ? " ctl-modified" : ""}`;
     const publication = publicationTarget(this.repository);
     target.textContent = publication.label;
     target.className = `ctl-status-target ${publication.live ? "is-live" : publication.mode === "SANDBOX" ? "is-sandbox" : ""}`;
@@ -203,7 +205,7 @@ class J3w1ctl {
       this.token = event.data.token;
       sessionStorage.setItem(TOKEN_KEY, this.token);
       try {
-        const session = await this.request("/api/session");
+        const session = await this.validateSession();
         await this.unlock(session);
       } catch {
         sessionStorage.removeItem(TOKEN_KEY);
@@ -212,6 +214,16 @@ class J3w1ctl {
       }
     };
     window.addEventListener("message", this.messageHandler);
+  }
+
+  async validateSession() {
+    const activity = this.beginLoading("validating session");
+    if (!activity) throw Object.assign(new Error("Session validation is already in progress."), { code: "loading" });
+    try {
+      return await this.request("/api/session");
+    } finally {
+      this.endLoading(activity);
+    }
   }
 
   async unlock(session) {
@@ -238,30 +250,38 @@ class J3w1ctl {
     this.syncActions();
   }
 
-  showBuffer(name) {
-    if (this.mutation.inFlight || this.imageProcessingInFlight) return;
+  showBuffer(name, { allowLoading = false } = {}) {
+    if (this.mutation.inFlight || this.imageProcessingInFlight || (this.loading.inFlight && !allowLoading)) return;
     this.body.querySelectorAll("[data-buffer-pane]").forEach((pane) => pane.classList.toggle("is-mobile-active", pane.dataset.bufferPane === name));
     this.body.querySelectorAll("[data-buffer]").forEach((button) => button.setAttribute("aria-selected", String(button.dataset.buffer === name)));
   }
 
   async changeCollection(name) {
-    if (this.mutation.inFlight || this.imageProcessingInFlight) return;
-    this.collection = name; this.entry = null;
-    this.collectionPane.querySelectorAll("[data-collection]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.collection === name)));
-    await this.loadCollection(); this.showBuffer("entries");
+    const loaded = await this.loadCollection(name);
+    if (loaded) this.showBuffer("entries");
   }
 
-  async loadCollection() {
-    if (!navigator.onLine) return this.setState("offline", "collection refresh unavailable");
-    this.setState("loading", `reading ${this.collection}`);
+  async loadCollection(name = this.collection) {
+    if (!navigator.onLine) { this.setState("offline", "collection refresh unavailable"); return false; }
+    if (this.mutation.inFlight || this.imageProcessingInFlight) return false;
+    const activity = this.beginLoading(`reading ${name}`);
+    if (!activity) return false;
+    let loaded = false;
     try {
-      const data = await this.request(`/api/content/${this.collection}`);
+      const data = await this.request(`/api/content/${name}`);
+      const drafts = (await draftOperation("list")).filter((draft) => draft.collection === name);
+      if (!this.loading.owns(activity)) return false;
+      this.collection = name; this.entry = null; this.resetPreview();
+      this.collectionPane.querySelectorAll("[data-collection]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.collection === name)));
       this.entries = data.entries;
-      this.localDrafts = (await draftOperation("list")).filter((draft) => draft.collection === this.collection);
+      this.localDrafts = drafts;
       this.renderEntries();
-      this.newEntry(false);
+      this.newEntry(false, { allowLoading: true });
       this.setState("clean");
+      loaded = true;
     } catch (error) { this.setState("error", error.message); }
+    finally { this.endLoading(activity); }
+    return loaded;
   }
 
   renderEntries() {
@@ -277,36 +297,44 @@ class J3w1ctl {
   }
 
   openLocalDraft(draft) {
-    if (this.mutation.inFlight || this.imageProcessingInFlight) return;
+    if (this.mutation.inFlight || this.imageProcessingInFlight || this.loading.inFlight) return;
     this.conflicted = false; this.entry = { ...draft.value, persisted: false };
     this.renderEditor(draft.value, draft.files ?? []); this.renderEntries(); this.setState("local draft", "saved on this device"); this.showBuffer("editor");
   }
 
   async selectEntry(slug, { ignoreDraft = false } = {}) {
-    if (this.mutation.inFlight || this.imageProcessingInFlight) return;
-    this.setState("loading", `reading ${this.collection}/${slug}`);
+    if (this.mutation.inFlight || this.imageProcessingInFlight) return false;
+    const collection = this.collection;
+    const activity = this.beginLoading(`reading ${collection}/${slug}`);
+    if (!activity) return false;
+    let selected = false;
+    this.resetPreview();
     try {
-      const data = await this.request(`/api/content/${this.collection}/${encodeURIComponent(slug)}`);
+      const data = await this.request(`/api/content/${collection}/${encodeURIComponent(slug)}`);
+      const draft = ignoreDraft ? null : await draftOperation("get", `${collection}/${slug}`);
+      if (!this.loading.owns(activity) || this.collection !== collection) return false;
       this.entry = { ...data.entry, body: data.body, version: data.version, persisted: true };
-      const selectedKey = `${this.collection}/${slug}`;
+      const selectedKey = `${collection}/${slug}`;
       this.conflicted = !ignoreDraft && this.conflictKey === selectedKey;
       if (ignoreDraft) this.conflictKey = null;
-      const draft = ignoreDraft ? null : await draftOperation("get", `${this.collection}/${slug}`);
       this.renderEditor(draft?.value ?? this.entry, draft?.files ?? []);
-      this.renderEntries(); this.setState(draft ? "local draft" : "clean"); this.showBuffer("editor");
+      this.renderEntries(); this.setState(draft ? "local draft" : "clean"); selected = true;
     } catch (error) { this.setState("error", error.message); }
+    finally { this.endLoading(activity); }
+    if (selected) this.showBuffer("editor");
+    return selected;
   }
 
-  newEntry(show = true) {
-    if (this.mutation.inFlight) return;
+  newEntry(show = true, { allowLoading = false } = {}) {
+    if (this.mutation.inFlight || (this.loading.inFlight && !allowLoading)) return;
     this.conflicted = false;
     this.entry = { slug: "", title: "", body: "", persisted: false };
-    this.renderEditor(this.entry, []); this.previewPane.replaceChildren(node("h3", "ctl-pane-title", "preview"), node("p", "ctl-preview", "Preview is generated by the authenticated service.")); this.setState("clean");
+    this.renderEditor(this.entry, []); this.setState("clean");
     if (show) this.showBuffer("editor");
   }
 
   showExamples() {
-    if (this.mutation.inFlight || this.imageProcessingInFlight) return;
+    if (this.mutation.inFlight || this.imageProcessingInFlight || this.loading.inFlight) return;
     const dialog = node("dialog", "ctl-dialog ctl-example-dialog");
     const header = node("header", "window-titlebar"); header.append(node("span", "", `Load ${this.collection} example`));
     const body = node("div", "ctl-example-list");
@@ -321,22 +349,28 @@ class J3w1ctl {
   }
 
   loadExample(example) {
-    if (this.mutation.inFlight) return;
+    if (this.mutation.inFlight || this.loading.inFlight) return;
     this.conflicted = false;
     this.entry = { ...structuredClone(example), persisted: false };
     this.renderEditor(this.entry, []);
-    this.previewPane.replaceChildren(node("h3", "ctl-pane-title", "preview"), node("p", "ctl-preview", "Preview is generated by the authenticated service."));
     this.setState("modified", "example loaded locally; not published");
     this.showBuffer("editor");
   }
 
+  resetPreview(message = "Preview is generated by the authenticated service.") {
+    this.photoPreviewUrls.revokeAll();
+    this.previewPane?.classList.remove("is-visible");
+    this.previewPane?.replaceChildren(node("h3", "ctl-pane-title", "preview"), node("p", "ctl-preview", message));
+  }
+
   renderEditor(value, files = []) {
+    this.resetPreview();
     const form = node("form", "ctl-form"); form.setAttribute("aria-label", `${this.collection} editor`); form.addEventListener("submit", (event) => event.preventDefault());
     form.append(field("Title", "title", { value: value.title, required: true, maxLength: 120 }), field("Slug (immutable after publish)", "slug", { value: value.slug, required: true, maxLength: 80 }));
-    if (this.collection === "writing") form.append(field("Date", "date", { type: "date", value: value.date, required: true }), field("Summary", "summary", { type: "textarea", value: value.summary, required: true, maxLength: 500, rows: 4, controlClassName: "ctl-textarea-summary" }), field("Tags (comma separated)", "tags", { value: (value.tags ?? []).join(", ") }), field("Markdown", "body", { type: "textarea", value: value.body, required: true, rows: 16, controlClassName: "ctl-textarea-body" }));
+    if (this.collection === "writing") form.append(field("Date", "date", { type: "date", value: value.date, required: true }), field("Summary", "summary", { type: "textarea", value: value.summary, required: true, maxLength: 500, rows: 3, controlClassName: "ctl-textarea-summary" }), field("Tags (comma separated)", "tags", { value: (value.tags ?? []).join(", ") }), field("Markdown", "body", { type: "textarea", value: value.body, required: true, rows: 16, controlClassName: "ctl-textarea-body" }));
     if (this.collection === "books") form.append(field("Author", "author", { value: value.author, required: true }), field("Year", "year", { type: "number", value: value.year, required: true }), field("Status", "status", { type: "select", value: value.status || "want-to-read", options: [["want-to-read", "Want to read"], ["reading", "Reading"], ["finished", "Finished"], ["abandoned", "Abandoned"]] }), field("Rating (0–5)", "rating", { type: "number", value: value.rating }), field("Started", "started", { type: "date", value: value.started }), field("Finished", "finished", { type: "date", value: value.finished }), field("Tags (comma separated)", "tags", { value: (value.tags ?? []).join(", ") }), field("Markdown notes", "body", { type: "textarea", value: value.body, rows: 16, controlClassName: "ctl-textarea-body" }));
     if (this.collection === "photography") {
-      form.append(field("Date", "date", { type: "date", value: value.date, required: true }), field("Caption", "caption", { type: "textarea", value: value.caption, required: true, maxLength: 500, rows: 4, controlClassName: "ctl-textarea-summary" }), field("Location", "location", { value: value.location }), field("Camera", "camera", { value: value.camera }));
+      form.append(field("Date", "date", { type: "date", value: value.date, required: true }), field("Caption", "caption", { type: "textarea", value: value.caption, required: true, maxLength: 500, rows: 3, controlClassName: "ctl-textarea-summary" }), field("Location", "location", { value: value.location }), field("Camera", "camera", { value: value.camera }));
       this.photoItems = this.hydratePhotoItems(value.images ?? [], files);
       const picker = field("Select photographs", "photographs", { type: "file", className: "ctl-photo-picker", help: "JPG, JPEG, PNG, or WebP. j3w1ctl creates the full and thumbnail WebP files locally before publication." });
       this.photoPicker = picker.querySelector("input"); this.photoPicker.accept = IMAGE_ACCEPT; this.photoPicker.multiple = true; this.photoPicker.addEventListener("change", (event) => this.addPhotographs(event));
@@ -345,7 +379,10 @@ class J3w1ctl {
       form.append(this.photoList); this.renderPhotoItems();
     }
     if (value.persisted || this.entry?.persisted) form.querySelector('[name="slug"]').readOnly = true;
-    form.addEventListener("input", () => this.setState(navigator.onLine ? "modified" : "offline", navigator.onLine ? `${this.collection}/${form.elements.slug.value.trim() || "new"}` : "local editing only"));
+    form.addEventListener("input", () => {
+      if (this.collection === "photography") this.resetPreview("Photography preview is stale; validate it again.");
+      this.setState(navigator.onLine ? "modified" : "offline", navigator.onLine ? `${this.collection}/${form.elements.slug.value.trim() || "new"}` : "local editing only");
+    });
     this.form = form; this.editorPane.replaceChildren(node("h3", "ctl-pane-title", `${this.collection}/${value.slug || "new"}`), form);
     this.syncActions();
   }
@@ -353,6 +390,7 @@ class J3w1ctl {
   hydratePhotoItems(images, files) {
     return images.map((image) => {
       const saved = files.find((pair) => pair.id === image.id) ?? {};
+      const published = this.entry?.images?.find((candidate) => candidate.id === image.id) ?? {};
       const fullBlob = saved.full instanceof Blob ? saved.full : saved.full?.blob;
       const thumbnailBlob = saved.thumbnail instanceof Blob ? saved.thumbnail : saved.thumbnail?.blob;
       return {
@@ -362,6 +400,8 @@ class J3w1ctl {
         source: saved.source,
         full: fullBlob ? { ...(saved.fullInfo ?? {}), blob: fullBlob, size: fullBlob.size } : null,
         thumbnail: thumbnailBlob ? { ...(saved.thumbnailInfo ?? {}), blob: thumbnailBlob, size: thumbnailBlob.size } : null,
+        publicSrc: image.src ?? published.src ?? "",
+        publicThumbnailSrc: image.thumbnailSrc ?? published.thumbnailSrc ?? "",
         existing: !fullBlob && !thumbnailBlob,
       };
     });
@@ -409,7 +449,7 @@ class J3w1ctl {
   async addPhotographs(event) {
     const selected = [...event.currentTarget.files];
     event.currentTarget.value = "";
-    if (!selected.length || this.imageProcessingInFlight || this.mutation.inFlight) return;
+    if (!selected.length || this.imageProcessingInFlight || this.mutation.inFlight || this.loading.inFlight) return;
     if (this.photoItems.length + selected.length > IMAGE_LIMITS.count) return this.setState("error", `Select at most ${IMAGE_LIMITS.count} photographs per entry.`);
     this.imageProcessingInFlight = true; this.form.setAttribute("aria-busy", "true"); this.setState("loading", `optimizing ${selected.length} photograph${selected.length === 1 ? "" : "s"} locally`); this.syncActions();
     try {
@@ -421,7 +461,7 @@ class J3w1ctl {
         normalized.push({ id, alt: "", caption: "", source: result.source, full: result.full, thumbnail: result.thumbnail, existing: false });
       }
       if (generatedImageBytes([...this.photoItems, ...normalized]) > IMAGE_LIMITS.totalBytes) throw new Error("Generated photography files exceed the 28 MiB entry limit. Select fewer photographs.");
-      this.photoItems.push(...normalized); this.renderPhotoItems(); this.setState("modified", `${normalized.length} photograph${normalized.length === 1 ? "" : "s"} optimized; add alt text`);
+      this.photoItems.push(...normalized); this.resetPreview("Photography preview is stale; validate it again."); this.renderPhotoItems(); this.setState("modified", `${normalized.length} photograph${normalized.length === 1 ? "" : "s"} optimized; add alt text`);
     } catch (error) {
       this.setState("error", error.message);
     } finally {
@@ -438,17 +478,17 @@ class J3w1ctl {
   }
 
   movePhotograph(index, delta) {
-    if (this.mutation.inFlight) return;
+    if (this.mutation.inFlight || this.loading.inFlight) return;
     this.syncPhotoInputs();
     const target = index + delta;
     if (target < 0 || target >= this.photoItems.length) return;
     [this.photoItems[index], this.photoItems[target]] = [this.photoItems[target], this.photoItems[index]];
-    this.renderPhotoItems(); this.setState("modified", "photography order changed");
+    this.resetPreview("Photography preview is stale; validate it again."); this.renderPhotoItems(); this.setState("modified", "photography order changed");
   }
 
   removePhotograph(index) {
-    if (this.mutation.inFlight) return;
-    this.syncPhotoInputs(); this.photoItems.splice(index, 1); this.renderPhotoItems(); this.setState("modified", "photograph removed locally");
+    if (this.mutation.inFlight || this.loading.inFlight) return;
+    this.syncPhotoInputs(); this.photoItems.splice(index, 1); this.resetPreview("Photography preview is stale; validate it again."); this.renderPhotoItems(); this.setState("modified", "photograph removed locally");
   }
 
   editorValue({ validate = false } = {}) {
@@ -478,7 +518,7 @@ class J3w1ctl {
   draftKey(value = this.editorValue()) { return `${this.collection}/${value.slug || "new"}`; }
 
   async saveDraft() {
-    if (this.mutation.inFlight) return;
+    if (this.mutation.inFlight || this.loading.inFlight) return;
     const value = this.editorValue(); const files = value.files ?? []; delete value.files;
     await this.saveDraftSnapshot(value, files);
     this.localDrafts = (await draftOperation("list")).filter((draft) => draft.collection === this.collection); this.renderEntries();
@@ -490,13 +530,41 @@ class J3w1ctl {
   }
 
   async forgetDrafts() {
-    if (this.mutation.inFlight) return;
+    if (this.mutation.inFlight || this.loading.inFlight) return;
     if (!await this.confirm("Forget local drafts?", "This permanently removes every local j3w1ctl draft and selected photograph blob from this browser.")) return;
     await draftOperation("clear"); this.localDrafts = []; this.renderEntries(); this.setState(this.entry?.persisted ? "clean" : "authenticated", "local drafts removed");
   }
 
+  renderPhotographyPreview(metadata) {
+    this.resetPreview();
+    this.previewPane.replaceChildren(node("h3", "ctl-pane-title", `preview — ${metadata.title}`));
+    const preview = node("article", "ctl-photo-preview");
+    const heading = node("header", "ctl-photo-preview-heading");
+    heading.append(node("h4", "", metadata.title), node("p", "", [metadata.date, metadata.location, metadata.camera].filter(Boolean).join(" · ")));
+    preview.append(heading, node("p", "ctl-photo-preview-caption", metadata.caption));
+    const gallery = node("div", "ctl-photo-preview-grid");
+    const previewItems = buildPhotographyPreviewItems({
+      images: metadata.images,
+      photoItems: this.photoItems,
+      persisted: this.entry?.persisted,
+      slug: metadata.slug,
+      createObjectUrl: (blob) => this.photoPreviewUrls.create(blob),
+    });
+    for (const image of previewItems) {
+      const figure = node("figure", "ctl-photo-preview-item");
+      if (image.source) {
+        const photograph = node("img"); photograph.src = image.source; photograph.alt = image.alt; figure.append(photograph);
+      } else figure.append(node("p", "ctl-photo-preview-missing", "Local image data is unavailable."));
+      const caption = node("figcaption");
+      if (image.caption) caption.append(node("span", "ctl-photo-preview-image-caption", image.caption));
+      caption.append(node("span", "ctl-photo-preview-alt", `alt: ${image.alt}`));
+      figure.append(caption); gallery.append(figure);
+    }
+    preview.append(gallery); this.previewPane.append(preview); this.previewPane.classList.add("is-visible");
+  }
+
   async preview() {
-    if (this.mutation.inFlight || this.imageProcessingInFlight) return;
+    if (this.mutation.inFlight || this.imageProcessingInFlight || this.loading.inFlight) return;
     if (!navigator.onLine) return this.setState("offline", "preview requires the service");
     if (matchMedia("(min-width: 768px) and (max-width: 1100px)").matches && this.previewPane.classList.contains("is-visible")) {
       this.previewPane.classList.remove("is-visible");
@@ -505,15 +573,27 @@ class J3w1ctl {
     let value;
     try { value = this.editorValue({ validate: true }); } catch (error) { return this.setState("error", error.message); }
     const body = value.body; delete value.body; delete value.files;
-    this.setState("loading", "validating preview");
+    const collection = this.collection;
+    const activity = this.beginLoading(`validating preview ${collection}/${value.slug}`);
+    if (!activity) return;
+    let rendered = false;
     try {
-      const result = await this.request(`/api/preview/${this.collection}`, { method: "POST", body: JSON.stringify({ metadata: value, body }) });
-      this.previewPane.replaceChildren(node("h3", "ctl-pane-title", `preview — ${value.title}`)); const rendered = node("div", "ctl-preview"); renderAst(result.blocks, rendered); this.previewPane.append(rendered); this.previewPane.classList.add("is-visible"); this.setState("modified", "preview validated"); this.showBuffer("preview");
+      const result = await this.request(`/api/preview/${collection}`, { method: "POST", body: JSON.stringify({ metadata: value, body }) });
+      if (!this.loading.owns(activity) || this.collection !== collection) return;
+      if (collection === "photography") this.renderPhotographyPreview(result.metadata);
+      else {
+        this.resetPreview();
+        this.previewPane.replaceChildren(node("h3", "ctl-pane-title", `preview — ${result.metadata.title}`));
+        const content = node("div", "ctl-preview"); renderAst(result.blocks, content); this.previewPane.append(content); this.previewPane.classList.add("is-visible");
+      }
+      this.setState("modified", "preview validated"); rendered = true;
     } catch (error) { this.setState("error", error.message); }
+    finally { this.endLoading(activity); }
+    if (rendered) this.showBuffer("preview");
   }
 
   async publish() {
-    if (this.mutation.inFlight) return;
+    if (this.mutation.inFlight || this.loading.inFlight) return;
     if (!navigator.onLine) return this.setState("offline", "publication requires the service");
     if (this.imageProcessingInFlight) return this.setState("loading", "wait for photograph optimization to finish");
     let snapshot;
@@ -541,7 +621,7 @@ class J3w1ctl {
   }
 
   async deleteEntry() {
-    if (this.mutation.inFlight || this.deleteConfirmationInFlight || !this.entry?.persisted || !navigator.onLine) return;
+    if (this.mutation.inFlight || this.loading.inFlight || this.deleteConfirmationInFlight || !this.entry?.persisted || !navigator.onLine) return;
     this.deleteConfirmationInFlight = true;
     let confirmed;
     try {
@@ -568,7 +648,42 @@ class J3w1ctl {
     await draftOperation("delete", `${snapshot.collection}/${snapshot.slug}`); await this.loadCollection(); this.setState("published", shortCommit(result.commitSha));
   }
 
+  beginLoading(message) {
+    if (this.mutation.inFlight || this.imageProcessingInFlight) return null;
+    const activity = this.loading.enter(message);
+    if (!activity) return null;
+    this.setLoadingLocked(true);
+    this.setState("loading", message);
+    return activity;
+  }
+
+  endLoading(activity) {
+    if (!this.loading.leave(activity)) return false;
+    this.setLoadingLocked(false);
+    this.syncActions();
+    return true;
+  }
+
+  setLoadingLocked(locked) {
+    if (locked) { this.overlay?.setAttribute("aria-busy", "true"); this.form?.setAttribute("aria-busy", "true"); }
+    else { this.overlay?.removeAttribute("aria-busy"); this.form?.removeAttribute("aria-busy"); }
+    this.overlay?.classList.toggle("is-loading-locked", locked);
+    const controls = this.overlay?.querySelectorAll("button,input,select,textarea") ?? [];
+    controls.forEach((control) => {
+      if (locked) {
+        if (!control.hasAttribute("data-pre-loading-disabled")) {
+          control.dataset.preLoadingDisabled = String(control.disabled);
+          control.disabled = true;
+        }
+      } else if (control.hasAttribute("data-pre-loading-disabled")) {
+        control.disabled = control.dataset.preLoadingDisabled === "true";
+        delete control.dataset.preLoadingDisabled;
+      }
+    });
+  }
+
   beginMutation(action, value) {
+    if (this.loading.inFlight) return false;
     if (!this.mutation.enter(action)) return false;
     this.setMutationLocked(true);
     const entryPath = `${this.collection}/${value.slug || "new"}`;
@@ -607,23 +722,25 @@ class J3w1ctl {
   }
 
   async logout() {
-    if (this.mutation.inFlight) return;
+    if (this.mutation.inFlight || this.loading.inFlight) return;
     const token = this.token; sessionStorage.removeItem(TOKEN_KEY); this.token = ""; this.repository = null; this.renderLocked("Signed out. Local drafts remain on this device.");
     if (token) fetch(`${this.apiBase}/api/logout`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
   }
 
   syncActions() {
     if (!this.body) return;
-    const mutating = this.mutation.inFlight; const offline = !navigator.onLine || this.state === "offline"; const conflict = this.conflicted || this.state === "conflict"; const processing = this.imageProcessingInFlight;
+    const mutating = this.mutation.inFlight; const loading = this.loading.inFlight; const offline = !navigator.onLine || this.state === "offline"; const conflict = this.conflicted || this.state === "conflict"; const processing = this.imageProcessingInFlight;
     const publishButton = this.body.querySelector('[data-action="publish"]');
-    if (publishButton) { publishButton.disabled = mutating || processing || offline || conflict; publishButton.textContent = mutating && this.mutation.action === "publish" ? "Publishing…" : publishButton.dataset.normalLabel; }
-    const previewButton = this.body.querySelector('[data-action="preview"]'); if (previewButton) previewButton.disabled = mutating || processing || offline;
-    ["new", "examples", "save-draft", "forget-local-drafts", "logout"].forEach((action) => { const button = this.body.querySelector(`[data-action="${action}"]`); if (button) button.disabled = mutating || processing; });
-    this.body.querySelectorAll("[data-navigation],.ctl-collection,.ctl-mobile-buffers button").forEach((button) => { button.disabled = mutating || processing; });
+    if (publishButton) { publishButton.disabled = mutating || loading || processing || offline || conflict; publishButton.textContent = mutating && this.mutation.action === "publish" ? "Publishing…" : publishButton.dataset.normalLabel; }
+    const previewButton = this.body.querySelector('[data-action="preview"]');
+    if (previewButton) { previewButton.disabled = mutating || loading || processing || offline; previewButton.textContent = loading && this.loading.action.startsWith("validating preview") ? "Previewing…" : previewButton.dataset.normalLabel; }
+    ["new", "examples", "save-draft", "forget-local-drafts", "logout"].forEach((action) => { const button = this.body.querySelector(`[data-action="${action}"]`); if (button) button.disabled = mutating || loading || processing; });
+    this.body.querySelectorAll("[data-navigation],.ctl-collection,.ctl-mobile-buffers button").forEach((button) => { button.disabled = mutating || loading || processing; });
     let deleteButton = this.body.querySelector('[data-action="delete"]');
     if (this.entry?.persisted && !deleteButton) { deleteButton = node("button", "", "Delete"); deleteButton.type = "button"; deleteButton.dataset.action = "delete"; deleteButton.dataset.normalLabel = "Delete"; deleteButton.addEventListener("click", () => this.deleteEntry()); this.body.querySelector(".ctl-menu")?.append(deleteButton); }
-    if (deleteButton) { deleteButton.disabled = !this.entry?.persisted || offline || mutating || processing; deleteButton.textContent = mutating && this.mutation.action === "delete" ? "Deleting…" : deleteButton.dataset.normalLabel; }
+    if (deleteButton) { deleteButton.disabled = !this.entry?.persisted || offline || mutating || loading || processing; deleteButton.textContent = mutating && this.mutation.action === "delete" ? "Deleting…" : deleteButton.dataset.normalLabel; }
     if (mutating) this.setMutationLocked(true);
+    if (loading) this.setLoadingLocked(true);
   }
 
   async request(path, options = {}) {

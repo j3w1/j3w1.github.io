@@ -13,7 +13,7 @@
   <meta name="theme-color" content="#0c0909">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/assets/fonts/JetBrainsMonoNerdFont-Regular.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="/assets/css/site.css?v=20260824">
+  <link rel="stylesheet" href="/assets/css/site.css?v=20260825b">
   <script>document.documentElement.classList.replace('no-js', 'js');</script>
   <script type="application/ld+json">
   {
@@ -151,9 +151,9 @@
         <header class="window-titlebar"><span>[7 entries] projects — j3w1</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
         <div class="app-menu" aria-hidden="true"><span>Project</span><span>Edit</span><span>View</span><span>Tools</span><span>Help</span></div>
         <div class="project-toolbar">
-          <button class="toolbar-label project-filter-button" type="button" data-project-visibility="all" aria-pressed="true"><span class="ui-icon" aria-hidden="true">&#xf0ae;</span>All projects <span data-project-count="all">(7)</span></button>
-          <button class="toolbar-label project-filter-button" type="button" data-project-visibility="public" aria-pressed="false"><span class="ui-icon" aria-hidden="true">&#xf0ac;</span>Public <span data-project-count="public">(5)</span></button>
-          <button class="toolbar-label project-filter-button" type="button" data-project-visibility="internal" aria-pressed="false"><span class="ui-icon" aria-hidden="true">&#xf023;</span>Internal <span data-project-count="internal">(2)</span></button>
+          <button class="toolbar-label project-filter-button" type="button" data-project-visibility="all" aria-pressed="true"><span class="ui-icon" aria-hidden="true">&#xf0ae;</span><span class="project-filter-label">All projects</span><span data-project-count="all">(7)</span></button>
+          <button class="toolbar-label project-filter-button" type="button" data-project-visibility="public" aria-pressed="false"><span class="ui-icon" aria-hidden="true">&#xf0ac;</span><span class="project-filter-label">Public</span><span data-project-count="public">(5)</span></button>
+          <button class="toolbar-label project-filter-button" type="button" data-project-visibility="internal" aria-pressed="false"><span class="ui-icon" aria-hidden="true">&#xf023;</span><span class="project-filter-label">Internal</span><span data-project-count="internal">(2)</span></button>
           <label class="filter-field" for="project-filter"><span class="ui-icon" aria-hidden="true">&#xf002;</span><span class="sr-only">Filter projects</span><input id="project-filter" type="search" autocomplete="off" placeholder="Filter project name…"></label>
         </div>
         <div class="project-app-body">
@@ -161,6 +161,13 @@
             <div class="table-scroller">
               <table class="project-table">
                 <caption class="sr-only">Current, public, and historical projects</caption>
+                <colgroup>
+                  <col class="project-col-number">
+                  <col class="project-col-name">
+                  <col class="project-col-stack">
+                  <col class="project-col-state">
+                  <col class="project-col-repository">
+                </colgroup>
                 <thead><tr><th scope="col">#</th><th scope="col">Name</th><th scope="col">Type / stack</th><th scope="col">State</th><th scope="col">Repository</th></tr></thead>
                 <tbody>
                   <tr data-project-row="ce-systems" data-visibility="internal"><td><button class="project-selector" type="button" data-project="ce-systems" aria-pressed="false" aria-label="Show CE Systems details">01</button></td><td>CE Systems</td><td>Laravel · PHP · Vue</td><td>Active</td><td>Private / internal</td></tr>
@@ -266,7 +273,7 @@
   <dialog id="photo-viewer" class="photo-viewer" aria-labelledby="photo-viewer-title"><header class="window-titlebar"><h2 id="photo-viewer-title">photograph — ristretto</h2><button type="button" class="window-close" data-close-photo aria-label="Close photograph">×</button></header><figure><img alt=""><figcaption></figcaption></figure></dialog>
   <div id="j3w1ctl-root"></div>
 
-  <script src="/assets/js/site.js?v=20260824" defer></script>
-  <script src="/assets/js/public-content.js?v=20260824a" type="module"></script>
+  <script src="/assets/js/site.js?v=20260825b" defer></script>
+  <script src="/assets/js/public-content.js?v=20260825b" type="module"></script>
 </body>
 </html>

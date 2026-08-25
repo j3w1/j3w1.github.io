@@ -1,7 +1,9 @@
 import { renderAst } from "./content-renderer.js?v=20260824";
+import { closePhotoViewer, isPhotoViewerBackdropClick } from "./photo-viewer.js?v=20260825b";
 
 const collections = ["writing", "books", "photography"];
 let index;
+let photoReturnFocus = null;
 
 const element = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -69,7 +71,7 @@ const selectRoute = () => {
       thumbnail.alt = image.alt;
       button.append(thumbnail);
       if (image.caption) button.append(element("span", "", image.caption));
-      button.addEventListener("click", () => openPhoto(target, image));
+      button.addEventListener("click", () => openPhoto(target, image, button));
       grid.append(button);
     }
     detail.append(grid);
@@ -110,9 +112,10 @@ const renderCollection = (collection) => {
   list.replaceChildren(fragment);
 };
 
-const openPhoto = (entry, image) => {
+const openPhoto = (entry, image, sourceThumbnail) => {
   const dialog = document.querySelector("#photo-viewer");
   const img = dialog.querySelector("img");
+  photoReturnFocus = sourceThumbnail;
   img.src = image.src;
   img.alt = image.alt;
   dialog.querySelector("figcaption").textContent = image.caption || entry.caption;
@@ -122,13 +125,16 @@ const openPhoto = (entry, image) => {
 
 const closePhoto = () => {
   const dialog = document.querySelector("#photo-viewer");
-  if (dialog.open) dialog.close();
-  history.pushState({ workspace: "photography" }, "", "#photography");
-  window.dispatchEvent(new HashChangeEvent("hashchange"));
+  const returnFocus = photoReturnFocus;
+  photoReturnFocus = null;
+  closePhotoViewer(dialog, returnFocus);
 };
 
 document.querySelector("[data-close-photo]")?.addEventListener("click", closePhoto);
 document.querySelector("#photo-viewer")?.addEventListener("cancel", (event) => { event.preventDefault(); closePhoto(); });
+document.querySelector("#photo-viewer")?.addEventListener("click", (event) => {
+  if (isPhotoViewerBackdropClick(event)) closePhoto();
+});
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && document.querySelector("#photo-viewer")?.open) {
     event.preventDefault();

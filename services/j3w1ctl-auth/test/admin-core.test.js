@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { MutationGate, publicationTarget, shortCommit } from "../../../admin/j3w1ctl-core.js";
+import { ActivityGate, buildPhotographyPreviewItems, MutationGate, ObjectUrlRegistry, publicationTarget, shortCommit } from "../../../admin/j3w1ctl-core.js";
 import { EXAMPLES } from "../../../admin/j3w1ctl-examples.js";
 import { IMAGE_ACCEPT, IMAGE_LIMITS, acceptedImageType, fitWithin } from "../../../admin/j3w1ctl-images.js";
 
@@ -16,6 +16,116 @@ test("mutation gate rejects concurrent publish, update, and delete attempts", ()
     assert.equal(gate.inFlight, false);
     assert.equal(gate.enter(action), true);
   }
+});
+
+test("activity gate gives one foreground read explicit ownership", () => {
+  const gate = new ActivityGate();
+  const owner = gate.enter("reading books");
+  assert.ok(owner);
+  assert.equal(gate.enter("reading photography"), null);
+  assert.equal(gate.owns(owner), true);
+  assert.equal(gate.leave({ action: "reading books", sequence: owner.sequence }), false);
+  assert.equal(gate.inFlight, true);
+  assert.equal(gate.leave(owner), true);
+  assert.equal(gate.inFlight, false);
+});
+
+test("delayed foreground reads admit one request and release after failure", async () => {
+  const gate = new ActivityGate();
+  const requests = { books: 0, photography: 0, preview: 0 };
+  const run = async (name, { fail = false } = {}) => {
+    const owner = gate.enter(`reading ${name}`);
+    if (!owner) return "ignored";
+    requests[name] += 1;
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      if (fail) throw new Error("read failed");
+      return "complete";
+    } finally {
+      gate.leave(owner);
+    }
+  };
+
+  const first = run("books");
+  const duplicate = run("books");
+  const impatientNavigation = run("photography");
+  assert.deepEqual(await Promise.all([first, duplicate, impatientNavigation]), ["complete", "ignored", "ignored"]);
+  assert.deepEqual(requests, { books: 1, photography: 0, preview: 0 });
+  assert.equal(await run("photography"), "complete");
+  assert.deepEqual(requests, { books: 1, photography: 1, preview: 0 });
+
+  await assert.rejects(run("books", { fail: true }), /read failed/);
+  assert.equal(gate.inFlight, false);
+  assert.equal(await run("books"), "complete");
+
+  const preview = run("preview");
+  const duplicatePreview = run("preview");
+  assert.deepEqual(await Promise.all([preview, duplicatePreview]), ["complete", "ignored"]);
+  assert.deepEqual(requests, { books: 3, photography: 1, preview: 1 });
+});
+
+test("object URL registry revokes every local photography preview URL", () => {
+  const revoked = [];
+  let sequence = 0;
+  const registry = new ObjectUrlRegistry({
+    createObjectURL: () => `blob:preview-${++sequence}`,
+    revokeObjectURL: (url) => revoked.push(url),
+  });
+  assert.equal(registry.create({}), "blob:preview-1");
+  assert.equal(registry.create({}), "blob:preview-2");
+  registry.revokeAll();
+  assert.deepEqual(revoked, ["blob:preview-1", "blob:preview-2"]);
+  assert.equal(registry.urls.size, 0);
+});
+
+test("photography preview preserves validated order across published and local images", () => {
+  const firstLocal = new Blob(["first"], { type: "image/webp" });
+  const secondLocal = new Blob(["second"], { type: "image/webp" });
+  const created = [];
+  const images = [
+    { id: "existing", file: "existing.webp", alt: "Existing", caption: "Published" },
+    { id: "first-local", file: "first-local.webp", alt: "First local", caption: "One" },
+    { id: "second-local", file: "second-local.webp", alt: "Second local", caption: "Two" },
+  ];
+  const photoItems = [
+    { id: "second-local", full: { blob: secondLocal } },
+    { id: "existing", publicSrc: "/assets/photography/entry/existing.webp" },
+    { id: "first-local", full: { blob: firstLocal } },
+  ];
+  const preview = buildPhotographyPreviewItems({
+    images,
+    photoItems,
+    persisted: true,
+    slug: "entry",
+    createObjectUrl: (blob) => { created.push(blob); return `blob:preview-${created.length}`; },
+  });
+  assert.deepEqual(preview.map(({ id, source }) => [id, source]), [
+    ["existing", "/assets/photography/entry/existing.webp"],
+    ["first-local", "blob:preview-1"],
+    ["second-local", "blob:preview-2"],
+  ]);
+  assert.deepEqual(created, [firstLocal, secondLocal]);
+});
+
+test("new photography preview uses a local object URL without inventing a public source", () => {
+  const local = new Blob(["local"], { type: "image/webp" });
+  const images = [{ id: "local", file: "local.webp", alt: "Local", caption: "Draft" }];
+  const localPreview = buildPhotographyPreviewItems({
+    images,
+    photoItems: [{ id: "local", full: { blob: local } }],
+    persisted: false,
+    slug: "new-entry",
+    createObjectUrl: () => "blob:new-entry",
+  });
+  const unavailablePreview = buildPhotographyPreviewItems({
+    images,
+    photoItems: [],
+    persisted: false,
+    slug: "new-entry",
+    createObjectUrl: () => "unused",
+  });
+  assert.equal(localPreview[0].source, "blob:new-entry");
+  assert.equal(unavailablePreview[0].source, "");
 });
 
 test("publication target distinguishes server-reported main and sandbox branches", () => {
