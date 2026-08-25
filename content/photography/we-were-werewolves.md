@@ -4,7 +4,7 @@ slug: we-were-werewolves
 date: 2026-08-25
 location: forbidden forest
 camera: memories
-caption: we were happy, we were werewolves staring at the moon, and we had no idea what was there, but we knew it would be good
+caption: we were happy. we were werewolves staring at the moon, and we had no idea what was there, but we knew it would be good.
 images:
   - id: image-01
     file: image-01.webp
@@ -14,6 +14,6 @@ images:
   - id: image-02
     file: image-02.webp
     thumbnail: image-02-thumb.webp
-    alt: two werewolves living without full moons but full of life
-    caption: two werewolves living without full moons but full of life
+    alt: two werewolves living at full moon or full of life?
+    caption: two werewolves living at full moon or full of life?
 ---
