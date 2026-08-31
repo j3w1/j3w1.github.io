@@ -63,7 +63,9 @@ test("server logging excludes request secrets, bodies, query values, and photogr
 
 test("Vercel Fastify entrypoint starts the server at module load", async () => {
   const source = await fs.readFile(path.join(repoRoot, "services", "j3w1ctl-auth", "src", "server.js"), "utf8");
+  assert.match(source, /import Fastify from "fastify";/);
   assert.match(source, /import \{ buildServer \} from "\.\/service\.js";/);
+  assert.match(source, /buildServer\(\{ fastifyFactory: Fastify, logger: true \}\)/);
   assert.match(source, /await server\.listen\(\{ host: "0\.0\.0\.0", port:/);
   assert.doesNotMatch(source, /process\.argv|isDirectEntrypoint/);
 });

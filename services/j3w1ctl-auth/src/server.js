@@ -1,6 +1,7 @@
+import Fastify from "fastify";
 import { buildServer } from "./service.js";
 
-const server = await buildServer({ logger: true });
+const server = await buildServer({ fastifyFactory: Fastify, logger: true });
 
 // Vercel's Fastify runtime captures this listener while importing the
 // recognized entrypoint. The same listener serves ordinary `npm start` use.

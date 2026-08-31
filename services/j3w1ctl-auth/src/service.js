@@ -69,6 +69,7 @@ const parseJsonPayload = (request) => {
 };
 
 export const buildServer = async ({
+  fastifyFactory = Fastify,
   environment = process.env,
   fetchImpl = fetch,
   githubClient,
@@ -81,7 +82,7 @@ export const buildServer = async ({
   now,
 } = {}) => {
   const config = loadConfig(environment);
-  const app = Fastify({
+  const app = fastifyFactory({
     logger: logger ? {
       redact: ["req.headers", "req.query", "req.body", "res.headers"],
       serializers: {
