@@ -55,10 +55,17 @@ test("browser OAuth handoff keeps exact origin, source, type, and channel checks
 });
 
 test("server logging excludes request secrets, bodies, query values, and photograph bytes", async () => {
-  const source = await fs.readFile(path.join(repoRoot, "services", "j3w1ctl-auth", "src", "server.js"), "utf8");
+  const source = await fs.readFile(path.join(repoRoot, "services", "j3w1ctl-auth", "src", "service.js"), "utf8");
   assert.match(source, /redact: \["req\.headers", "req\.query", "req\.body", "res\.headers"\]/);
   assert.match(source, /url: String\(request\.url \?\? ""\)\.split\("\?", 1\)\[0\]/);
   assert.doesNotMatch(source, /request\.log\.(?:info|warn|error)\([^\n]*(?:headers|query|body|cookie|token|blob|photo)/i);
+});
+
+test("Vercel Fastify entrypoint starts the server at module load", async () => {
+  const source = await fs.readFile(path.join(repoRoot, "services", "j3w1ctl-auth", "src", "server.js"), "utf8");
+  assert.match(source, /import \{ buildServer \} from "\.\/service\.js";/);
+  assert.match(source, /await server\.listen\(\{ host: "0\.0\.0\.0", port:/);
+  assert.doesNotMatch(source, /process\.argv|isDirectEntrypoint/);
 });
 
 test("direct and i3bar launchers use the same CMS bundle cache key", async () => {

@@ -1,16 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import deployedServer, { buildServer } from "../src/server.js";
+import { buildServer } from "../src/service.js";
 import { testProductionEnvironment } from "./helpers.js";
 
 const productionEnvironment = testProductionEnvironment;
-
-test.after(async () => deployedServer.close());
-
-test("deployment entrypoint exports the Fastify server instance", () => {
-  assert.equal(typeof deployedServer.listen, "function");
-  assert.equal(typeof deployedServer.server?.emit, "function");
-});
 
 test("health remains healthy while configuration is incomplete", async () => {
   const app = await buildServer({ environment: {}, githubClient: {} });
