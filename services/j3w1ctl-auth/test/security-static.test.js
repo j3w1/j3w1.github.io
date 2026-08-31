@@ -61,6 +61,12 @@ test("server logging excludes request secrets, bodies, query values, and photogr
   assert.doesNotMatch(source, /request\.log\.(?:info|warn|error)\([^\n]*(?:headers|query|body|cookie|token|blob|photo)/i);
 });
 
+test("provider acceptance requests only GitHub App publication credentials", async () => {
+  const source = await fs.readFile(path.join(repoRoot, "services", "j3w1ctl-auth", "bin", "provider-acceptance.mjs"), "utf8");
+  assert.match(source, /const githubNames = \[\s*"GITHUB_APP_ID",\s*"GITHUB_PRIVATE_KEY_BASE64",\s*"GITHUB_API_VERSION",\s*\]/);
+  assert.doesNotMatch(source, /GITHUB_CLIENT_(?:ID|SECRET)|GITHUB_CALLBACK_URL|CMS_SESSION_SECRET/);
+});
+
 test("Vercel Fastify entrypoint starts the server at module load", async () => {
   const source = await fs.readFile(path.join(repoRoot, "services", "j3w1ctl-auth", "src", "server.js"), "utf8");
   assert.match(source, /import Fastify from "fastify";/);

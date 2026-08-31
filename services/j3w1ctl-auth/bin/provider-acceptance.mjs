@@ -25,13 +25,8 @@ if (!apply) {
 
 const config = loadConfig({ ...process.env, NODE_ENV: "production", VERCEL_ENV: "production" });
 const githubNames = [
-  "CMS_ALLOWED_GITHUB_LOGIN",
-  "CMS_ALLOWED_GITHUB_USER_ID",
   "GITHUB_APP_ID",
-  "GITHUB_CLIENT_ID",
-  "GITHUB_CLIENT_SECRET",
   "GITHUB_PRIVATE_KEY_BASE64",
-  "GITHUB_CALLBACK_URL",
   "GITHUB_API_VERSION",
 ];
 const missing = githubNames.filter((name) => !String(process.env[name] ?? "").trim());
