@@ -28,8 +28,8 @@ JetBrains Mono is self-hosted under `assets/fonts/`; its OFL license is included
 
 ## Content management
 
-Content can be added manually with the documented templates and CLI, or through the static `/admin/` j3w1ctl client after its service URL is configured. The small Node 24 service under [`services/j3w1ctl-auth/`](services/j3w1ctl-auth/README.md) owns authentication, validation, preview, and atomic expected-head GitHub commits. GitHub is the published-content database; the backend is not content storage.
+Content can be added manually with the documented templates and CLI, or through the static `/admin/` j3w1ctl client after its service URL is configured. The narrow Node 24/Fastify service under [`services/j3w1ctl-auth/`](services/j3w1ctl-auth/README.md) runs as Vercel Functions and owns authentication, validation, private temporary image staging, and atomic expected-head GitHub commits. GitHub is the published-content database; Vercel Blob is staging only and the backend is not permanent content storage.
 
-In production, j3w1ctl displays the backend-controlled `git:main · LIVE` target. Save draft remains browser-local, Preview does not publish, and Publish performs the single live GitHub mutation. Photography sources may be JPG, JPEG, PNG, or WebP; j3w1ctl creates the repository's full and thumbnail WebP files automatically and never commits the original source.
+In production, the service is source-bound to `j3w1/j3w1.github.io@main`; no browser or deployment setting can select another publication target. j3w1ctl requires API protocol compatibility before enabling authentication or mutation. Save draft remains browser-local, Preview does not publish, and Publish performs one expected-head GitHub mutation with no automatic write retry. Photography sources may be JPG, JPEG, PNG, or WebP; j3w1ctl creates full and thumbnail WebP files locally, stages only those generated files in private Blob, and never uploads the original source.
 
-No production service, GitHub App, credential, branch rule, or deployment is created by this repository.
+Backend deployment is explicit: protected Preview, staged Production without domain assignment, then promotion of the exact accepted deployment. Automatic Git deployments are disabled. The previous DigitalOcean publisher is not a fallback.

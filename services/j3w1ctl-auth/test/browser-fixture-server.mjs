@@ -23,7 +23,8 @@ const fixtureState = {
   collectionGets: { writing: 0, books: 0, photography: 0 },
   detailGets: { writing: 0, books: 0, photography: 0 },
   previewPosts: { writing: 0, books: 0, photography: 0 },
-  branch: "main",
+  protocolVersion: 1,
+  validSession: false,
   uploadNames: [],
 };
 const webp = Buffer.from("UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AA/v89WAAAAA==", "base64");
@@ -79,6 +80,7 @@ const authServer = createServer(async (request, response) => {
   if (url.pathname === "/auth/github/callback") {
     const channel = url.searchParams.get("channel") ?? "";
     const nonce = "browser-fixture-nonce";
+    fixtureState.validSession = true;
     const payload = { type: "j3w1ctl:auth-success", channel, token: "browser-fixture-token", expiresAt: 9999999999 };
     response.writeHead(200, {
       "Content-Type": "text/html; charset=utf-8",
@@ -93,9 +95,13 @@ const authServer = createServer(async (request, response) => {
   if (url.pathname === "/__test/fail-next" && request.method === "POST") { fixtureState.failNext = Number(url.searchParams.get("status") || 500); return json(response, 200, fixtureState, corsHeaders); }
   if (url.pathname === "/__test/fail-next-read" && request.method === "POST") { fixtureState.failNextRead = Number(url.searchParams.get("status") || 500); return json(response, 200, fixtureState, corsHeaders); }
   if (url.pathname === "/__test/read-delay" && request.method === "POST") { fixtureState.readDelay = Math.min(2000, Math.max(0, Number(url.searchParams.get("ms")) || 0)); return json(response, 200, fixtureState, corsHeaders); }
-  if (url.pathname === "/__test/branch" && request.method === "POST") { fixtureState.branch = url.searchParams.get("value") === "cms-sandbox" ? "cms-sandbox" : "main"; return json(response, 200, fixtureState, corsHeaders); }
-  if (url.pathname === "/__test/reset" && request.method === "POST") { Object.assign(fixtureState, { post: 0, put: 0, delete: 0, failNext: 0, failNextRead: 0, readDelay: 0, collectionGets: { writing: 0, books: 0, photography: 0 }, detailGets: { writing: 0, books: 0, photography: 0 }, previewPosts: { writing: 0, books: 0, photography: 0 }, uploadNames: [] }); return json(response, 200, fixtureState, corsHeaders); }
-  if (url.pathname === "/api/session") return json(response, 200, { owner: { id: "42", login: "j3w1" }, expiresAt: 9999999999, repository: { owner: "j3w1", name: "j3w1.github.io", branch: fixtureState.branch } }, corsHeaders);
+  if (url.pathname === "/__test/protocol" && request.method === "POST") { fixtureState.protocolVersion = url.searchParams.has("value") ? Number(url.searchParams.get("value")) : undefined; return json(response, 200, fixtureState, corsHeaders); }
+  if (url.pathname === "/__test/reset" && request.method === "POST") { Object.assign(fixtureState, { post: 0, put: 0, delete: 0, failNext: 0, failNextRead: 0, readDelay: 0, collectionGets: { writing: 0, books: 0, photography: 0 }, detailGets: { writing: 0, books: 0, photography: 0 }, previewPosts: { writing: 0, books: 0, photography: 0 }, protocolVersion: 1, validSession: false, uploadNames: [] }); return json(response, 200, fixtureState, corsHeaders); }
+  const provenance = { provider: "vercel", runtime: "node", environment: "development", sourceRevision: "179a3740656b16a0382f362917651ee829643aea", protocolVersion: fixtureState.protocolVersion, repository: { owner: "j3w1", name: "j3w1.github.io", branch: "main" } };
+  if (url.pathname === "/healthz") return json(response, 200, { status: "ok", configured: true, protocolVersion: fixtureState.protocolVersion, provenance }, corsHeaders);
+  if (url.pathname.startsWith("/api/") && request.headers.authorization !== "Bearer browser-fixture-token") return json(response, 401, { error: { code: "unauthorized", message: "Authentication required.", requestId: "fixture" } }, corsHeaders);
+  if (url.pathname !== "/api/logout" && url.pathname.startsWith("/api/") && !fixtureState.validSession) return json(response, 401, { error: { code: "unauthorized", message: "Authentication required.", requestId: "fixture" } }, corsHeaders);
+  if (url.pathname === "/api/session") return json(response, 200, { owner: { id: "42", login: "j3w1" }, expiresAt: 9999999999, protocolVersion: fixtureState.protocolVersion, provenance, repository: { owner: "j3w1", name: "j3w1.github.io", branch: "main" } }, corsHeaders);
   if (url.pathname.match(/^\/api\/content\/(writing|books|photography)$/) && request.method === "GET") {
     const collection = url.pathname.split("/").at(-1);
     fixtureState.collectionGets[collection] += 1;
@@ -129,17 +135,6 @@ const authServer = createServer(async (request, response) => {
       const entry = { ...metadata, ...(collection === "writing" ? { blocks: ast(parsed.body) } : collection === "books" ? { notes: ast(parsed.body) } : {}), contentDigest: "mutation-fixture" };
       const index = collections[collection].findIndex(({ slug }) => slug === (routeSlug || metadata.slug));
       if (index >= 0) collections[collection][index] = entry; else collections[collection].push(entry);
-    } else if (request.headers["content-type"]?.startsWith("multipart/form-data")) {
-      const chunks = []; for await (const chunk of request) chunks.push(chunk);
-      const multipart = Buffer.concat(chunks).toString("latin1");
-      fixtureState.uploadNames = [...multipart.matchAll(/filename="([^"]+)"/g)].map((match) => match[1]);
-      const metadataMatch = multipart.match(/name="metadata"\r\n\r\n([^\r\n]+)\r\n/);
-      if (metadataMatch) {
-        const metadata = JSON.parse(metadataMatch[1]);
-        const entry = { ...metadata, images: metadata.images.map((image) => ({ ...image, src: `/assets/photography/${metadata.slug}/${image.file}`, thumbnailSrc: `/assets/photography/${metadata.slug}/${image.thumbnail}` })), contentDigest: "mutation-fixture" };
-        const index = collections.photography.findIndex(({ slug }) => slug === (routeSlug || metadata.slug));
-        if (index >= 0) collections.photography[index] = entry; else collections.photography.push(entry);
-      }
     }
     return json(response, request.method === "POST" ? 201 : 200, { commitSha: "3".repeat(40), headSha: "3".repeat(40) }, corsHeaders);
   }
@@ -152,7 +147,7 @@ const authServer = createServer(async (request, response) => {
     const parsed = JSON.parse(body);
     return json(response, 200, { metadata: parsed.metadata, blocks: ast(parsed.body || parsed.metadata.caption || "Photography preview metadata is valid.") }, corsHeaders);
   }
-  if (url.pathname === "/api/logout" && request.method === "POST") { response.writeHead(204, corsHeaders); return response.end(); }
+  if (url.pathname === "/api/logout" && request.method === "POST") { fixtureState.validSession = false; response.writeHead(204, corsHeaders); return response.end(); }
   return json(response, 404, { error: { code: "not_found", message: "Not found.", requestId: "fixture" } }, corsHeaders);
 });
 

@@ -1,30 +1,31 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildServer } from "../src/server.js";
+import { buildServer } from "../src/service.js";
+import { testProductionEnvironment } from "./helpers.js";
 
-const productionEnvironment = {
-  NODE_ENV: "production",
-  CMS_SITE_ORIGIN: "https://j3w1.github.io",
-  CMS_ALLOWED_GITHUB_LOGIN: "j3w1",
-  CMS_ALLOWED_GITHUB_USER_ID: "42",
-  CMS_SESSION_SECRET: "a sufficiently long test-only session secret",
-  GITHUB_APP_ID: "1",
-  GITHUB_CLIENT_ID: "client",
-  GITHUB_CLIENT_SECRET: "secret",
-  GITHUB_PRIVATE_KEY_BASE64: "key",
-  GITHUB_CALLBACK_URL: "https://cms.example/auth/github/callback",
-};
+const productionEnvironment = testProductionEnvironment;
 
 test("health remains healthy while configuration is incomplete", async () => {
   const app = await buildServer({ environment: {}, githubClient: {} });
   const response = await app.inject({ method: "GET", url: "/healthz" });
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(response.json(), { status: "ok", configured: false });
+  assert.deepEqual(response.json(), {
+    status: "ok",
+    configured: false,
+    protocolVersion: 1,
+    provenance: {
+      provider: "vercel",
+      runtime: "node",
+      environment: "development",
+      protocolVersion: 1,
+      repository: { owner: "j3w1", name: "j3w1.github.io", branch: "main" },
+    },
+  });
   await app.close();
 });
 
 test("API errors have stable shape and all API content routes require bearer auth", async () => {
-  const app = await buildServer({ environment: {}, githubClient: {} });
+  const app = await buildServer({ environment: productionEnvironment, sessionManager: { verify: async () => { throw new Error("must not run"); } }, githubClient: {} });
   const response = await app.inject({ method: "GET", url: "/api/content/writing" });
   assert.equal(response.statusCode, 401);
   assert.equal(response.json().error.code, "unauthorized");
@@ -62,9 +63,9 @@ test("mutations enforce exact origin and publish through one repository commit",
   await app.close();
 });
 
-test("authenticated session reports the server-controlled publication target", async () => {
+test("authenticated session reports only the fixed publication target and protocol", async () => {
   const app = await buildServer({
-    environment: { ...productionEnvironment, GITHUB_OWNER: "j3w1", GITHUB_REPO: "j3w1.github.io", GITHUB_BRANCH: "cms-sandbox" },
+    environment: { ...productionEnvironment, GITHUB_OWNER: "attacker", GITHUB_REPO: "other", GITHUB_BRANCH: "other" },
     sessionManager: { verify: async () => ({ sub: "42", login: "j3w1", exp: 999999, jti: "jti" }) },
     githubClient: {},
   });
@@ -74,7 +75,30 @@ test("authenticated session reports the server-controlled publication target", a
     headers: { authorization: "Bearer token" },
   });
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(response.json().repository, { owner: "j3w1", name: "j3w1.github.io", branch: "cms-sandbox" });
+  assert.deepEqual(response.json().repository, { owner: "j3w1", name: "j3w1.github.io", branch: "main" });
+  assert.equal(response.json().protocolVersion, 1);
+  assert.equal(response.json().provenance.provider, "vercel");
+  await app.close();
+});
+
+test("Preview remains zero-write even when test dependencies attempt to supply an authenticated session", async () => {
+  let writes = 0;
+  const app = await buildServer({
+    environment: { ...productionEnvironment, VERCEL_ENV: "preview" },
+    sessionManager: { verify: async () => ({ sub: "42", login: "j3w1", exp: 999999, sessionId: "digest" }) },
+    githubClient: {
+      getSnapshot: async () => ({ headSha: "2".repeat(40), files: new Map() }),
+      createCommit: async () => { writes += 1; return { commitSha: "3".repeat(40) }; },
+    },
+  });
+  const response = await app.inject({
+    method: "POST",
+    url: "/api/content/writing",
+    headers: { authorization: `Bearer ${"t".repeat(43)}`, origin: "https://j3w1.github.io", "if-none-match": "*" },
+    payload: { metadata: { title: "Entry", slug: "entry", date: "2026-08-31", summary: "Summary", tags: [] }, body: "Body" },
+  });
+  assert.equal(response.statusCode, 503);
+  assert.equal(writes, 0);
   await app.close();
 });
 
@@ -106,5 +130,69 @@ test("OAuth callback errors notify only the exact configured origin and issue no
   assert.match(response.body, /j3w1ctl:auth-error/);
   assert.match(response.body, /https:\/\/j3w1\.github\.io/);
   assert.equal(response.body.includes("j3w1ctl:auth-success"), false);
+  await app.close();
+});
+
+test("OAuth callback verifies the exact owner, issues an opaque session, and always revokes the temporary GitHub token", async () => {
+  const channel = "c".repeat(43);
+  const state = `state.${channel}`;
+  const calls = { issue: 0, revoke: [] };
+  const sessionManager = {
+    randomToken: () => "n".repeat(43),
+    openOAuth: async () => ({ state, verifier: "pkce-verifier", channel }),
+    issue: async (user) => { calls.issue += 1; assert.equal(user.id, 42); return { token: "s".repeat(43), expiresAt: 1234 }; },
+  };
+  const githubClient = {
+    exchangeOAuthCode: async ({ code, verifier }) => {
+      assert.deepEqual({ code, verifier }, { code: "temporary-code", verifier: "pkce-verifier" });
+      return { access_token: "temporary-user-token" };
+    },
+    getUser: async (token) => { assert.equal(token, "temporary-user-token"); return { id: 42, login: "J3W1" }; },
+    revokeUserToken: async (token) => { calls.revoke.push(token); },
+  };
+  const app = await buildServer({ environment: productionEnvironment, sessionManager, githubClient });
+  const response = await app.inject({
+    method: "GET",
+    url: `/auth/github/callback?state=${state}&code=temporary-code`,
+    headers: { cookie: `__Host-j3w1ctl-oauth=sealed-state` },
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(calls.issue, 1);
+  assert.deepEqual(calls.revoke, ["temporary-user-token"]);
+  assert.match(response.body, /j3w1ctl:auth-success/);
+  assert.equal(response.body.includes("temporary-user-token"), false);
+  await app.close();
+});
+
+test("upload batch control routes require owner session and exact Origin", async () => {
+  const calls = [];
+  const uploadBatchManager = {
+    create: async (value) => { calls.push(["create", value]); return { id: "b".repeat(32) }; },
+    finalize: async (value) => { calls.push(["finalize", value]); return { commitSha: "4".repeat(40) }; },
+    cancel: async (value) => { calls.push(["cancel", value]); },
+    cleanup: async () => ({ scanned: 0, deleted: 0 }),
+  };
+  const session = { sub: "42", login: "j3w1", exp: 999999, sessionId: "digest" };
+  const app = await buildServer({
+    environment: productionEnvironment,
+    sessionManager: { verify: async () => session, revoke: async () => {} },
+    githubClient: {},
+    uploadBatchManager,
+  });
+  const headers = { authorization: `Bearer ${"t".repeat(43)}`, origin: "https://j3w1.github.io", "if-none-match": "*" };
+  const body = { collection: "photography", slug: "fixture", action: "create", imageIds: ["image-01"] };
+  const denied = await app.inject({ method: "POST", url: "/api/photography/upload-batches", headers: { ...headers, origin: "https://evil.example" }, payload: body });
+  assert.equal(denied.statusCode, 403);
+  assert.equal(calls.length, 0);
+  const created = await app.inject({ method: "POST", url: "/api/photography/upload-batches", headers, payload: body });
+  assert.equal(created.statusCode, 201);
+  assert.equal(calls[0][0], "create");
+  assert.equal(calls[0][1].session, session);
+  assert.equal(calls[0][1].ifNoneMatch, "*");
+
+  const finalized = await app.inject({ method: "POST", url: `/api/photography/upload-batches/${"b".repeat(32)}/finalize`, headers, payload: { metadata: { slug: "fixture" } } });
+  assert.equal(finalized.statusCode, 200);
+  assert.equal(calls[1][0], "finalize");
+  assert.equal(typeof calls[1][1].verifySession, "function");
   await app.close();
 });

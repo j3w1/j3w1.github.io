@@ -10,7 +10,12 @@
   "scripts": {
     "start": "node src/server.js",
     "test": "node --test test/*.test.js",
+    "test:browser": "playwright test --config playwright.config.mjs",
     "test:browser-fixture": "node test/browser-fixture-server.mjs",
+    "client:bundle": "node bin/build-client-bundle.mjs",
+    "client:check": "node bin/build-client-bundle.mjs --check",
+    "deploy:preflight": "node bin/deploy-preflight.mjs",
+    "acceptance:provider": "node bin/provider-acceptance.mjs",
     "content:new": "node bin/content-cli.mjs new",
     "content:validate": "node bin/content-cli.mjs validate",
     "content:rebuild": "node bin/content-cli.mjs rebuild",
@@ -19,11 +24,15 @@
   "dependencies": {
     "@fastify/cors": "^11.3.0",
     "@fastify/helmet": "^13.1.1",
-    "@fastify/multipart": "^10.1.1",
-    "@fastify/rate-limit": "^11.2.0",
+    "@upstash/redis": "^1.38.3",
+    "@vercel/blob": "^2.8.0",
     "fastify": "^5.12.1",
     "jose": "^6.2.10",
     "markdown-it": "^15.0.0",
     "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "esbuild": "^0.28.2"
   }
 }

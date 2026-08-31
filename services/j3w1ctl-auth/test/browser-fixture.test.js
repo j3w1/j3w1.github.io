@@ -23,14 +23,16 @@ test("browser fixture models a cross-origin frontend and OAuth service", async (
     assert.equal(callback.headers.get("x-frame-options"), "DENY");
     assert.match(await callback.text(), new RegExp(fixture.frontendOrigin.replaceAll(".", "\\.")));
 
-    const session = await fetch(`${fixture.authOrigin}/api/session`).then((response) => response.json());
+    const authorization = { Authorization: "Bearer browser-fixture-token" };
+    const session = await fetch(`${fixture.authOrigin}/api/session`, { headers: authorization }).then((response) => response.json());
     assert.deepEqual(session.repository, { owner: "j3w1", name: "j3w1.github.io", branch: "main" });
 
     await fetch(`${fixture.authOrigin}/__test/reset`, { method: "POST" });
+    await fetch(`${fixture.authOrigin}/auth/github/callback?channel=${channel}`);
     await fetch(`${fixture.authOrigin}/__test/read-delay?ms=10`, { method: "POST" });
-    await fetch(`${fixture.authOrigin}/api/content/books`);
-    await fetch(`${fixture.authOrigin}/api/content/books/fixture-book`);
-    await fetch(`${fixture.authOrigin}/api/preview/books`, { method: "POST", body: JSON.stringify({ metadata: {}, body: "" }) });
+    await fetch(`${fixture.authOrigin}/api/content/books`, { headers: authorization });
+    await fetch(`${fixture.authOrigin}/api/content/books/fixture-book`, { headers: authorization });
+    await fetch(`${fixture.authOrigin}/api/preview/books`, { method: "POST", headers: { ...authorization, "Content-Type": "application/json" }, body: JSON.stringify({ metadata: {}, body: "" }) });
     const state = await fetch(`${fixture.authOrigin}/__test/state`).then((response) => response.json());
     assert.deepEqual(state.collectionGets, { writing: 0, books: 1, photography: 0 });
     assert.deepEqual(state.detailGets, { writing: 0, books: 1, photography: 0 });

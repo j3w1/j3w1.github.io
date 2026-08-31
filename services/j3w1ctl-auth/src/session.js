@@ -1,65 +1,81 @@
-import { hkdfSync, randomBytes, randomUUID } from "node:crypto";
+import { createHash, hkdfSync, randomBytes } from "node:crypto";
+import { CompactEncrypt, compactDecrypt } from "jose";
 import {
-  CompactEncrypt,
-  SignJWT,
-  compactDecrypt,
-  jwtVerify,
-} from "jose";
+  J3W1CTL_API_PROTOCOL,
+  SESSION_SCHEMA_VERSION,
+  SESSION_TTL_SECONDS,
+} from "./constants.js";
+import { createRedisStore } from "./store.js";
 import { unauthorized } from "./errors.js";
 
 const encoder = new TextEncoder();
-const SESSION_AUDIENCE = "j3w1ctl";
-const SESSION_ISSUER = "j3w1ctl-auth";
 const OAUTH_AUDIENCE = "j3w1ctl-oauth-state";
+const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 const deriveKey = (secret, label, length = 32) =>
   new Uint8Array(hkdfSync("sha256", Buffer.from(secret, "utf8"), Buffer.alloc(0), Buffer.from(label), length));
 
-export const createSessionManager = (config, { now = () => Math.floor(Date.now() / 1000) } = {}) => {
-  const signingKey = deriveKey(config.sessionSecret, "j3w1ctl-session-v1");
-  const oauthKey = deriveKey(config.sessionSecret, "j3w1ctl-oauth-state-v1");
-  const revoked = new Map();
+export const digestSessionToken = (token) => createHash("sha256").update(token, "utf8").digest("hex");
+const sessionKey = (token) => `sess:v1:${digestSessionToken(token)}`;
 
-  const prune = () => {
-    const current = now();
-    for (const [jti, expiry] of revoked) if (expiry <= current) revoked.delete(jti);
-  };
+export const createSessionManager = (config, {
+  now = () => Math.floor(Date.now() / 1000),
+  store = createRedisStore(config),
+} = {}) => {
+  const oauthKey = deriveKey(config.sessionSecret, "j3w1ctl-oauth-state-v1");
 
   const issue = async (user) => {
+    if (String(user?.id) !== config.allowedGithubUserId || String(user?.login ?? "").toLowerCase() !== config.allowedGithubLogin) {
+      throw unauthorized("The GitHub owner identity is not authorized.");
+    }
     const issuedAt = now();
-    const expiresAt = issuedAt + 60 * 60;
-    const jti = randomUUID();
-    const token = await new SignJWT({ login: user.login })
-      .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-      .setSubject(String(user.id))
-      .setIssuer(SESSION_ISSUER)
-      .setAudience(SESSION_AUDIENCE)
-      .setJti(jti)
-      .setIssuedAt(issuedAt)
-      .setExpirationTime(expiresAt)
-      .sign(signingKey);
-    return { token, expiresAt, jti };
+    const expiresAt = issuedAt + SESSION_TTL_SECONDS;
+    const record = {
+      schemaVersion: SESSION_SCHEMA_VERSION,
+      ownerUserId: String(user.id),
+      ownerLogin: String(user.login).toLowerCase(),
+      issuedAt,
+      expiresAt,
+      protocolVersion: J3W1CTL_API_PROTOCOL,
+    };
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const token = randomBytes(32).toString("base64url");
+      if (await store.setIfAbsent(sessionKey(token), record, SESSION_TTL_SECONDS)) return { token, expiresAt };
+    }
+    throw unauthorized("A j3w1ctl session could not be issued.");
   };
 
   const verify = async (token) => {
-    try {
-      const { payload } = await jwtVerify(token, signingKey, {
-        issuer: SESSION_ISSUER,
-        audience: SESSION_AUDIENCE,
-        currentDate: new Date(now() * 1000),
-      });
-      prune();
-      if (!payload.jti || revoked.has(payload.jti)) throw unauthorized("The j3w1ctl session has expired.");
-      return payload;
-    } catch (error) {
-      if (error?.statusCode === 401) throw error;
+    if (!TOKEN_PATTERN.test(token)) throw unauthorized("The j3w1ctl session is invalid or expired.");
+    const key = sessionKey(token);
+    const record = await store.get(key);
+    const current = now();
+    if (
+      !record
+      || record.schemaVersion !== SESSION_SCHEMA_VERSION
+      || record.protocolVersion !== J3W1CTL_API_PROTOCOL
+      || record.ownerUserId !== config.allowedGithubUserId
+      || record.ownerLogin !== config.allowedGithubLogin
+      || !Number.isInteger(record.issuedAt)
+      || !Number.isInteger(record.expiresAt)
+      || record.issuedAt > current + 30
+      || record.expiresAt <= current
+    ) {
       throw unauthorized("The j3w1ctl session is invalid or expired.");
     }
+    return {
+      sub: record.ownerUserId,
+      login: record.ownerLogin,
+      iat: record.issuedAt,
+      exp: record.expiresAt,
+      protocolVersion: record.protocolVersion,
+      sessionId: key.slice("sess:v1:".length),
+    };
   };
 
-  const revoke = (payload) => {
-    if (payload?.jti && payload?.exp) revoked.set(payload.jti, payload.exp);
-    prune();
+  const revoke = async (token) => {
+    if (!TOKEN_PATTERN.test(token)) return;
+    await store.delete(sessionKey(token));
   };
 
   const sealOAuth = async (payload) => {
@@ -79,9 +95,7 @@ export const createSessionManager = (config, { now = () => Math.floor(Date.now()
     try {
       const { plaintext } = await compactDecrypt(value, oauthKey);
       const payload = JSON.parse(new TextDecoder().decode(plaintext));
-      if (payload.aud !== OAUTH_AUDIENCE || payload.exp < now() || payload.iat > now() + 30) {
-        throw new Error("expired");
-      }
+      if (payload.aud !== OAUTH_AUDIENCE || payload.exp < now() || payload.iat > now() + 30) throw new Error("expired");
       return payload;
     } catch {
       throw unauthorized("The GitHub authorization state is invalid or expired.");
@@ -97,4 +111,3 @@ export const createSessionManager = (config, { now = () => Math.floor(Date.now()
     randomToken: (bytes = 32) => randomBytes(bytes).toString("base64url"),
   };
 };
-

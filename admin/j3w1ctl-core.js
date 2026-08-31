@@ -17,6 +17,14 @@ export class MutationGate {
   }
 }
 
+export const J3W1CTL_SUPPORTED_PROTOCOLS = Object.freeze([1]);
+export const FIXED_PUBLICATION_TARGET = Object.freeze({ owner: "j3w1", name: "j3w1.github.io", branch: "main" });
+
+export const protocolCompatibility = (value) => ({
+  protocolVersion: value,
+  compatible: Number.isInteger(value) && J3W1CTL_SUPPORTED_PROTOCOLS.includes(value),
+});
+
 export class ActivityGate {
   constructor() {
     this.inFlight = false;
@@ -74,13 +82,12 @@ export const buildPhotographyPreviewItems = ({ images, photoItems, persisted, sl
 });
 
 export const publicationTarget = (repository) => {
-  if (!repository?.owner || !repository?.name || !repository?.branch) {
-    return { label: "GitHub repository", mode: "UNKNOWN", live: false };
-  }
-  const live = repository.branch === "main";
+  const live = repository?.owner === FIXED_PUBLICATION_TARGET.owner
+    && repository?.name === FIXED_PUBLICATION_TARGET.name
+    && repository?.branch === FIXED_PUBLICATION_TARGET.branch;
   return {
-    label: `${repository.owner}/${repository.name} · git:${repository.branch} · ${live ? "LIVE" : "SANDBOX"}`,
-    mode: live ? "LIVE" : "SANDBOX",
+    label: live ? "j3w1/j3w1.github.io · git:main · LIVE" : "Fixed publication target unavailable",
+    mode: live ? "LIVE" : "INCOMPATIBLE",
     live,
   };
 };

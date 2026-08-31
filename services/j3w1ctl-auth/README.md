@@ -1,57 +1,66 @@
 # j3w1ctl-auth
 
-This Node 24 service is the deliberately narrow write boundary for the static j3w1ctl application. GitHub remains the published-content database; DigitalOcean runs authentication, validation, preview, and one-commit repository mutations only. The service stores no content on its ephemeral filesystem.
+This Node 24/Fastify service is the narrow Vercel publication boundary for the static GitHub Pages j3w1ctl client. Source constants bind it to `j3w1/j3w1.github.io@main`. GitHub is canonical published-content storage; private Vercel Blob holds generated photographs only while a bounded upload batch is open or under investigation.
 
 ## Local setup
 
-Copy `.env.example` into an untracked `.env`, provide a GitHub App created for local testing, then load those variables before `npm start`. `GET /healthz` remains healthy while configuration is incomplete; every authentication or API operation fails closed.
+Copy `.env.example` to an untracked `.env` and use development-only providers and a GitHub App created for local testing. `PORT` and `CMS_DEV_ORIGINS` are development-only. Production ignores `PORT` and does not support `GITHUB_OWNER`, `GITHUB_REPO`, or `GITHUB_BRANCH`. `GET /healthz` remains available when configuration is incomplete; authenticated and provider-backed operations fail closed.
 
-The GitHub App requires only repository `Contents: Read and write`, must be installed only on `j3w1/j3w1.github.io`, and uses one exact callback URL. No PAT, Actions, Workflows, Administration, Issues, or Pull Requests permission is used. The temporary user authorization token is revoked immediately after the configured numeric user ID and normalized login are both verified.
+The site-publisher GitHub App requires repository `Contents: Read and write`, is installed only on `j3w1/j3w1.github.io`, and uses exact callback URLs. No PAT or Actions, Workflows, Administration, Issues, Pull Requests, or deployment permission is used. The temporary OAuth token is revoked immediately after both owner ID and normalized login pass.
 
-## Content workflow
-
-From the repository root:
+Run the local graph from the repository root:
 
 ```powershell
 npm --prefix services/j3w1ctl-auth ci
-npm --prefix services/j3w1ctl-auth run content:new -- --repo-root ../.. --collection writing --slug my-entry
-npm --prefix services/j3w1ctl-auth run content:validate -- --repo-root ../..
-npm --prefix services/j3w1ctl-auth run content:rebuild -- --repo-root ../..
+npm --prefix services/j3w1ctl-auth test
+npm --prefix services/j3w1ctl-auth run client:check
+npm --prefix services/j3w1ctl-auth run content:check
+npm --prefix services/j3w1ctl-auth run deploy:preflight
 ```
 
-Manual editing uses the templates in `content/_templates/`. A Markdown file inside a collection is public; private drafts must stay outside the repository. `content:check` fails when the committed deterministic index is stale. j3w1ctl local drafts and browser-normalized WebP blobs live only in that browser's IndexedDB, survive logout, and can be removed with the separately confirmed “Forget local drafts” action.
+The preflight is zero-mutation. With no provider credentials it checks source, lock, protocol, fixed-target, secret-scan, and cutover invariants and marks credential-dependent checks unavailable. With Production credentials it additionally creates, reads, and removes one disposable Redis TTL key and one private Blob object. `--json` emits strict machine-readable results. Provider setup and acceptance use separately named commands.
 
-For normal production use, **Save draft** writes only to IndexedDB, **Preview** validates and renders without a repository mutation, and **Publish** creates one GitHub commit on the server-configured branch. With `GITHUB_BRANCH=main`, Publish is a live publication action and GitHub Pages deploys the resulting content. The authenticated session reports the configured repository and branch for display, but the browser cannot select or override that target.
+## Configuration ownership
 
-Photography accepts JPG, JPEG, PNG, and WebP source files in j3w1ctl. The browser applies decoded orientation, preserves aspect ratio and transparency, avoids upscaling, and generates a bounded full WebP plus thumbnail WebP. Only those generated WebP files are sent on Publish; original source files are neither uploaded nor committed.
+| Name | Ownership and scope |
+| --- | --- |
+| `j3w1/j3w1.github.io@main`, protocol `1` | immutable source constants |
+| `VERCEL_ENV`, `VERCEL_GIT_COMMIT_SHA`, `VERCEL_DEPLOYMENT_ID`, `VERCEL_REGION` | Vercel system values; safe bounded provenance |
+| `CMS_SITE_ORIGIN`, `CMS_ALLOWED_GITHUB_LOGIN`, `CMS_ALLOWED_GITHUB_USER_ID`, `GITHUB_APP_ID`, `GITHUB_CLIENT_ID`, `GITHUB_CALLBACK_URL`, `GITHUB_API_VERSION` | Production non-secret configuration; absent or harmless in Preview |
+| `CMS_SESSION_SECRET`, `GITHUB_CLIENT_SECRET`, `GITHUB_PRIVATE_KEY_BASE64`, `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `BLOB_READ_WRITE_TOKEN`, `CRON_SECRET` | Production secrets only; absent from Preview |
+| `PORT`, `CMS_DEV_ORIGINS` | Development-only |
+| `GITHUB_OWNER`, `GITHUB_REPO`, `GITHUB_BRANCH` | obsolete and unsupported |
 
-## Publication safety
+`CMS_SESSION_SECRET` encrypts/authenticates OAuth state; it does not sign browser sessions. Sessions are random 32-byte base64url bearer tokens represented in Redis only as `sess:v1:<sha256(token)>` records with schema, exact owner, issue/expiry time, protocol, and a 3,600-second TTL. Logout deletes the shared record and invalidates every Function instance.
 
-The service serializes all mutations. It reads one exact branch head, enforces the caller's blob precondition, rebuilds the entire index in memory, then calls GraphQL `createCommitOnBranch` once with that head as `expectedHeadOid`. Markdown, image pairs, deletions, and the public index therefore land in one commit. A changed head returns a conflict; it is never retried automatically against newer content. Paths are derived server-side from validated collection, immutable slug, and image ID.
+## Content and photography
 
-Session credentials are 60-minute HS256 JWTs kept by the browser in `sessionStorage`. OAuth state uses a separate HKDF-derived key and a short-lived encrypted HttpOnly cookie. Logout removes the browser token first and revokes its JTI in this process best-effort. Run exactly one App Platform instance because the revocation set is intentionally in memory and the product is single-owner.
+Save draft and source photographs stay in IndexedDB. Preview validates and renders with zero repository writes. Writing/book publication uses a small JSON request. Photography publication creates a private 30-minute batch, uploads only browser-generated WebP pairs directly to server-derived Blob paths, then finalizes with small JSON. The server checks the exact object set, MIME, full/thumbnail pairing, source size constants, RIFF/WEBP bytes, owner/session, slug/action/preconditions, and current GitHub CAS before a single commit attempt. Success and proven validation/conflict states delete staging. An ambiguous GitHub outcome is held without retry; an authenticated hourly Cron removes only abandoned `staging/j3w1ctl/` objects older than six hours.
 
-The service keeps Helmet enabled but deliberately omits `Cross-Origin-Opener-Policy`. The GitHub OAuth callback is a popup on the service origin and must retain the Pages window as `window.opener` long enough to deliver its exact-origin, channel-bound `postMessage`. The callback remains protected by a nonce-restricted CSP, `frame-ancestors 'none'`, and `X-Frame-Options: DENY`.
+All publication paths use one branch snapshot and `expectedHeadOid`. GitHub CAS, not a Function-local mutex, resolves competing instances. Effectful publication is single-attempt. After an ambiguous response, one read-only branch check classifies proven success, proven failure, or hold unknown. No hold produces another write.
 
-## Deployment and activation
+## Vercel deployment
 
-The example app spec uses `npm ci`, `npm start`, `/healthz`, `process.env.PORT`, one instance, runtime secrets, and `deploy_on_push: false`. Owner-operated production activation is:
+The Vercel project is `j3w1ctl-auth`, linked to `j3w1/j3w1.github.io` with Root Directory `services/j3w1ctl-auth`, Node 24, Fastify Functions/Fluid compute, and `git.deploymentEnabled=false`. `vercel.json` schedules the bounded staging cleanup. No Next.js wrapper is used.
 
-1. Deploy the unconfigured service and record its permanent HTTPS URL.
-2. Register the GitHub App with that service's single callback URL and only Contents read/write.
-3. Install it only on `j3w1/j3w1.github.io`.
-4. Add all values shown in `.env.example` as encrypted runtime variables where secret.
-5. Put the service origin in `admin/config.js` (no path, query, credentials, or trailing data).
-6. For future commissioning tests, temporarily set `GITHUB_BRANCH=cms-sandbox`, redeploy, and exercise create, stale-update conflict, photography replacement, and deletion there. Never merge commissioning content into `main`.
-7. For normal production operation, set `GITHUB_BRANCH=main` and manually redeploy. j3w1ctl must show `git:main · LIVE` before publishing.
+Provider activation sequence:
 
-DigitalOcean autodeploy is intentionally disabled. Every backend source change or branch-variable change requires an owner-operated deployment. To return safely to sandbox testing later, change only the runtime `GITHUB_BRANCH` value to `cms-sandbox`, redeploy, confirm the SANDBOX status line, run the tests, then restore `main` and redeploy again. The repository service remains environment-driven throughout.
+1. Configure Production-only secrets and exact `CMS_SITE_ORIGIN=https://j3w1.github.io` and `<production-origin>/auth/github/callback`; keep Preview free of production credentials.
+2. Enable Standard Deployment Protection for Preview and generated deployment URLs. Keep the production API origin public.
+3. Configure Vercel WAF limits for OAuth start/callback, authenticated reads, and mutation/upload controls. Identity and Origin checks remain application-level.
+4. Review team metered spend, then enable low web/email notifications and automatic production pause at a threshold above fixed plan/seat charges and normal low-volume traffic.
+5. Build a protected Preview with `vercel deploy`; it must report `configured=false` and remain zero-write.
+6. Stage the exact reviewed commit with `vercel --prod --skip-domain`, run preflight and provider acceptance, then promote only that deployment with `vercel promote <exact-deployment>`.
+7. Put the accepted production origin alone in `admin/config.js`, publish through the reviewed repository path, and verify GitHub Pages and the real browser flow.
 
-GitHub Pages continues to build from `main` at the repository root. `main` is currently unprotected; before activation, the owner must add a rule that blocks force pushes and branch deletion while allowing ordinary GitHub App fast-forward commits. This repository does not configure that rule.
+Automatic Git deployment and automatic production-domain assignment for staged deployments are disabled. There is no dynamic target selector, permanent test branch, DigitalOcean fallback, or automatic publication retry.
 
-## Operations
+## Operations and security
 
-- Rotate the GitHub private key/client secret and `CMS_SESSION_SECRET` together during a maintenance window; existing CMS sessions and OAuth states then become invalid.
-- Disable access by suspending/uninstalling the App or removing the App Platform secrets. The public site and committed content remain available.
-- Recover content with normal Git history. Rebuild `assets/data/content-index.json` from the authoritative Markdown before publishing a manual correction.
-- Logs intentionally exclude headers, query strings, bodies, cookies, and tokens. API failures expose only a stable code, safe message, and request ID.
+- Vercel WAF is rate/cost protection; session, owner, Origin, precondition, path, and CAS checks remain authoritative.
+- Keep Helmet enabled without Cross-Origin-Opener-Policy because the exact-origin OAuth popup must retain `window.opener`. CSP, `frame-ancestors 'none'`, and `X-Frame-Options: DENY` protect the callback.
+- Logs exclude headers, query strings, bodies, cookies, tokens, Blob objects, and photograph bytes. Responses expose stable error codes/messages and request IDs only.
+- Recover published content through Git history and rebuild the deterministic index after manual corrections.
+- Disable publication by suspending/uninstalling the GitHub App or removing Production credentials. Do not reactivate the retired DigitalOcean publisher.
+
+The DigitalOcean App is handed to the separate CE Metadata Reconciler workstream only after this service is accepted on Vercel. This repository does not document or activate that system.
