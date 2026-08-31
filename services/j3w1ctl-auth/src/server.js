@@ -1,16 +1,20 @@
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
-import multipart from "@fastify/multipart";
-import rateLimit from "@fastify/rate-limit";
-import { assertCollection, mediaPath, normalizeEntry, markdownToAst } from "./content.js";
+import { handleUpload } from "@vercel/blob/client";
+import { createBlobStore } from "./blob-store.js";
+import { J3W1CTL_API_PROTOCOL } from "./constants.js";
+import { assertCollection, normalizeEntry, markdownToAst } from "./content.js";
 import { loadConfig, requireConfigured } from "./config.js";
 import { AppError, badRequest, conflict, forbidden, unauthorized } from "./errors.js";
 import { createGitHubClient } from "./github.js";
+import { safeProvenance } from "./provenance.js";
 import { createRepositoryService } from "./repository.js";
 import { createSessionManager } from "./session.js";
+import { createRedisStore } from "./store.js";
+import { createUploadBatchManager } from "./upload-batches.js";
 
 const OAUTH_COOKIE = "__Host-j3w1ctl-oauth";
 const DEV_OAUTH_COOKIE = "j3w1ctl-oauth";
@@ -65,40 +69,15 @@ const parseJsonPayload = (request) => {
   return { metadata, body: markdownBody };
 };
 
-const parsePhotography = async (request) => {
-  if (!request.isMultipart()) throw badRequest("invalid_request", "Photography publication requires multipart form data.");
-  let metadata;
-  let total = 0;
-  const uploads = new Map();
-  for await (const part of request.parts()) {
-    if (part.type === "field") {
-      if (part.fieldname !== "metadata" || metadata) throw badRequest("invalid_request", "Unexpected or duplicate multipart field.");
-      try { metadata = JSON.parse(part.value); } catch { throw badRequest("invalid_request", "Photography metadata is not valid JSON."); }
-      continue;
-    }
-    const match = part.fieldname.match(/^(full|thumbnail)\.([a-z0-9]+(?:-[a-z0-9]+)*)$/);
-    if (!match || part.mimetype !== "image/webp") throw badRequest("invalid_image", "Only named full and thumbnail WebP pairs are accepted.");
-    const [, kind, id] = match;
-    const pair = uploads.get(id) ?? {};
-    if (pair[kind]) throw badRequest("invalid_image", "Duplicate photography upload path.");
-    const buffer = await part.toBuffer();
-    total += buffer.length;
-    if (total > 28 * 1024 * 1024) throw badRequest("image_too_large", "Photography upload exceeds 28 MiB.");
-    pair[kind] = buffer;
-    uploads.set(id, pair);
-  }
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) throw badRequest("invalid_request", "Photography metadata is required.");
-  for (const [id, pair] of uploads) {
-    if (!pair.full || !pair.thumbnail) throw badRequest("invalid_image", `Image ${id} requires a full and thumbnail pair.`);
-  }
-  return { metadata, body: "", uploads };
-};
-
 export const buildServer = async ({
   environment = process.env,
   fetchImpl = fetch,
   githubClient,
   sessionManager,
+  sharedStore,
+  blobStore,
+  repositoryService,
+  uploadBatchManager,
   logger = false,
   now,
 } = {}) => {
@@ -119,9 +98,13 @@ export const buildServer = async ({
     bodyLimit: 300 * 1024,
     genReqId: () => crypto.randomUUID(),
   });
-  const sessions = sessionManager ?? createSessionManager(config, { ...(now ? { now } : {}) });
+  const store = sharedStore ?? createRedisStore(config);
+  const sessions = sessionManager ?? createSessionManager(config, { store, ...(now ? { now } : {}) });
   const github = githubClient ?? createGitHubClient(config, { fetchImpl, ...(now ? { now } : {}) });
-  const repository = createRepositoryService(github);
+  const repository = repositoryService ?? createRepositoryService(github);
+  const privateBlobs = blobStore ?? createBlobStore(config);
+  const batches = uploadBatchManager ?? createUploadBatchManager({ store, blobStore: privateBlobs, repository, ...(now ? { now } : {}) });
+  const provenance = safeProvenance(config);
   const cookieName = config.nodeEnv === "production" ? OAUTH_COOKIE : DEV_OAUTH_COOKIE;
   const sendCallback = (reply, payload, statusCode = 200) => {
     const nonce = sessions.randomToken(18);
@@ -142,22 +125,16 @@ export const buildServer = async ({
     origin(origin, callback) {
       callback(null, !origin || config.allowedOrigins.includes(origin));
     },
-    allowedHeaders: ["Authorization", "Content-Type", "If-Match", "If-None-Match"],
+    allowedHeaders: ["Authorization", "Content-Type", "If-Match", "If-None-Match", "X-Vercel-Blob-Request-Attempt"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     exposedHeaders: ["ETag"],
   });
-  await app.register(multipart, {
-    limits: { files: 24, fields: 1, parts: 25, fileSize: 2 * 1024 * 1024 },
-    throwFileSizeLimit: true,
-  });
-  await app.register(rateLimit, { global: false });
-
   app.setErrorHandler((error, request, reply) => jsonError(request, reply, error));
   app.setNotFoundHandler((request, reply) => jsonError(request, reply, new AppError(404, "not_found", "The requested route does not exist.")));
 
-  app.get("/healthz", async () => ({ status: "ok", configured: config.configured }));
+  app.get("/healthz", async () => ({ status: "ok", configured: config.configured, protocolVersion: J3W1CTL_API_PROTOCOL, provenance }));
 
-  app.get("/auth/github/start", { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } }, async (request, reply) => {
+  app.get("/auth/github/start", async (request, reply) => {
     requireConfigured(config);
     noStore(reply);
     const channel = String(request.query?.channel ?? "");
@@ -176,7 +153,7 @@ export const buildServer = async ({
     return reply.redirect(authorization.href);
   });
 
-  app.get("/auth/github/callback", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (request, reply) => {
+  app.get("/auth/github/callback", async (request, reply) => {
     requireConfigured(config);
     noStore(reply);
     const hintedChannel = String(request.query?.state ?? "").split(".").at(-1);
@@ -213,25 +190,25 @@ export const buildServer = async ({
   });
 
   const authenticate = async (request, reply) => {
+    requireConfigured(config);
     noStore(reply);
-    request.cmsSession = await sessions.verify(parseBearer(request.headers.authorization));
+    request.cmsToken = parseBearer(request.headers.authorization);
+    request.cmsSession = await sessions.verify(request.cmsToken);
   };
   const mutationOrigin = async (request) => {
     if (!config.allowedOrigins.includes(request.headers.origin)) throw forbidden("This mutation origin is not allowed.");
   };
 
-  const readOptions = { preHandler: authenticate, config: { rateLimit: { max: 120, timeWindow: "1 minute" } } };
+  const readOptions = { preHandler: authenticate };
   app.get("/api/session", readOptions, async (request) => ({
     owner: { id: request.cmsSession.sub, login: request.cmsSession.login },
     expiresAt: request.cmsSession.exp,
-    repository: {
-      owner: config.githubOwner,
-      name: config.githubRepo,
-      branch: config.githubBranch,
-    },
+    protocolVersion: J3W1CTL_API_PROTOCOL,
+    provenance,
+    repository: provenance.repository,
   }));
   app.post("/api/logout", { preHandler: [authenticate, mutationOrigin] }, async (request, reply) => {
-    sessions.revoke(request.cmsSession);
+    await sessions.revoke(request.cmsToken);
     return reply.code(204).send();
   });
   app.get("/api/content/:collection", readOptions, async (request) => repository.list(assertCollection(request.params.collection)));
@@ -241,17 +218,19 @@ export const buildServer = async ({
     return result;
   });
 
-  const mutationOptions = { preHandler: [authenticate, mutationOrigin], config: { rateLimit: { max: 30, timeWindow: "1 minute" } } };
+  const mutationOptions = { preHandler: [authenticate, mutationOrigin] };
   app.post("/api/content/:collection", mutationOptions, async (request, reply) => {
     const collection = assertCollection(request.params.collection);
-    const payload = collection === "photography" ? await parsePhotography(request) : parseJsonPayload(request);
+    if (collection === "photography") throw badRequest("upload_batch_required", "Photography publication requires a private upload batch.");
+    const payload = parseJsonPayload(request);
     const slug = payload.metadata?.slug;
     const result = await repository.publish({ action: "create", collection, slug, ...payload, ifNoneMatch: request.headers["if-none-match"] });
     return reply.code(201).send(result);
   });
   app.put("/api/content/:collection/:slug", mutationOptions, async (request) => {
     const collection = assertCollection(request.params.collection);
-    const payload = collection === "photography" ? await parsePhotography(request) : parseJsonPayload(request);
+    if (collection === "photography") throw badRequest("upload_batch_required", "Photography publication requires a private upload batch.");
+    const payload = parseJsonPayload(request);
     if (payload.metadata?.slug && payload.metadata.slug !== request.params.slug) throw conflict("Published slugs are immutable.");
     return repository.publish({ action: "update", collection, slug: request.params.slug, ...payload, ifMatch: request.headers["if-match"] });
   });
@@ -269,6 +248,55 @@ export const buildServer = async ({
       metadata: normalized.metadata,
       blocks: collection === "photography" ? [] : markdownToAst(normalized.body),
     };
+  });
+
+  app.post("/api/photography/upload-batches", mutationOptions, async (request, reply) => {
+    const result = await batches.create({
+      session: request.cmsSession,
+      body: request.body,
+      ifMatch: request.headers["if-match"],
+      ifNoneMatch: request.headers["if-none-match"],
+    });
+    return reply.code(201).send(result);
+  });
+
+  app.post("/api/photography/upload-batches/:id/upload", async (request) => {
+    requireConfigured(config);
+    if (request.body?.type === "blob.generate-client-token") await mutationOrigin(request);
+    return handleUpload({
+      body: request.body,
+      request: request.raw,
+      token: config.blobToken,
+      onBeforeGenerateToken: (pathname, clientPayload) => batches.authorizeUpload({ id: request.params.id, pathname, clientPayload }),
+      onUploadCompleted: ({ blob, tokenPayload }) => batches.confirmUpload({ blob, tokenPayload }),
+    });
+  });
+
+  app.post("/api/photography/upload-batches/:id/finalize", mutationOptions, async (request) => {
+    if (!request.body?.metadata || typeof request.body.metadata !== "object" || Array.isArray(request.body.metadata)) {
+      throw badRequest("invalid_request", "Photography metadata is required.");
+    }
+    return batches.finalize({
+      id: request.params.id,
+      session: request.cmsSession,
+      metadata: request.body.metadata,
+      verifySession: () => sessions.verify(request.cmsToken),
+    });
+  });
+
+  app.post("/api/photography/upload-batches/:id/cancel", mutationOptions, async (request, reply) => {
+    await batches.cancel({ id: request.params.id, session: request.cmsSession });
+    return reply.code(204).send();
+  });
+
+  app.get("/api/internal/cleanup-staging", async (request) => {
+    requireConfigured(config);
+    const supplied = String(request.headers.authorization ?? "");
+    const expected = `Bearer ${config.cronSecret}`;
+    const suppliedBytes = Buffer.from(supplied);
+    const expectedBytes = Buffer.from(expected);
+    if (suppliedBytes.length !== expectedBytes.length || !timingSafeEqual(suppliedBytes, expectedBytes)) throw unauthorized();
+    return batches.cleanup();
   });
 
   return app;

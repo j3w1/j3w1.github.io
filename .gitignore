@@ -3,5 +3,7 @@ services/j3w1ctl-auth/node_modules/
 services/j3w1ctl-auth/.env
 services/j3w1ctl-auth/.env.*
 !services/j3w1ctl-auth/.env.example
+services/j3w1ctl-auth/.vercel/
+services/j3w1ctl-auth/test-results/
+services/j3w1ctl-auth/playwright-report/
 *.log
-

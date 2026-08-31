@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   COLLECTIONS,
   LIMITS,
@@ -11,25 +12,18 @@ import {
   stringifyIndex,
   validateWebp,
 } from "./content.js";
-import { badRequest, conflict, notFound, preconditionRequired } from "./errors.js";
+import { AppError, badRequest, conflict, notFound, preconditionRequired, publicationUnknown } from "./errors.js";
 
 const INDEX_PATH = "assets/data/content-index.json";
 
-class MutationMutex {
-  #tail = Promise.resolve();
+const gitBlobSha = (content) => {
+  const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content);
+  return createHash("sha1").update(`blob ${buffer.length}\0`).update(buffer).digest("hex");
+};
 
-  async run(operation) {
-    const previous = this.#tail;
-    let release;
-    this.#tail = new Promise((resolve) => { release = resolve; });
-    await previous;
-    try {
-      return await operation();
-    } finally {
-      release();
-    }
-  }
-}
+const publicationMatches = (snapshot, additions, deletions) =>
+  additions.every(({ path, content }) => snapshot.files.get(path)?.sha === gitBlobSha(content))
+  && deletions.every((path) => !snapshot.files.has(path));
 
 const sourceCollections = (files) => {
   const result = Object.fromEntries(COLLECTIONS.map((collection) => [collection, []]));
@@ -117,8 +111,6 @@ const verifyPhotography = (snapshot, metadata, uploads, { creating = false } = {
 };
 
 export const createRepositoryService = (github) => {
-  const mutex = new MutationMutex();
-
   const readSnapshot = () => github.getSnapshot();
 
   const list = async (collection) => {
@@ -132,8 +124,7 @@ export const createRepositoryService = (github) => {
     return detailEntry(await readSnapshot(), collection, slug);
   };
 
-  const publish = ({ action, collection, slug, metadata, body = "", uploads = new Map(), ifMatch, ifNoneMatch }) =>
-    mutex.run(async () => {
+  const publish = async ({ action, collection, slug, metadata, body = "", uploads = new Map(), ifMatch, ifNoneMatch }) => {
       assertCollection(collection);
       const targetPath = entryPath(collection, slug);
       const snapshot = await readSnapshot();
@@ -190,19 +181,33 @@ export const createRepositoryService = (github) => {
 
       const index = buildIndex(sources);
       additions.push({ path: INDEX_PATH, content: Buffer.from(stringifyIndex(index), "utf8") });
-      const result = await github.createCommit({
-        expectedHeadOid: snapshot.headSha,
-        headline: `cms: ${action} ${collection}/${slug}`,
-        additions,
-        deletions: [...new Set(deletions)],
-      });
+      const uniqueDeletions = [...new Set(deletions)];
+      let result;
+      try {
+        result = await github.createCommit({
+          expectedHeadOid: snapshot.headSha,
+          headline: `cms: ${action} ${collection}/${slug}`,
+          additions,
+          deletions: uniqueDeletions,
+        });
+      } catch (error) {
+        if (error?.code !== "publication_unknown") throw error;
+        const readback = await readSnapshot();
+        if (readback.headSha !== snapshot.headSha && publicationMatches(readback, additions, uniqueDeletions)) {
+          result = { commitSha: readback.headSha, publicationOutcome: "PROVEN_SUCCESS_READBACK" };
+        } else if (readback.headSha === snapshot.headSha) {
+          throw new AppError(503, "publication_failed", "GitHub did not apply the publication. No retry was attempted.");
+        } else {
+          throw publicationUnknown();
+        }
+      }
       return {
         ...result,
         headSha: result.commitSha,
         ...(normalized ? { entry: compileSource(collection, additions[0].content.toString("utf8")) } : {}),
-        deletedPaths: action === "delete" ? [...new Set(deletions)] : undefined,
+        deletedPaths: action === "delete" ? uniqueDeletions : undefined,
       };
-    });
+  };
 
   return { list, get, publish };
 };

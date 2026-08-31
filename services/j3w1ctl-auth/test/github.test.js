@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
 import test from "node:test";
-import { createGitHubClient } from "../src/github.js";
+import { createAcceptanceGitHubClient, createGitHubClient } from "../src/github.js";
 
 const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const config = {
@@ -12,7 +12,7 @@ const config = {
   callbackUrl: "https://cms.example/auth/github/callback",
   githubOwner: "j3w1",
   githubRepo: "j3w1.github.io",
-  githubBranch: "cms-sandbox",
+  githubBranch: "main",
   githubApiVersion: "2026-03-10",
   repositoryNameWithOwner: "j3w1/j3w1.github.io",
 };
@@ -37,7 +37,7 @@ test("installation tokens are opaque and GraphQL commit verifies returned ref", 
   assert.equal(graph.options.headers.Authorization, `Bearer ${token}`);
   const input = JSON.parse(graph.options.body).variables.input;
   assert.equal(input.expectedHeadOid, "2".repeat(40));
-  assert.equal(input.branch.branchName, "cms-sandbox");
+  assert.equal(input.branch.branchName, "main");
   assert.equal(Buffer.from(input.fileChanges.additions[0].contents, "base64").toString(), "source");
 });
 
@@ -59,3 +59,8 @@ test("network failures are sanitized as GitHub availability errors", async () =>
   await assert.rejects(() => github.getSnapshot(), (error) => error.code === "github_error" && !error.message.includes("token="));
 });
 
+test("the local-only acceptance client permits only generated migration branches", () => {
+  assert.throws(() => createAcceptanceGitHubClient(config, "main"), /invalid/i);
+  assert.throws(() => createAcceptanceGitHubClient(config, "feature/other"), /invalid/i);
+  assert.doesNotThrow(() => createAcceptanceGitHubClient(config, "migration/j3w1ctl-vercel-acceptance-20260831t010203z-1234abcd", { fetchImpl: async () => response(null) }));
+});

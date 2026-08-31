@@ -29,3 +29,8 @@ export const preconditionRequired = () =>
 export const unavailable = (message = "The service is not configured.") =>
   new AppError(503, "service_unconfigured", message);
 
+export const dependencyUnavailable = (code, message) =>
+  new AppError(503, code, message);
+
+export const publicationUnknown = () =>
+  new AppError(503, "publication_unknown", "The publication result could not be proven. No retry was attempted.");

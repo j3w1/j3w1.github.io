@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ActivityGate, buildPhotographyPreviewItems, MutationGate, ObjectUrlRegistry, publicationTarget, shortCommit } from "../../../admin/j3w1ctl-core.js";
+import { ActivityGate, buildPhotographyPreviewItems, J3W1CTL_SUPPORTED_PROTOCOLS, MutationGate, ObjectUrlRegistry, protocolCompatibility, publicationTarget, shortCommit } from "../../../admin/j3w1ctl-core.js";
 import { EXAMPLES } from "../../../admin/j3w1ctl-examples.js";
 import { IMAGE_ACCEPT, IMAGE_LIMITS, acceptedImageType, fitWithin } from "../../../admin/j3w1ctl-images.js";
 
@@ -128,17 +128,20 @@ test("new photography preview uses a local object URL without inventing a public
   assert.equal(unavailablePreview[0].source, "");
 });
 
-test("publication target distinguishes server-reported main and sandbox branches", () => {
+test("publication target accepts only the fixed repository and protocol", () => {
   assert.deepEqual(publicationTarget({ owner: "j3w1", name: "j3w1.github.io", branch: "main" }), {
     label: "j3w1/j3w1.github.io · git:main · LIVE",
     mode: "LIVE",
     live: true,
   });
-  assert.deepEqual(publicationTarget({ owner: "j3w1", name: "j3w1.github.io", branch: "cms-sandbox" }), {
-    label: "j3w1/j3w1.github.io · git:cms-sandbox · SANDBOX",
-    mode: "SANDBOX",
+  assert.deepEqual(publicationTarget({ owner: "attacker", name: "other", branch: "main" }), {
+    label: "Fixed publication target unavailable",
+    mode: "INCOMPATIBLE",
     live: false,
   });
+  assert.deepEqual(J3W1CTL_SUPPORTED_PROTOCOLS, [1]);
+  assert.equal(protocolCompatibility(1).compatible, true);
+  for (const value of [0, 2, undefined, "1", NaN]) assert.equal(protocolCompatibility(value).compatible, false);
   assert.equal(shortCommit("1234567890abcdef"), "12345678");
 });
 

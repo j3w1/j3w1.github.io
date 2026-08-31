@@ -1,6 +1,6 @@
 import { createPrivateKey } from "node:crypto";
 import { SignJWT } from "jose";
-import { AppError, conflict, unavailable } from "./errors.js";
+import { AppError, conflict, publicationUnknown, unavailable } from "./errors.js";
 
 const apiError = (message = "GitHub is unavailable.") => new AppError(502, "github_error", message);
 
@@ -14,11 +14,14 @@ const parseResponse = async (response) => {
   }
 };
 
-export const createGitHubClient = (config, { fetchImpl = fetch, now = () => Math.floor(Date.now() / 1000) } = {}) => {
+const ACCEPTANCE_BRANCH = /^migration\/j3w1ctl-vercel-acceptance-\d{8}t\d{6}z-[0-9a-f]{8}$/;
+
+const createClient = (config, targetBranch, { fetchImpl = fetch, now = () => Math.floor(Date.now() / 1000) } = {}) => {
   let appKeyPromise;
   let installationCache;
 
-  const request = async (url, options = {}, token) => {
+  const request = async (url, requestOptions = {}, token) => {
+    const { effectful = false, ...options } = requestOptions;
     let response;
     try {
       response = await fetchImpl(url, {
@@ -34,11 +37,13 @@ export const createGitHubClient = (config, { fetchImpl = fetch, now = () => Math
         },
       });
     } catch {
+      if (effectful) throw publicationUnknown();
       throw apiError();
     }
     const body = await parseResponse(response);
     if (!response.ok) {
       if (response.status === 409 || response.status === 422) throw conflict();
+      if (effectful) throw publicationUnknown();
       throw apiError(response.status === 403 ? "GitHub rejected the configured App permissions." : undefined);
     }
     return body;
@@ -72,6 +77,7 @@ export const createGitHubClient = (config, { fetchImpl = fetch, now = () => Math
       `https://api.github.com/app/installations/${installation.id}/access_tokens`,
       {
         method: "POST",
+        effectful: true,
         body: JSON.stringify({
           repositories: [config.githubRepo],
           permissions: { contents: "write" },
@@ -117,7 +123,7 @@ export const createGitHubClient = (config, { fetchImpl = fetch, now = () => Math
   const getSnapshot = async () => {
     const owner = encodeURIComponent(config.githubOwner);
     const repo = encodeURIComponent(config.githubRepo);
-    const ref = await rest(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(config.githubBranch)}`);
+    const ref = await rest(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(targetBranch)}`);
     const headSha = ref.object.sha;
     const commit = await rest(`/repos/${owner}/${repo}/git/commits/${headSha}`);
     const tree = await rest(`/repos/${owner}/${repo}/git/trees/${commit.tree.sha}?recursive=1`);
@@ -156,7 +162,7 @@ export const createGitHubClient = (config, { fetchImpl = fetch, now = () => Math
             input: {
               branch: {
                 repositoryNameWithOwner: config.repositoryNameWithOwner,
-                branchName: config.githubBranch,
+                branchName: targetBranch,
               },
               expectedHeadOid,
               message: { headline },
@@ -176,11 +182,11 @@ export const createGitHubClient = (config, { fetchImpl = fetch, now = () => Math
     if (body.errors?.length) {
       const messages = body.errors.map((error) => error.message).join(" ");
       if (/expectedHeadOid|head.*changed|out of date/i.test(messages)) throw conflict();
-      throw apiError();
+      throw publicationUnknown();
     }
     const result = body.data?.createCommitOnBranch;
     if (!result?.commit?.oid || result.ref?.target?.oid !== result.commit.oid) {
-      throw apiError("GitHub did not return a verifiable publication result.");
+      throw publicationUnknown();
     }
     return { commitSha: result.commit.oid, commitUrl: result.commit.url };
   };
@@ -192,4 +198,11 @@ export const createGitHubClient = (config, { fetchImpl = fetch, now = () => Math
     getSnapshot,
     createCommit,
   };
+};
+
+export const createGitHubClient = (config, dependencies) => createClient(config, config.githubBranch, dependencies);
+
+export const createAcceptanceGitHubClient = (config, branch, dependencies) => {
+  if (!ACCEPTANCE_BRANCH.test(branch)) throw new TypeError("The acceptance branch name is invalid.");
+  return createClient(config, branch, dependencies);
 };

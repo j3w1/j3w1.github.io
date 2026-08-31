@@ -81,7 +81,6 @@
 .ctl-status-mode { min-width: 9ch; }
 .ctl-status-target { overflow: hidden; color: #d9aaa7; text-overflow: ellipsis; }
 .ctl-status-target.is-live { color: #ffd1cf; }
-.ctl-status-target.is-sandbox { color: #ffcc80; }
 .ctl-status-tail { margin-left: auto; overflow: hidden; text-overflow: ellipsis; }
 .ctl-auth-wrap { display: grid; min-height: 260px; flex: 1 1 auto; place-items: center; }
 .ctl-auth { width: min(460px,calc(100% - 30px)); border: 1px solid var(--border-strong); background: var(--chrome); }

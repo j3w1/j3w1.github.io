@@ -1,7 +1,8 @@
 import { renderAst } from "/assets/js/content-renderer.js?v=20260824";
-import { ActivityGate, buildPhotographyPreviewItems, MutationGate, ObjectUrlRegistry, publicationTarget, shortCommit } from "/admin/j3w1ctl-core.js?v=20260825b";
+import { ActivityGate, buildPhotographyPreviewItems, MutationGate, ObjectUrlRegistry, protocolCompatibility, publicationTarget, shortCommit } from "/admin/j3w1ctl-core.js?v=20260831";
 import { EXAMPLES } from "/admin/j3w1ctl-examples.js?v=20260825";
 import { IMAGE_ACCEPT, IMAGE_LIMITS, generatedImageBytes, normalizePhotograph } from "/admin/j3w1ctl-images.js?v=20260825";
+import { upload as uploadPrivateBlob } from "/admin/j3w1ctl-blob-client.js?v=20260831";
 
 const TOKEN_KEY = "j3w1ctl.session";
 const COLLECTIONS = ["writing", "books", "photography"];
@@ -103,6 +104,8 @@ class J3w1ctl {
     this.deleteConfirmationInFlight = false;
     this.imageProcessingInFlight = false;
     this.repository = null;
+    this.provenance = null;
+    this.protocolCompatible = false;
     this.photoItems = [];
     this.localDrafts = [];
   }
@@ -114,6 +117,11 @@ class J3w1ctl {
     this.renderShell();
     this.bindConnectivity();
     if (!this.apiBase) return this.renderLocked("Backend not configured. Set the permanent service URL in admin/config.js.", true);
+    try {
+      await this.validateBackend();
+    } catch (error) {
+      return this.renderLocked(error.message, true);
+    }
     if (!this.token) return this.renderLocked();
     try {
       const session = await this.validateSession();
@@ -123,6 +131,16 @@ class J3w1ctl {
       this.token = "";
       this.renderLocked("The previous session is no longer valid.");
     }
+  }
+
+  async validateBackend() {
+    let response;
+    try { response = await fetch(`${this.apiBase}/healthz`, { cache: "no-store" }); } catch { throw new Error("The publication service is offline."); }
+    const health = await response.json().catch(() => null);
+    const compatibility = protocolCompatibility(health?.protocolVersion);
+    if (!response.ok || !compatibility.compatible) throw new Error("The publication service protocol is incompatible. Publishing remains locked.");
+    this.protocolCompatible = true;
+    this.provenance = health.provenance ?? null;
   }
 
   renderShell() {
@@ -173,9 +191,10 @@ class J3w1ctl {
     mode.className = `ctl-status-mode${state === "loading" ? " ctl-loading" : state === "offline" ? " ctl-offline" : state === "modified" ? " ctl-modified" : ""}`;
     const publication = publicationTarget(this.repository);
     target.textContent = publication.label;
-    target.className = `ctl-status-target ${publication.live ? "is-live" : publication.mode === "SANDBOX" ? "is-sandbox" : ""}`;
+    target.className = `ctl-status-target${publication.live ? " is-live" : ""}`;
     const editorSlug = this.form?.elements?.slug?.value?.trim();
-    tail.textContent = message || `${this.collection}/${editorSlug || this.entry?.slug || "new"}`;
+    const revision = typeof this.provenance?.sourceRevision === "string" ? this.provenance.sourceRevision.slice(0, 8) : "unknown";
+    tail.textContent = message || `api:v${this.provenance?.protocolVersion ?? "?"} · ${revision}`;
     this.syncActions();
   }
 
@@ -227,7 +246,10 @@ class J3w1ctl {
   }
 
   async unlock(session) {
+    if (!this.protocolCompatible || !protocolCompatibility(session?.protocolVersion).compatible) throw new Error("The publication service protocol is incompatible.");
     this.repository = session?.repository ?? null;
+    this.provenance = session?.provenance ?? this.provenance;
+    if (!publicationTarget(this.repository).live) throw new Error("The publication target is not the fixed main repository.");
     this.setState("authenticated", "session unlocked");
     this.renderManager();
     await this.loadCollection();
@@ -601,11 +623,13 @@ class J3w1ctl {
     const files = snapshot.files ?? []; delete snapshot.files; const markdownBody = snapshot.body; delete snapshot.body;
     const persisted = Boolean(this.entry?.persisted); const path = persisted ? `/api/content/${this.collection}/${encodeURIComponent(this.entry.slug)}` : `/api/content/${this.collection}`;
     const options = { method: persisted ? "PUT" : "POST", headers: persisted ? { "If-Match": `"${this.entry.version}"` } : { "If-None-Match": "*" } };
-    if (this.collection === "photography") { const form = new FormData(); form.append("metadata", JSON.stringify(snapshot)); for (const pair of files) { if (pair.full instanceof Blob) form.append(`full.${pair.id}`, pair.full, `${pair.id}.webp`); if (pair.thumbnail instanceof Blob) form.append(`thumbnail.${pair.id}`, pair.thumbnail, `${pair.id}-thumb.webp`); } options.body = form; }
-    else { options.body = JSON.stringify({ metadata: snapshot, body: markdownBody }); }
+    if (this.collection !== "photography") options.body = JSON.stringify({ metadata: snapshot, body: markdownBody });
     if (!this.beginMutation("publish", snapshot)) return;
     let result; let failure;
-    try { result = await this.request(path, options); } catch (error) { failure = error; } finally { this.endMutation(); }
+    try {
+      if (this.collection === "photography") result = await this.publishPhotography({ snapshot, files, options });
+      else result = await this.request(path, options);
+    } catch (error) { failure = error; } finally { this.endMutation(); }
     if (failure) {
       if (failure.code === "content_conflict") {
         await this.saveDraftSnapshot({ ...snapshot, body: markdownBody }, files); this.conflicted = true; this.conflictKey = this.draftKey(snapshot); this.setState("conflict", "remote changed; local draft preserved"); this.renderConflict();
@@ -614,6 +638,49 @@ class J3w1ctl {
     }
     await draftOperation("delete", this.draftKey(snapshot)); this.conflicted = false; this.conflictKey = null;
     await this.loadCollection(); await this.selectEntry(snapshot.slug); this.setState("published", shortCommit(result.commitSha));
+  }
+
+  async publishPhotography({ snapshot, files, options }) {
+    const staged = files.filter(({ full, thumbnail }) => full instanceof Blob || thumbnail instanceof Blob);
+    if (staged.some(({ full, thumbnail }) => !(full instanceof Blob) || !(thumbnail instanceof Blob))) throw new Error("Each changed photograph requires a generated full and thumbnail WebP pair.");
+    const batch = await this.request("/api/photography/upload-batches", {
+      method: "POST",
+      headers: options.headers,
+      body: JSON.stringify({
+        collection: "photography",
+        slug: snapshot.slug,
+        action: this.entry?.persisted ? "update" : "create",
+        imageIds: staged.map(({ id }) => id),
+      }),
+    });
+    let finalized = false;
+    let preserveBatch = false;
+    try {
+      for (const target of batch.uploads) {
+        const pair = staged.find(({ id }) => id === target.imageId);
+        for (const kind of ["full", "thumbnail"]) {
+          await uploadPrivateBlob(target[kind], pair[kind], {
+            access: "private",
+            contentType: "image/webp",
+            handleUploadUrl: `${this.apiBase}/api/photography/upload-batches/${batch.id}/upload`,
+            clientPayload: JSON.stringify({ batchId: batch.id, capability: batch.uploadCapability, imageId: target.imageId, kind }),
+          });
+        }
+      }
+      const result = await this.request(`/api/photography/upload-batches/${batch.id}/finalize`, {
+        method: "POST",
+        body: JSON.stringify({ metadata: snapshot }),
+      });
+      finalized = true;
+      return result;
+    } catch (error) {
+      preserveBatch = error?.code === "publication_unknown";
+      throw error;
+    } finally {
+      if (!finalized && !preserveBatch) {
+        await this.request(`/api/photography/upload-batches/${batch.id}/cancel`, { method: "POST" }).catch(() => {});
+      }
+    }
   }
 
   renderConflict() {
@@ -724,14 +791,21 @@ class J3w1ctl {
   async logout() {
     if (this.mutation.inFlight || this.loading.inFlight) return;
     const token = this.token; sessionStorage.removeItem(TOKEN_KEY); this.token = ""; this.repository = null; this.renderLocked("Signed out. Local drafts remain on this device.");
-    if (token) fetch(`${this.apiBase}/api/logout`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+    if (token) {
+      try {
+        const response = await fetch(`${this.apiBase}/api/logout`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+        if (!response.ok) throw new Error("logout failed");
+      } catch {
+        this.renderLocked("Signed out locally. Server logout could not be confirmed; the opaque session will expire automatically.");
+      }
+    }
   }
 
   syncActions() {
     if (!this.body) return;
-    const mutating = this.mutation.inFlight; const loading = this.loading.inFlight; const offline = !navigator.onLine || this.state === "offline"; const conflict = this.conflicted || this.state === "conflict"; const processing = this.imageProcessingInFlight;
+    const mutating = this.mutation.inFlight; const loading = this.loading.inFlight; const offline = !navigator.onLine || this.state === "offline"; const conflict = this.conflicted || this.state === "conflict"; const processing = this.imageProcessingInFlight; const incompatible = !this.protocolCompatible;
     const publishButton = this.body.querySelector('[data-action="publish"]');
-    if (publishButton) { publishButton.disabled = mutating || loading || processing || offline || conflict; publishButton.textContent = mutating && this.mutation.action === "publish" ? "Publishing…" : publishButton.dataset.normalLabel; }
+    if (publishButton) { publishButton.disabled = mutating || loading || processing || offline || conflict || incompatible; publishButton.textContent = mutating && this.mutation.action === "publish" ? "Publishing…" : publishButton.dataset.normalLabel; }
     const previewButton = this.body.querySelector('[data-action="preview"]');
     if (previewButton) { previewButton.disabled = mutating || loading || processing || offline; previewButton.textContent = loading && this.loading.action.startsWith("validating preview") ? "Previewing…" : previewButton.dataset.normalLabel; }
     ["new", "examples", "save-draft", "forget-local-drafts", "logout"].forEach((action) => { const button = this.body.querySelector(`[data-action="${action}"]`); if (button) button.disabled = mutating || loading || processing; });
