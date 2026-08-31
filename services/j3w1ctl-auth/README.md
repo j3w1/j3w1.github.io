@@ -27,7 +27,7 @@ The preflight is zero-mutation. With no provider credentials it checks source, l
 | `j3w1/j3w1.github.io@main`, protocol `1` | immutable source constants |
 | `VERCEL_ENV`, `VERCEL_GIT_COMMIT_SHA`, `VERCEL_DEPLOYMENT_ID`, `VERCEL_REGION` | Vercel system values; safe bounded provenance |
 | `CMS_SITE_ORIGIN`, `CMS_ALLOWED_GITHUB_LOGIN`, `CMS_ALLOWED_GITHUB_USER_ID`, `GITHUB_APP_ID`, `GITHUB_CLIENT_ID`, `GITHUB_CALLBACK_URL`, `GITHUB_API_VERSION` | Production non-secret configuration; absent or harmless in Preview |
-| `CMS_SESSION_SECRET`, `GITHUB_CLIENT_SECRET`, `GITHUB_PRIVATE_KEY_BASE64`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `BLOB_READ_WRITE_TOKEN`, `CRON_SECRET` | Production secrets only; absent from Preview |
+| `CMS_SESSION_SECRET`, `GITHUB_CLIENT_SECRET`, `GITHUB_PRIVATE_KEY_BASE64`, `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `BLOB_READ_WRITE_TOKEN`, `CRON_SECRET` | Production secrets only; absent from Preview |
 | `PORT`, `CMS_DEV_ORIGINS` | Development-only |
 | `GITHUB_OWNER`, `GITHUB_REPO`, `GITHUB_BRANCH` | obsolete and unsupported |
 

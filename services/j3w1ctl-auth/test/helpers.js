@@ -41,8 +41,8 @@ export const testProductionEnvironment = Object.freeze({
   GITHUB_PRIVATE_KEY_BASE64: "test-only-key",
   GITHUB_CALLBACK_URL: "https://cms.example/auth/github/callback",
   GITHUB_API_VERSION: "2026-03-10",
-  UPSTASH_REDIS_REST_URL: "https://test-only.upstash.invalid",
-  UPSTASH_REDIS_REST_TOKEN: "test-only-redis-token",
+  KV_REST_API_URL: "https://test-only.upstash.invalid",
+  KV_REST_API_TOKEN: "test-only-redis-token",
   BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_test-only",
   CRON_SECRET: "test-only-cron-secret-at-least-16",
 });

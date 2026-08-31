@@ -22,6 +22,7 @@ test("production configuration is exact and publication target inputs cannot ove
   assert.equal(config.siteOrigin, "https://j3w1.github.io");
   assert.deepEqual([config.githubOwner, config.githubRepo, config.githubBranch], ["j3w1", "j3w1.github.io", "main"]);
   assert.deepEqual(config.allowedOrigins, ["https://j3w1.github.io"]);
+  assert.equal(config.redisUrl, testProductionEnvironment.KV_REST_API_URL);
   assert.equal("port" in config, false);
   assert.equal("GITHUB_BRANCH" in config, false);
 });
@@ -37,6 +38,16 @@ test("production fails closed for the wrong site or callback and reports require
 
   const absent = loadConfig({ NODE_ENV: "production", VERCEL_ENV: "production" });
   assert.deepEqual(absent.missing, PRODUCTION_REQUIRED_NAMES);
+
+  const legacyRedisNames = loadConfig({
+    ...testProductionEnvironment,
+    KV_REST_API_URL: undefined,
+    KV_REST_API_TOKEN: undefined,
+    UPSTASH_REDIS_REST_URL: "https://legacy.invalid",
+    UPSTASH_REDIS_REST_TOKEN: "legacy-token",
+  });
+  assert.equal(legacyRedisNames.configured, false);
+  assert.deepEqual(legacyRedisNames.missing, ["KV_REST_API_URL", "KV_REST_API_TOKEN"]);
 });
 
 test("Preview is deliberately unprivileged and secret presence is a configuration violation", () => {
