@@ -302,7 +302,13 @@ export const buildServer = async ({
   return app;
 };
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const app = await buildServer({ logger: true });
-  await app.listen({ host: "0.0.0.0", port: Number(process.env.PORT || 3000) });
+const isDirectEntrypoint = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+const server = await buildServer({ logger: process.env.VERCEL === "1" || isDirectEntrypoint });
+
+// Vercel's Fastify runtime imports this recognized entrypoint and serves the
+// exported instance. Direct Node execution retains the ordinary local server.
+export default server;
+
+if (isDirectEntrypoint) {
+  await server.listen({ host: "0.0.0.0", port: Number(process.env.PORT || 3000) });
 }
