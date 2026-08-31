@@ -66,7 +66,8 @@ test("Vercel Fastify entrypoint starts the server at module load", async () => {
   assert.match(source, /import Fastify from "fastify";/);
   assert.match(source, /import \{ buildServer \} from "\.\/service\.js";/);
   assert.match(source, /buildServer\(\{ fastifyFactory: Fastify, logger: true \}\)/);
-  assert.match(source, /await server\.listen\(\{ host: "0\.0\.0\.0", port:/);
+  assert.match(source, /server\.listen\(\{ host: "0\.0\.0\.0", port:/);
+  assert.doesNotMatch(source, /await server\.listen/);
   assert.doesNotMatch(source, /process\.argv|isDirectEntrypoint/);
 });
 

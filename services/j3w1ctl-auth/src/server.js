@@ -5,4 +5,9 @@ const server = await buildServer({ fastifyFactory: Fastify, logger: true });
 
 // Vercel's Fastify runtime captures this listener while importing the
 // recognized entrypoint. The same listener serves ordinary `npm start` use.
-await server.listen({ host: "0.0.0.0", port: Number(process.env.PORT || 3000) });
+server.listen({ host: "0.0.0.0", port: Number(process.env.PORT || 3000) }, (error) => {
+  if (error) {
+    server.log.error(error);
+    process.exitCode = 1;
+  }
+});
