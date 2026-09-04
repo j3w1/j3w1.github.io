@@ -230,10 +230,35 @@ test("the i3 / plain toggle is reachable and reversible", async ({ page }) => {
 
 test("the status bar shows no fabricated values", async ({ page }) => {
   await open(page);
-  const text = await page.locator("#i3status").innerText();
-  expect(text).not.toMatch(/\bn\/a\b|--\s*$|unknown/i);
-  /* Viewport and uptime are always available, so the bar is never empty. */
-  expect(text).toMatch(/\d+x\d+/);
+  const blocks = await page.evaluate(() =>
+    [...document.querySelectorAll("#i3status .i3block")]
+      .filter((node) => node.offsetParent)
+      .map((node) => node.querySelector(".i3block-value").textContent.trim()));
+
+  /* A block whose source the browser does not expose is absent, never a
+     placeholder — so every block that is rendered must carry a real value. */
+  expect(blocks.length).toBeGreaterThan(0);
+  for (const value of blocks) {
+    expect(value).not.toEqual("");
+    expect(value).not.toMatch(/\bn\/a\b|\bunknown\b|^-+$/i);
+  }
+});
+
+test("the status bar never squeezes the workspace names, at any width", async ({ page }) => {
+  await open(page);
+  for (const width of [1920, 1600, 1500, 1440, 1366, 1280, 1100, 900]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.waitForFunction(() => true);
+    const fit = await page.evaluate(() => {
+      const status = document.querySelector("#i3status");
+      const tray = document.querySelector(".system-status");
+      return {
+        status: status.scrollWidth <= status.clientWidth + 1,
+        tray: tray.scrollWidth <= tray.clientWidth + 1,
+      };
+    });
+    expect(fit, `status blocks overflow at ${width}px`).toEqual({ status: true, tray: true });
+  }
 });
 
 test("layout survives a reload and killed windows always come back", async ({ page }) => {
