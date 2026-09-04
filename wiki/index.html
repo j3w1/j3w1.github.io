@@ -13,7 +13,7 @@
   <meta name="theme-color" content="#0c0909">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/assets/fonts/JetBrainsMonoNerdFont-Regular.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="/assets/css/site.css?v=20260905b">
+  <link rel="stylesheet" href="/assets/css/site.css?v=20260905c">
   <style>
     /* A scrolling document, unlike the fixed-viewport desktop, so the shared
        stylesheet's full-height/no-scroll rules are released here. */
@@ -376,7 +376,7 @@
       <p>
         Then the <strong>LightDM login screen</strong> appears and waits for you. The username and password are
         already filled in; the password is decorative bullets and no password value exists anywhere in the page.
-        Press <kbd>Enter</kbd> or click <strong>Log In</strong>.
+        Press <kbd>Enter</kbd>, or click <strong>Log In</strong>. Nothing else logs you in — a click on the desktop behind the panel is ignored.
       </p>
       <div class="note">
         <p>🔁 <strong>Logging in is remembered.</strong> Come back tomorrow and the desktop appears immediately, with no boot and no login, until you log out.</p>
@@ -385,7 +385,7 @@
         <table>
           <thead><tr><th scope="col">To…</th><th scope="col">Do this</th></tr></thead>
           <tbody>
-            <tr><td>🔒 Lock the screen</td><td><kbd>Shift</kbd>+<kbd>E</kbd> → <strong>Lock screen</strong>, or <code>exec i3lock</code>. Any key dismisses it.</td></tr>
+            <tr><td>🔒 Lock the screen</td><td><kbd>Shift</kbd>+<kbd>E</kbd> → <strong>Lock screen</strong>, or <code>exec i3lock</code>. Press a key to dismiss it — moving the mouse will not.</td></tr>
             <tr><td>🚪 Log out</td><td><kbd>Shift</kbd>+<kbd>E</kbd> → <strong>Log out</strong>, the launcher's <code>log out</code>, or <code>logout</code></td></tr>
             <tr><td>🔓 Log back in</td><td>The login panel is already there — press <kbd>Enter</kbd></td></tr>
             <tr><td>🎬 Watch the boot again</td><td>The launcher's <code>exec lightdm</code></td></tr>

@@ -2,11 +2,11 @@
    window-manager owned, holding no authored site content, and therefore safe to
    create and destroy at will. */
 
-import { createShell } from "./shell.js?v=20260905b";
-import { createNeofetch } from "./neofetch.js?v=20260905b";
-import { createHtop } from "./htop.js?v=20260905b";
-import { createMatrix } from "./cmatrix.js?v=20260905b";
-import { createFeh } from "./feh.js?v=20260905b";
+import { createShell } from "./shell.js?v=20260905c";
+import { createNeofetch } from "./neofetch.js?v=20260905c";
+import { createHtop } from "./htop.js?v=20260905c";
+import { createMatrix } from "./cmatrix.js?v=20260905c";
+import { createFeh } from "./feh.js?v=20260905c";
 
 export const APPS = Object.freeze({
   urxvt: {

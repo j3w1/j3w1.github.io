@@ -6,8 +6,8 @@
    event twice, in terse i3 jargon — so the announcer speaks human sentences and
    dunst shows the short form. */
 
-import { element } from "./dom.js?v=20260905b";
-import { media, prefs } from "./session.js?v=20260905b";
+import { element } from "./dom.js?v=20260905c";
+import { media, prefs } from "./session.js?v=20260905c";
 
 const MAX_VISIBLE = 3;
 const MIN_INTERVAL = 400;

@@ -58,7 +58,7 @@ test("digits switch workspaces and hjkl moves focus between tiles", async ({ pag
   await open(page);
   await page.locator("body").press("2");
   await expect(page.locator("#writing")).toBeVisible();
-  await expect(page.locator("#status-workspace")).toHaveText("2:writing");
+  await expect(page.locator("#status-workspace")).toHaveText("/home/j3w1/writing");
 
   await page.locator("body").press("1");
   await expect(page.locator("#home")).toBeVisible();
@@ -439,6 +439,56 @@ test("the boot sequence runs, then the login waits for the visitor", async ({ pa
   await expect(page.locator("#greeter")).toBeHidden();
   await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
   await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
+});
+
+test("only Enter or the Log In button logs in", async ({ page }) => {
+  await openWithGreeter(page);
+  await page.keyboard.press("x");
+  const panel = page.locator("[data-login-screen]");
+  await expect(panel).toBeVisible();
+
+  /* A stray click on the screen behind the panel must not log anyone in. */
+  await page.mouse.click(40, 400);
+  await page.waitForTimeout(400);
+  await expect(panel).toBeVisible();
+
+  /* Nor does any other key. */
+  await page.keyboard.press("a");
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(400);
+  await expect(panel).toBeVisible();
+
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#greeter")).toBeHidden();
+});
+
+test("the lock screen yields to a keystroke, never to the mouse", async ({ page }) => {
+  await open(page);
+  await page.locator("body").press("/");
+  await page.locator("#command-input").fill("exec i3lock");
+  await page.locator("#command-input").press("Enter");
+  const lock = page.locator("#lockscreen");
+  await expect(lock).toBeVisible();
+
+  /* Moving and clicking must leave it up: a passing mouse is not someone
+     returning to the machine. */
+  await page.mouse.move(300, 300);
+  await page.mouse.move(700, 500);
+  await page.mouse.click(700, 500);
+  await page.waitForTimeout(600);
+  await expect(lock).toBeVisible();
+
+  await page.keyboard.press("a");
+  await expect(lock).toBeHidden();
+});
+
+test("the bar shows the absolute path of the active workspace", async ({ page }) => {
+  await open(page);
+  await expect(page.locator("#status-workspace")).toHaveText("/home/j3w1");
+  await page.locator("body").press("4");
+  await expect(page.locator("#status-workspace")).toHaveText("/home/j3w1/photography");
+  /* The workspace name already lives in the strip; the chip is the path now. */
+  expect(await page.locator("#status-path").count()).toBe(0);
 });
 
 test("the password field holds only decoration, never a value", async ({ page }) => {

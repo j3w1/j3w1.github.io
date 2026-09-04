@@ -1204,7 +1204,11 @@ dl {
 .file-row.is-selected > span:not(:first-child) { color: var(--prose); opacity: 0.78; }
 .writing-entry { grid-template-columns: 48px minmax(0, 1fr) 11ch; }
 .books-entry { grid-template-columns: 2fr 1.2fr 0.7fr 1fr; }
-.photography-entry { grid-template-columns: 30px minmax(0, 1fr) 14rem; }
+.photography-entry { grid-template-columns: auto minmax(0, 1fr) 14rem; }
+/* Real Thunar sets the folder icon right against its name; a fixed icon column
+   plus the shared cell padding pushed them roughly 25px apart. */
+.photography-entry > .file-icon { padding-right: 0; }
+.photography-entry > .content-title { padding-left: 6px; }
 .content-entry > span { min-width: 0; padding: 5px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .content-number { color: var(--inactive); text-align: right; }
 .content-title { color: var(--foreground-bright); }

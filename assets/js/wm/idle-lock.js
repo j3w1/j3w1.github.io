@@ -8,9 +8,11 @@
    asks for no password, and — like the greeter — is aria-hidden and inert, so it
    never moves focus in or out and <main> is untouched throughout. */
 
-import { LOCK_THRESHOLDS, media, prefs } from "./session.js?v=20260905b";
-import { throttle } from "./dom.js?v=20260905b";
+import { LOCK_THRESHOLDS, media, prefs } from "./session.js?v=20260905c";
+import { throttle } from "./dom.js?v=20260905c";
 
+/* Activity that counts as "still here" for the idle timer. Dismissing the
+   lock is deliberately narrower — see onUnlockKey. */
 const ACTIVITY = ["pointermove", "pointerdown", "keydown", "wheel", "scroll", "touchstart"];
 
 export const installIdleLock = ({ node, isBusy, onLock, onUnlock }) => {
@@ -81,19 +83,29 @@ export const installIdleLock = ({ node, isBusy, onLock, onUnlock }) => {
     }, threshold());
   };
 
+  /* While unlocked this keeps the idle timer alive. It deliberately does not
+     unlock: i3lock is dismissed by typing, and a passing mouse should not
+     count as someone returning to the machine. */
   const onActivity = throttle(() => {
-    if (locked) unlock();
-    else schedule();
+    if (!locked) schedule();
   }, 1000);
 
+  const onUnlockKey = (event) => {
+    if (!locked) return;
+    /* Swallow the keystroke that dismisses the lock so it cannot also trigger a
+       window manager binding underneath. */
+    event.preventDefault();
+    event.stopPropagation();
+    unlock();
+  };
+
   const onVisibility = () => {
-    if (document.visibilityState === "visible") unlock();
-    else if (timer) clearTimeout(timer);
+    if (document.visibilityState !== "visible" && timer) clearTimeout(timer);
   };
 
   ACTIVITY.forEach((name) => document.addEventListener(name, onActivity, { passive: true }));
+  document.addEventListener("keydown", onUnlockKey, true);
   document.addEventListener("visibilitychange", onVisibility);
-  window.addEventListener("focus", () => locked && unlock());
   schedule();
 
   return {
@@ -105,6 +117,7 @@ export const installIdleLock = ({ node, isBusy, onLock, onUnlock }) => {
       if (timer) clearTimeout(timer);
       if (clock) clearInterval(clock);
       ACTIVITY.forEach((name) => document.removeEventListener(name, onActivity));
+      document.removeEventListener("keydown", onUnlockKey, true);
       document.removeEventListener("visibilitychange", onVisibility);
       unlock();
     },

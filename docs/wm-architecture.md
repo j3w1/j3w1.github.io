@@ -195,7 +195,12 @@ module loads. `wm-contract.test.js` asserts the two agree.
 Two phases in one overlay. The boot log scrolls for roughly five seconds — a Manjaro banner, kernel
 lines, and systemd units, driven by elapsed time rather than step count so a backgrounded tab catches
 up instantly — and any key or click skips to the end. Then the LightDM panel appears and **waits**.
-It never authenticates itself.
+It never authenticates itself, and only `Enter` or the Log In button authenticates: a click elsewhere
+on the screen is ignored, so nobody logs in by brushing the page.
+
+The idle lock is dismissed the same way round — by a keystroke, never by pointer movement. A mouse
+crossing the desk is not somebody returning to the machine, and treating it as one is how a lock
+screen becomes a thing that flickers rather than a thing that locks.
 
 Unlike the lock screen, the greeter is interactive, so it is neither `inert` nor `aria-hidden`: it is
 a `role="dialog"` with an accessible name and a real focusable button, which receives focus when the

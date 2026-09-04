@@ -138,7 +138,7 @@ three actions, the same way i3 answers `$mod+Shift+E`:
 
 | Action | Does |
 | --- | --- |
-| **Lock screen** | i3lock immediately; any key dismisses it |
+| **Lock screen** | i3lock immediately; press any **key** to dismiss it — moving the mouse will not |
 | **Log out** | Ends the session and returns to the login panel |
 | **Restart i3 in place** | Resets every window and layout to defaults |
 
@@ -181,7 +181,8 @@ coming up, taking about five seconds. Any key or click skips straight to the end
 
 Then the **LightDM login screen** appears and waits for you. The username and password are already
 filled in — the password is decorative bullets, and no password value exists anywhere in the page.
-Press `Enter` or click **Log In**.
+Press `Enter`, or click **Log In**. Nothing else logs you in: a click on the desktop behind the
+panel is ignored.
 
 **Logging in is remembered.** Come back tomorrow and the desktop appears immediately, with no boot
 and no login, until you log out.

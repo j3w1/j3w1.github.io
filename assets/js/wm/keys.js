@@ -7,8 +7,8 @@
    wherever the browser allows it. Bindings that genuinely need a modifier to
    avoid breaking the page (Space would kill space-to-scroll) are Alt-only. */
 
-import { isEditable } from "./dom.js?v=20260905b";
-import { announce } from "./a11y.js?v=20260905b";
+import { isEditable } from "./dom.js?v=20260905c";
+import { announce } from "./a11y.js?v=20260905c";
 
 const DIRECTIONS = Object.freeze({
   h: "left",

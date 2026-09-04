@@ -720,6 +720,10 @@ html[data-wm="off"].js .workspace:not(.is-active),
 .nagbar-cancel { background: var(--surface); color: var(--foreground); }
 
 @media (max-width: 767px) {
+  /* Logging in is a button press now, so it has to be a real touch target. */
+  .greeter-login { min-height: 44px; }
+  .greeter-panel { width: min(340px, 100%); }
+
   .nagbar { flex-wrap: wrap; }
   .nagbar-message { flex-basis: 100%; }
   .nagbar-action { min-height: 40px; }

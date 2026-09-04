@@ -225,19 +225,20 @@ export const runGreeter = ({ node, mode = "boot", reducedMotion, onLogin }) => {
       skipBoot();
       return;
     }
-    if (phase === "login" && (event.key === "Enter" || event.key === " ")) {
+    /* Only Enter logs in. Any other key during the login phase is ignored, so
+       the panel cannot be dismissed by accident. */
+    if (phase === "login" && event.key === "Enter") {
       event.preventDefault();
       authenticate();
     }
   }
 
+  /* Clicking anywhere skips the boot log, but the login panel only responds to
+     the Log In button itself — a stray click on the desktop behind it must not
+     log anyone in. */
   function onPointerDown(event) {
-    if (finished) return;
-    if (phase === "boot") {
-      skipBoot();
-      return;
-    }
-    if (phase === "login" && !event.target.closest("[data-login]")) authenticate();
+    if (finished || phase !== "boot") return;
+    skipBoot();
   }
 
   node.hidden = false;
