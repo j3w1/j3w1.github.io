@@ -8,7 +8,7 @@ The publication service is Node 24 and Fastify on Vercel Functions. Its source c
 
 The browser fetches `/healthz` before enabling authentication, then checks `/api/session` after OAuth. Both responses carry integer API protocol version `1`, bounded Vercel provenance, and the fixed repository identity. A missing, malformed, lower, or higher unsupported version keeps mutation controls locked; there is no best-effort fallback. Safe UI provenance is limited to the provider/runtime/environment, source revision, deployment identity, region, protocol, and fixed target.
 
-The OAuth popup keeps PKCE, authenticated/encrypted state in a short-lived secure HttpOnly cookie, and exact `origin`, popup `source`, message `type`, and channel checks. The temporary GitHub user token is revoked after exact numeric owner ID and normalized login verification. The resulting bearer token is opaque, stored in browser `sessionStorage`, and represented in Postgres only by a SHA-256-keyed record with a 3,600-second expiry. Shared storage makes verification and logout effective across Function instances. GitHub OAuth and installation tokens are never persisted.
+The OAuth popup keeps PKCE, authenticated/encrypted state in a short-lived secure HttpOnly cookie, and exact `origin`, popup `source`, message `type`, and channel checks. The temporary GitHub user token is revoked after exact numeric owner ID and normalized login verification. The resulting bearer token is opaque, stored in browser `sessionStorage`, and represented in Redis only by a SHA-256-keyed record with a 3,600-second TTL. Shared storage makes verification and logout effective across Function instances. GitHub OAuth and installation tokens are never persisted.
 
 ## Publication and concurrency
 
@@ -22,30 +22,10 @@ Finalize is a small JSON request. The server claims the batch once, revalidates 
 
 ## Provider controls
 
-Vercel WAF is abuse and cost control, not authorization. Provider rules rate-limit OAuth start/callback, authenticated reads, and mutation/upload control endpoints. Standard Deployment Protection covers Preview and generated deployment URLs while the production API origin remains publicly reachable by GitHub Pages. Spend Management notifications and automatic production pause are team-scoped and must be read back before activation. Production secrets exist only in Production; Preview has none of the GitHub App, OAuth, database, Blob, or session secrets and therefore remains zero-write.
+Vercel WAF is abuse and cost control, not authorization. Provider rules rate-limit OAuth start/callback, authenticated reads, and mutation/upload control endpoints. Standard Deployment Protection covers Preview and generated deployment URLs while the production API origin remains publicly reachable by GitHub Pages. Spend Management notifications and automatic production pause are team-scoped and must be read back before activation. Production secrets exist only in Production; Preview has none of the GitHub App, OAuth, Redis, Blob, or session secrets and therefore remains zero-write.
 
 Production deployment is manual: `vercel deploy` for protected Preview, `vercel --prod --skip-domain` for staged Production, and `vercel promote <exact-deployment>` after acceptance. Git-driven deployment is disabled. There is no retained DigitalOcean publisher, automatic failover, or post-cutover rollback path.
 
 ## Trust-domain boundary
 
 A future private general-purpose j3w1ctl may own device registry, enrollment, presence, route leases, relay policy, audit events, project/session continuity, and bounded personal automation. It must be a separate repository and service with separate credentials, data, and relay identities. It must not reuse this site-publisher GitHub App, CE Systems credentials, or merge personal and CE trust domains.
-
-## Shared store
-
-Sessions and upload batches live in one Neon Postgres table, `j3w1ctl_kv (key, value jsonb,
-expires_at)`, reached through Neon's serverless HTTP driver — so there is no connection pool to
-exhaust across Function invocations.
-
-Expiry is enforced in the read path (`expires_at > now()`), not by a background job, so a lapsed
-session can never be observed even if the sweep is late. Postgres does not evict on its own the way
-Redis did, so the hourly `cleanup-staging` cron that already prunes staged blobs also deletes lapsed
-rows; that is housekeeping, never correctness.
-
-`setIfAbsent` is the one subtle operation. It backs both session-token minting and upload-batch
-claiming, and it must treat an *expired* row as absent — otherwise an id could never be reused. The
-`ON CONFLICT` branch therefore updates only when `expires_at <= now()`, which makes "insert if free"
-and "reclaim if lapsed" a single atomic statement.
-
-`DATABASE_URL` is the only accepted name. A connection string under any other name leaves the service
-unconfigured rather than quietly pointing at a database nobody chose; `test/config.test.js` asserts
-this. Apply the schema with `npm run db:migrate` — it is idempotent and safe to race.

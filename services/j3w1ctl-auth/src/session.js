@@ -5,7 +5,7 @@ import {
   SESSION_SCHEMA_VERSION,
   SESSION_TTL_SECONDS,
 } from "./constants.js";
-import { createPostgresStore } from "./store.js";
+import { createRedisStore } from "./store.js";
 import { unauthorized } from "./errors.js";
 
 const encoder = new TextEncoder();
@@ -20,7 +20,7 @@ const sessionKey = (token) => `sess:v1:${digestSessionToken(token)}`;
 
 export const createSessionManager = (config, {
   now = () => Math.floor(Date.now() / 1000),
-  store = createPostgresStore(config),
+  store = createRedisStore(config),
 } = {}) => {
   const oauthKey = deriveKey(config.sessionSecret, "j3w1ctl-oauth-state-v1");
 

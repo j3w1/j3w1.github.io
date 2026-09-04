@@ -14,7 +14,7 @@ import {
   TARGET_REPOSITORY,
 } from "../src/constants.js";
 import { loadConfig } from "../src/config.js";
-import { createPostgresStore } from "../src/store.js";
+import { createRedisStore } from "../src/store.js";
 
 const execute = promisify(execFile);
 const serviceRoot = path.resolve(import.meta.dirname, "..");
@@ -112,21 +112,18 @@ for (const relative of tracked) {
 }
 secretMatch ? fail("security.tracked-secrets", `credential-shaped material found in ${secretMatch}`) : pass("security.tracked-secrets", "no tracked credential-shaped material found");
 
-if (config.databaseUrl) {
-  const store = createPostgresStore(config);
+if (config.redisUrl && config.redisToken) {
+  const store = createRedisStore(config);
   const key = `preflight:v1:${randomBytes(16).toString("hex")}`;
   try {
-    /* The schema is idempotent, so the probe doubles as a check that the
-       migration can run against whatever database this environment points at. */
-    await store.migrate();
     await store.set(key, { probe: true }, 30);
     const value = await store.get(key);
     await store.delete(key);
-    value?.probe === true ? pass("database.connectivity", "schema applied; disposable TTL probe created, read, and removed") : fail("database.connectivity", "probe readback differed");
+    value?.probe === true ? pass("redis.connectivity", "disposable TTL probe created, read, and removed") : fail("redis.connectivity", "probe readback differed");
   } catch (error) {
-    fail("database.connectivity", error.code ?? "probe failed");
+    fail("redis.connectivity", error.code ?? "probe failed");
   }
-} else skip("database.connectivity", "DATABASE_URL is unavailable in this environment");
+} else skip("redis.connectivity", "credential names are unavailable in this environment");
 
 if (config.blobToken) {
   const pathname = `staging/j3w1ctl/preflight/${randomBytes(16).toString("hex")}.txt`;

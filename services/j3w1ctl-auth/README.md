@@ -18,21 +18,7 @@ npm --prefix services/j3w1ctl-auth run content:check
 npm --prefix services/j3w1ctl-auth run deploy:preflight
 ```
 
-The preflight is zero-mutation. With no provider credentials it checks source, lock, protocol, fixed-target, secret-scan, and cutover invariants and marks credential-dependent checks unavailable. With Production credentials it additionally applies the schema, then creates, reads, and removes one disposable Postgres row and one private Blob object. `--json` emits strict machine-readable results. Provider setup and acceptance use separately named commands.
-
-## Database
-
-The shared store is Neon Postgres, configured with `DATABASE_URL` alone. Apply the schema before the
-first deploy of an environment, and after any schema change:
-
-```powershell
-vercel env pull .env.production.local --environment production
-npm run db:migrate
-```
-
-`db:migrate` is idempotent and safe to re-run or race. `npm test` includes store tests that exercise
-the real SQL — expiry enforced on read, `setIfAbsent` against a lapsed row, keyset pagination —
-whenever `DATABASE_URL` is set, and reports them as skipped when it is not.
+The preflight is zero-mutation. With no provider credentials it checks source, lock, protocol, fixed-target, secret-scan, and cutover invariants and marks credential-dependent checks unavailable. With Production credentials it additionally creates, reads, and removes one disposable Redis TTL key and one private Blob object. `--json` emits strict machine-readable results. Provider setup and acceptance use separately named commands.
 
 ## Configuration ownership
 
@@ -41,11 +27,11 @@ whenever `DATABASE_URL` is set, and reports them as skipped when it is not.
 | `j3w1/j3w1.github.io@main`, protocol `1` | immutable source constants |
 | `VERCEL_ENV`, `VERCEL_GIT_COMMIT_SHA`, `VERCEL_DEPLOYMENT_ID`, `VERCEL_REGION` | Vercel system values; safe bounded provenance |
 | `CMS_SITE_ORIGIN`, `CMS_ALLOWED_GITHUB_LOGIN`, `CMS_ALLOWED_GITHUB_USER_ID`, `GITHUB_APP_ID`, `GITHUB_CLIENT_ID`, `GITHUB_CALLBACK_URL`, `GITHUB_API_VERSION` | Production non-secret configuration; absent or harmless in Preview |
-| `CMS_SESSION_SECRET`, `GITHUB_CLIENT_SECRET`, `GITHUB_PRIVATE_KEY_BASE64`, `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN`, `CRON_SECRET` | Production secrets only; absent from Preview |
+| `CMS_SESSION_SECRET`, `GITHUB_CLIENT_SECRET`, `GITHUB_PRIVATE_KEY_BASE64`, `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `BLOB_READ_WRITE_TOKEN`, `CRON_SECRET` | Production secrets only; absent from Preview |
 | `PORT`, `CMS_DEV_ORIGINS` | Development-only |
 | `GITHUB_OWNER`, `GITHUB_REPO`, `GITHUB_BRANCH` | obsolete and unsupported |
 
-`CMS_SESSION_SECRET` encrypts/authenticates OAuth state; it does not sign browser sessions. Sessions are random 32-byte base64url bearer tokens represented in Postgres only as `sess:v1:<sha256(token)>` rows with schema, exact owner, issue/expiry time, protocol, and a 3,600-second TTL. Logout deletes the shared record and invalidates every Function instance.
+`CMS_SESSION_SECRET` encrypts/authenticates OAuth state; it does not sign browser sessions. Sessions are random 32-byte base64url bearer tokens represented in Redis only as `sess:v1:<sha256(token)>` records with schema, exact owner, issue/expiry time, protocol, and a 3,600-second TTL. Logout deletes the shared record and invalidates every Function instance.
 
 ## Content and photography
 
