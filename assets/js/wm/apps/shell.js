@@ -7,7 +7,7 @@
    no new way for content to reach the DOM as markup. */
 
 import { renderAst } from "../../content-renderer.js?v=20260824";
-import { element } from "../dom.js?v=20260905";
+import { element } from "../dom.js?v=20260905b";
 
 const HOME = "/home/j3w1";
 const INDEX_URL = "/assets/data/content-index.json";

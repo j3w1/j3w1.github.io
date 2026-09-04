@@ -3,8 +3,8 @@
    would resolve after first paint and guarantee a visible reflow from the
    fallback grid to the window manager's layout. */
 
-import { createWm } from "./wm/boot.js?v=20260905";
-import { isEditable } from "./wm/dom.js?v=20260905";
+import { createWm } from "./wm/boot.js?v=20260905b";
+import { isEditable } from "./wm/dom.js?v=20260905b";
 
 const workspaceNames = [
   "home",
@@ -29,7 +29,6 @@ const workspaceSections = new Map(
 
 const workspaceLinks = [...document.querySelectorAll("[data-workspace-link]")];
 const statusWorkspace = document.querySelector("#status-workspace");
-const statusPath = document.querySelector("#status-path");
 const announcer = document.querySelector("#workspace-announcer");
 const skipLink = document.querySelector("[data-skip-link]");
 const clock = document.querySelector("#local-clock");
@@ -86,9 +85,6 @@ const activateWorkspace = (
 
   const number = workspaceNumbers.get(nextName);
   if (statusWorkspace) statusWorkspace.textContent = `${number}:${nextName}`;
-  if (statusPath) {
-    statusPath.textContent = nextName === "home" ? "~/j3w1" : `~/j3w1/${nextName}`;
-  }
   if (skipLink) skipLink.setAttribute("href", `#${nextName}`);
 
   document.title =

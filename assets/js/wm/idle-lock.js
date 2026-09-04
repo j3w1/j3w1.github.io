@@ -8,8 +8,8 @@
    asks for no password, and — like the greeter — is aria-hidden and inert, so it
    never moves focus in or out and <main> is untouched throughout. */
 
-import { LOCK_THRESHOLDS, media, prefs } from "./session.js?v=20260905";
-import { throttle } from "./dom.js?v=20260905";
+import { LOCK_THRESHOLDS, media, prefs } from "./session.js?v=20260905b";
+import { throttle } from "./dom.js?v=20260905b";
 
 const ACTIVITY = ["pointermove", "pointerdown", "keydown", "wheel", "scroll", "touchstart"];
 

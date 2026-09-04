@@ -8,7 +8,7 @@
 
 :root {
   color-scheme: dark;
-  --desktop: #050303;
+  --desktop: #000000;
   --terminal: #0c0909;
   --chrome: #100909;
   --chrome-alt: #1c0a09;
@@ -1196,6 +1196,12 @@ dl {
 .content-entry { display: grid; min-height: 34px; align-items: center; border: 0; border-bottom: 1px solid #190b0b; background: var(--terminal); color: var(--foreground); text-decoration: none; cursor: pointer; }
 .content-entry:hover { background: var(--chrome-alt); }
 .content-entry.is-selected { background: var(--selection); color: var(--prose); }
+.content-entry.is-selected .content-title,
+.file-row.is-selected > span,
+.project-table tbody tr.is-selected td { color: var(--prose); }
+.content-entry.is-selected .content-meta,
+.content-entry.is-selected .content-number,
+.file-row.is-selected > span:not(:first-child) { color: var(--prose); opacity: 0.78; }
 .writing-entry { grid-template-columns: 48px minmax(0, 1fr) 11ch; }
 .books-entry { grid-template-columns: 2fr 1.2fr 0.7fr 1fr; }
 .photography-entry { grid-template-columns: 30px minmax(0, 1fr) 14rem; }
