@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node src/server.js",
+    "db:migrate": "node bin/migrate.mjs",
     "test": "node --test test/*.test.js",
     "test:browser": "playwright test --config playwright.config.mjs",
     "test:browser-fixture": "node test/browser-fixture-server.mjs",
@@ -24,7 +25,7 @@
   "dependencies": {
     "@fastify/cors": "^11.3.0",
     "@fastify/helmet": "^13.1.1",
-    "@upstash/redis": "^1.38.3",
+    "@neondatabase/serverless": "^1.1.0",
     "@vercel/blob": "^2.8.0",
     "fastify": "^5.12.1",
     "jose": "^6.2.10",

@@ -12,7 +12,7 @@ import { createGitHubClient } from "./github.js";
 import { safeProvenance } from "./provenance.js";
 import { createRepositoryService } from "./repository.js";
 import { createSessionManager } from "./session.js";
-import { createRedisStore } from "./store.js";
+import { createPostgresStore } from "./store.js";
 import { createUploadBatchManager } from "./upload-batches.js";
 
 const OAUTH_COOKIE = "__Host-j3w1ctl-oauth";
@@ -98,7 +98,7 @@ export const buildServer = async ({
     bodyLimit: 300 * 1024,
     genReqId: () => crypto.randomUUID(),
   });
-  const store = sharedStore ?? createRedisStore(config);
+  const store = sharedStore ?? createPostgresStore(config);
   const sessions = sessionManager ?? createSessionManager(config, { store, ...(now ? { now } : {}) });
   const github = githubClient ?? createGitHubClient(config, { fetchImpl, ...(now ? { now } : {}) });
   const repository = repositoryService ?? createRepositoryService(github);
@@ -296,7 +296,12 @@ export const buildServer = async ({
     const suppliedBytes = Buffer.from(supplied);
     const expectedBytes = Buffer.from(expected);
     if (suppliedBytes.length !== expectedBytes.length || !timingSafeEqual(suppliedBytes, expectedBytes)) throw unauthorized();
-    return batches.cleanup();
+    /* Redis evicted expired keys itself; Postgres does not, so the hourly sweep
+       that already prunes staged blobs now prunes lapsed rows too. Reads filter
+       on expires_at regardless, so this is housekeeping, never correctness. */
+    const staging = await batches.cleanup();
+    const expiredRows = await store.sweepExpired?.().catch(() => null) ?? null;
+    return { ...staging, expiredRows };
   });
 
   return app;
