@@ -140,6 +140,36 @@ test("the fallback path covers no-JS and a failed boot", async () => {
   assert.doesNotMatch(siteCss, /mobile-buffer-tabs/, "stale buffer tab rules remain");
 });
 
+test("the wiki exists and the site points at it in more than one place", async () => {
+  const wiki = await read("wiki", "index.html");
+  const html = await read("index.html");
+  const shell = await read("assets", "js", "wm", "apps", "shell.js");
+  const boot = await read("assets", "js", "wm", "boot.js");
+
+  assert.match(wiki, /<title>[^<]*[Ww]iki|<title>[^<]*guide/, "the wiki needs a descriptive title");
+  assert.match(wiki, /rel="canonical" href="https:\/\/j3w1\.github\.io\/wiki\/"/, "the wiki needs a canonical URL");
+  assert.match(wiki, /href="\/#home"/, "the wiki must link back to the workstation");
+
+  /* Every hotkey the guide documents has to be a binding that really exists. */
+  const bindings = await read("assets", "js", "wm", "keys.js");
+  for (const key of ["Shift + R", "Shift + E", "Alt + Shift + Space", "resize mode"]) {
+    assert.ok(bindings.includes(key), `keys.js no longer defines ${key}`);
+  }
+  const guide = wiki.toLowerCase();
+  for (const topic of ["shift</kbd>+<kbd>r", "shift</kbd>+<kbd>e", "resize mode", "scratchpad", "logout", "wallpaper"]) {
+    assert.ok(guide.includes(topic), `the wiki should document ${topic}`);
+  }
+
+  /* Discoverable from the desktop, not only from a URL someone was told about. */
+  assert.match(html, /id="wiki-link"[^>]*href="\/wiki\/"/, "the bar needs a visible wiki link");
+  assert.match(html, /help-intro-title[^<]*<a href="\/wiki\/"|<a href="\/wiki\/">full guide/, "the help dialog should link the wiki");
+  assert.ok(shell.includes('"wiki"') || shell.includes("wiki:"), "the shell needs a wiki command");
+  assert.match(boot, /open wiki/, "the launcher needs a wiki command");
+
+  const sitemap = await read("sitemap.xml");
+  assert.match(sitemap, /https:\/\/j3w1\.github\.io\/wiki\//, "the wiki must be in the sitemap");
+});
+
 test("the window manager stays small enough to keep the site dependency-free", async () => {
   /* Caps sit just above today's sizes: they are a ratchet against drift, not a
      target. Raise one deliberately when a feature justifies it. */

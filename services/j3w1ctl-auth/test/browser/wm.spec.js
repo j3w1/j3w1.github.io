@@ -258,7 +258,9 @@ test("the status blocks share one background and sit behind a single divider", a
   expect(style.count).toBeGreaterThan(0);
   expect(style.backgrounds).toBe(1);
   expect(style.blockBackground).toBe(style.barBackground);
-  expect(style.dividers).toBe(1);
+  /* Every visible block carries a divider, so the boundary with the workspace
+     names never lands on a block the viewport has hidden. */
+  expect(style.dividers).toBe(style.count);
 });
 
 test("the status bar shows no fabricated values", async ({ page }) => {

@@ -20,9 +20,10 @@ j3w1ctl preview.
 
 ## Using the site
 
-**[docs/wm-usage.md](docs/wm-usage.md) is the visitor's guide** — what to try first, the full key
-map, touch gestures, the terminal's commands, settings, and troubleshooting. The same guide is on
-the site itself: press `?` for the key map and a short tour, or type `help` in the terminal.
+**📖 The wiki is at <https://j3w1.github.io/wiki/>** — quick start, key points, every hotkey, the
+terminal's commands, touch gestures, session and settings, privacy, and troubleshooting. It is
+reachable from the site itself: the **wiki** button in the bar, the `?` help dialog, `6:elsewhere`,
+the launcher's `open wiki`, or `wiki` in the terminal. Source: [`wiki/index.html`](wiki/index.html).
 
 The short version:
 
@@ -38,7 +39,8 @@ full desktop.
 
 | Document | For |
 | --- | --- |
-| [wm-usage.md](docs/wm-usage.md) | Visitors — how to use the site |
+| [wiki/](https://j3w1.github.io/wiki/) | **Visitors — how to use the site** |
+| [wm-usage.md](docs/wm-usage.md) | The same guide in Markdown, for the repository |
 | [wm-architecture.md](docs/wm-architecture.md) | How the window manager is built and why |
 | [wm-accessibility.md](docs/wm-accessibility.md) | The rules the implementation must obey |
 | [wm-development.md](docs/wm-development.md) | Running it, testing it, extending it |

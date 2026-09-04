@@ -295,18 +295,14 @@ html.wm-active .window.is-floating {
   overflow: hidden;
 }
 
-/* The container and its blocks must share one background, or the strip reads as
-   two mismatched panels. The boundary with the workspaces is the divider below,
-   drawn on the first block so an empty bar leaves no orphan line behind. */
+/* The container and its blocks share one background, or the strip reads as two
+   mismatched panels. Every block carries its own divider rather than only the
+   first: which block is leftmost changes with the viewport as blocks are shed,
+   and a divider pinned to the first would end up drawn on a hidden one. */
 .i3block {
   height: 100%;
-  background: var(--chrome-alt);
-}
-
-.i3block:first-child {
-  padding-left: 12px;
   border-left: 1px solid var(--border-strong);
-  margin-left: 4px;
+  background: var(--chrome-alt);
 }
 
 /* Below 768px the strip scrolls instead, so the tray stays reachable. */
@@ -322,11 +318,6 @@ html.wm-active .window.is-floating {
   white-space: nowrap;
 }
 
-.i3block + .i3block::before {
-  margin-right: 8px;
-  color: var(--inactive);
-  content: "|";
-}
 
 .wm-mode {
   display: inline-flex;
@@ -729,13 +720,13 @@ html[data-wm="off"] .project-detail,
 
 /* The bar clips rather than squeezing the workspace names, so blocks are shed
    in ascending order of usefulness before they ever reach that point. */
-@media (max-width: 1919px) { .i3block-lang, .i3block-heap { display: none; } }
-@media (max-width: 1799px) { .i3block-tz { display: none; } }
-@media (max-width: 1599px) { .i3block-up { display: none; } }
-@media (max-width: 1549px) { .i3block-res { display: none; } }
-@media (max-width: 1449px) { .i3block-mem { display: none; } }
-@media (max-width: 1319px) { .i3block-net { display: none; } }
-@media (max-width: 1099px) { .i3block-cpu, .i3block-bat { display: none; } }
+@media (max-width: 2199px) { .i3block-lang, .i3block-heap { display: none; } }
+@media (max-width: 1849px) { .i3block-tz { display: none; } }
+@media (max-width: 1699px) { .i3block-up { display: none; } }
+@media (max-width: 1649px) { .i3block-res { display: none; } }
+@media (max-width: 1549px) { .i3block-mem { display: none; } }
+@media (max-width: 1449px) { .i3block-net { display: none; } }
+@media (max-width: 1279px) { .i3block-cpu, .i3block-bat { display: none; } }
 
 @media (max-width: 1199px) {
   html.wm-active .photography-body,

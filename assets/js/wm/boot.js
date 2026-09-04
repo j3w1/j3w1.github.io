@@ -697,6 +697,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
         list.push({ label: `wallpaper ${name}`, aliases: `feh background ${name}`, run: () => wm.setWallpaper(name) });
       });
       list.push(
+        { label: "open wiki (how to use this site)", aliases: "help guide manual docs wiki", run: () => window.open("/wiki/", "_blank", "noopener") },
         { label: "exec i3lock", aliases: "lock screen", run: () => lock?.lock() },
         { label: "lock off", aliases: "idle disable", run: () => { prefs.lock = "off"; lock?.reschedule(); announce("idle lock off"); } },
         { label: "lock 10m", aliases: "idle ten", run: () => { prefs.lock = "10m"; lock?.reschedule(); announce("idle lock ten minutes"); } },

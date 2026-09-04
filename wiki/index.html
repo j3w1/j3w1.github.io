@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wiki — how to use the j3w1 workstation</title>
+  <meta name="description" content="Guide to the j3w1.github.io Manjaro i3 workstation: quick start, keyboard shortcuts, terminal commands, touch gestures, session and settings.">
+  <link rel="canonical" href="https://j3w1.github.io/wiki/">
+  <meta property="og:title" content="j3w1 workstation — wiki">
+  <meta property="og:description" content="Quick start, hotkeys, terminal commands, gestures, and settings for the j3w1 i3 workstation.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://j3w1.github.io/wiki/">
+  <meta name="theme-color" content="#0c0909">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/fonts/JetBrainsMonoNerdFont-Regular.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="/assets/css/site.css?v=20260904">
+  <style>
+    /* A scrolling document, unlike the fixed-viewport desktop, so the shared
+       stylesheet's full-height/no-scroll rules are released here. */
+    html, body { height: auto; overflow: visible; }
+    body { padding-bottom: 60px; font-size: 13px; line-height: 1.6; }
+
+    .wiki-bar {
+      position: sticky;
+      z-index: 20;
+      top: 0;
+      display: flex;
+      height: var(--bar-height);
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--border-active);
+      background: var(--chrome-alt);
+      white-space: nowrap;
+    }
+    .wiki-bar a { color: var(--muted); text-decoration: none; }
+    .wiki-bar a:hover { color: var(--prose); background: transparent; }
+    .wiki-bar .is-here { color: var(--prose); }
+    .wiki-bar .spacer { flex: 1 1 auto; }
+
+    .wrap { width: min(880px, calc(100% - 32px)); margin: 0 auto; }
+
+    header.hero { padding: 44px 0 26px; }
+    header.hero h1 { margin: 0 0 10px; color: var(--prose); font-size: 27px; line-height: 1.25; }
+    header.hero p { max-width: 78ch; margin: 0; color: var(--muted); }
+
+    nav.toc {
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      margin-bottom: 34px;
+      background: var(--surface);
+    }
+    nav.toc p { margin: 0 0 8px; color: var(--foreground-bright); }
+    nav.toc ul { display: flex; flex-wrap: wrap; padding: 0; margin: 0; gap: 6px 16px; list-style: none; }
+    nav.toc a { color: var(--muted); }
+
+    section { margin-bottom: 40px; scroll-margin-top: calc(var(--bar-height) + 12px); }
+    h2 { margin: 0 0 6px; color: var(--foreground-bright); font-size: 19px; }
+    h3 { margin: 26px 0 8px; color: var(--prose); font-size: 15px; }
+    .lede { max-width: 80ch; margin: 0 0 18px; color: var(--muted); }
+    p { max-width: 80ch; }
+
+    .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .card { padding: 14px 16px; border: 1px solid var(--border); background: var(--surface); }
+    .card h3 { margin: 0 0 6px; color: var(--foreground-bright); font-size: 14px; }
+    .card p { margin: 0; color: var(--muted); }
+
+    table { width: 100%; border-collapse: collapse; margin: 10px 0 0; }
+    caption { padding-bottom: 6px; color: var(--quiet); text-align: left; }
+    th, td { padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { background: var(--selection-dark); color: var(--prose); }
+    td:first-child { width: 34%; white-space: nowrap; }
+    tbody tr:hover { background: var(--chrome-alt); }
+    .scroller { overflow-x: auto; }
+
+    kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      border: 1px solid var(--border-strong);
+      background: var(--terminal);
+      color: var(--foreground-bright);
+      font: inherit;
+      white-space: nowrap;
+    }
+    code { color: var(--foreground-bright); }
+
+    .note {
+      padding: 12px 16px;
+      border-left: 3px solid var(--focus);
+      background: var(--surface-raised);
+      color: var(--prose);
+    }
+    .note p { margin: 0; }
+    .note + .note { margin-top: 10px; }
+
+    ol.steps { padding-left: 20px; }
+    ol.steps li { margin-bottom: 9px; }
+
+    footer.wiki-foot {
+      padding-top: 22px;
+      border-top: 1px solid var(--border);
+      margin-top: 44px;
+      color: var(--quiet);
+    }
+
+    @media (max-width: 640px) {
+      td:first-child { width: auto; white-space: normal; }
+      header.hero { padding-top: 30px; }
+      header.hero h1 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#start">Skip to the guide</a>
+
+  <nav class="wiki-bar" aria-label="Site">
+    <a href="/#home">← back to the workstation</a>
+    <span class="spacer"></span>
+    <span class="is-here">📖 wiki</span>
+    <a href="https://github.com/j3w1/j3w1.github.io">source ↗</a>
+  </nav>
+
+  <div class="wrap">
+    <header class="hero">
+      <h1>🖥️ The j3w1 workstation — user guide</h1>
+      <p>
+        This site is a working <a href="https://i3wm.org/">i3</a> window manager rebuilt in a browser.
+        The windows really tile, split, float and close; the terminal really runs commands; the status
+        bar really reads your machine. This page explains how to drive it — no prior i3 knowledge needed.
+      </p>
+    </header>
+
+    <nav class="toc" aria-label="On this page">
+      <p>On this page</p>
+      <ul>
+        <li><a href="#start">🚀 Quick start</a></li>
+        <li><a href="#keypoints">💡 Key points</a></li>
+        <li><a href="#navigate">🧭 Getting around</a></li>
+        <li><a href="#hotkeys">⌨️ Hotkeys</a></li>
+        <li><a href="#terminal">💻 Terminal</a></li>
+        <li><a href="#apps">📦 Applications</a></li>
+        <li><a href="#touch">👆 Touch</a></li>
+        <li><a href="#session">🔐 Boot &amp; session</a></li>
+        <li><a href="#settings">⚙️ Settings</a></li>
+        <li><a href="#privacy">🔒 Privacy</a></li>
+        <li><a href="#trouble">🩹 Troubleshooting</a></li>
+      </ul>
+    </nav>
+
+    <section id="start">
+      <h2>🚀 Quick start</h2>
+      <p class="lede">Thirty seconds, and you can read everything on the site.</p>
+      <div class="cards">
+        <div class="card">
+          <h3>1️⃣ Just want to read?</h3>
+          <p>Click the workspace names in the top bar, or press <kbd>1</kbd>–<kbd>7</kbd>. That is the whole navigation.</p>
+        </div>
+        <div class="card">
+          <h3>2️⃣ Prefer typing?</h3>
+          <p>Press <kbd>/</kbd> for the launcher and type what you want — <code>open about</code>, <code>exec neofetch</code>.</p>
+        </div>
+        <div class="card">
+          <h3>3️⃣ Forgot a key?</h3>
+          <p>Press <kbd>?</kbd> for the live key map, generated from the real bindings.</p>
+        </div>
+      </div>
+
+      <h3>✨ Worth trying first</h3>
+      <ol class="steps">
+        <li>Press <kbd>/</kbd> and run <code>exec neofetch</code> — the Manjaro screenshot classic, filled with your own machine's details.</li>
+        <li>In the terminal, type <code>ls</code>, then <code>cd writing</code>, then <code>cat &lt;name&gt;</code>. The site's content is a filesystem.</li>
+        <li>Press <kbd>w</kbd> to tab the windows together, then <kbd>e</kbd> to untile them.</li>
+        <li>Hold <kbd>Alt</kbd> and drag a window, then drag the thin gap between two tiles to resize them.</li>
+        <li>Press <kbd>f</kbd> to fullscreen a reader — the nicest way to read a long entry.</li>
+      </ol>
+
+      <div class="note">
+        <p>🛟 <strong>Nothing here can be broken permanently.</strong> Closed windows are only hidden, never deleted, and reloading always restores the full desktop. If a layout ever looks wrong, press <kbd>Shift</kbd>+<kbd>R</kbd>.</p>
+      </div>
+    </section>
+
+    <section id="keypoints">
+      <h2>💡 Key points</h2>
+      <div class="cards">
+        <div class="card">
+          <h3>🪟 It is a real window manager</h3>
+          <p>A live layout tree per workspace: split, tabbed and stacked containers, floating windows, gaps, fullscreen and a scratchpad.</p>
+        </div>
+        <div class="card">
+          <h3>⌨️ Keys work bare</h3>
+          <p>No modifier needed for most bindings. <kbd>Alt</kbd>+key works too where the browser allows it. Shortcuts pause while you type.</p>
+        </div>
+        <div class="card">
+          <h3>🖱️ Everything has a click</h3>
+          <p>Every action is in the launcher (<kbd>/</kbd>), so you never need a shortcut you do not know.</p>
+        </div>
+        <div class="card">
+          <h3>📱 Phones get real i3 tabs</h3>
+          <p>Each workspace becomes an i3 <em>tabbed</em> container — what i3 does when a screen is too narrow to tile.</p>
+        </div>
+        <div class="card">
+          <h3>🧾 The status bar is honest</h3>
+          <p>Values your browser does not expose are simply absent, never invented. Nothing is transmitted.</p>
+        </div>
+        <div class="card">
+          <h3>♿ Readable without any of it</h3>
+          <p>Every window is reachable with <kbd>Tab</kbd> alone, and with JavaScript off the site renders as one plain stacked page.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="navigate">
+      <h2>🧭 Getting around</h2>
+      <div class="scroller">
+        <table>
+          <caption>The seven workspaces, mirroring a real i3 setup</caption>
+          <thead><tr><th scope="col">Workspace</th><th scope="col">What is in it</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>1</kbd> 🏠 home</td><td>A terminal and a Thunar-style file browser</td></tr>
+            <tr><td><kbd>2</kbd> ✍️ writing</td><td>Published writing, as Vim buffers</td></tr>
+            <tr><td><kbd>3</kbd> 🧰 projects</td><td>A filterable table of current, public and historical work</td></tr>
+            <tr><td><kbd>4</kbd> 📷 photography</td><td>Photograph sets, with a viewer</td></tr>
+            <tr><td><kbd>5</kbd> 📚 books</td><td>A Calibre-style library of reading notes</td></tr>
+            <tr><td><kbd>6</kbd> 🔗 elsewhere</td><td>External links, as symlinks in a terminal</td></tr>
+            <tr><td><kbd>7</kbd> 👤 about</td><td>Biography and working interests</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Entries are deep-linkable: <code>/#writing/&lt;slug&gt;</code>, <code>/#photography/&lt;slug&gt;</code> and
+      <code>/#books/&lt;slug&gt;</code> all open straight to that entry, with no boot screen in the way.</p>
+    </section>
+
+    <section id="hotkeys">
+      <h2>⌨️ Hotkeys</h2>
+      <p class="lede">
+        Bare keys work on their own; <kbd>Alt</kbd>+key does the same where your browser allows it.
+        Bindings pause automatically while your cursor is in a text field.
+      </p>
+
+      <h3>🧭 Moving around</h3>
+      <div class="scroller">
+        <table>
+          <thead><tr><th scope="col">Key</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>1</kbd>–<kbd>7</kbd></td><td>Switch workspace</td></tr>
+            <tr><td><kbd>h</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>l</kbd> or arrows</td><td>Focus the window left / down / up / right</td></tr>
+            <tr><td><kbd>Tab</kbd></td><td>Ordinary browser focus — reaches every window</td></tr>
+            <tr><td><kbd>Enter</kbd></td><td>Activate the selected row or link</td></tr>
+            <tr><td><kbd>/</kbd> or <kbd>:</kbd></td><td>Open the launcher (dmenu)</td></tr>
+            <tr><td><kbd>?</kbd></td><td>Show the live key map</td></tr>
+            <tr><td><kbd>Escape</kbd></td><td>Leave fullscreen, or close an overlay</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>🪟 Arranging windows</h3>
+      <div class="scroller">
+        <table>
+          <thead><tr><th scope="col">Key</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>H</kbd> <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd></td><td>Move the focused window</td></tr>
+            <tr><td><kbd>b</kbd> / <kbd>v</kbd></td><td>Split horizontally / vertically</td></tr>
+            <tr><td><kbd>w</kbd> / <kbd>s</kbd> / <kbd>e</kbd></td><td>Tabbed layout / stacked layout / toggle split</td></tr>
+            <tr><td><kbd>f</kbd></td><td>Fullscreen the focused window</td></tr>
+            <tr><td><kbd>q</kbd></td><td>Close the window — it can always come back</td></tr>
+            <tr><td><kbd>r</kbd></td><td>Resize mode: then <kbd>h</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>l</kbd>, <kbd>Shift</kbd> for bigger steps, <kbd>Escape</kbd> to leave</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>7</kbd></td><td>Move the window to another workspace</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Space</kbd></td><td>Switch focus between tiled and floating windows</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd></td><td>Float or unfloat the focused window</td></tr>
+            <tr><td><kbd>-</kbd> / <kbd>_</kbd></td><td>Show the scratchpad / send a window to it</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Enter</kbd></td><td>Open a new terminal</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>🔧 Session</h3>
+      <div class="scroller">
+        <table>
+          <thead><tr><th scope="col">Key</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>Shift</kbd>+<kbd>R</kbd></td><td>Restart in place — default layout, every window back</td></tr>
+            <tr><td><kbd>Shift</kbd>+<kbd>E</kbd></td><td>Session menu: lock screen, log out, restart i3</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>🖱️ Mouse</h3>
+      <div class="scroller">
+        <table>
+          <thead><tr><th scope="col">Gesture</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            <tr><td>Drag a title bar</td><td>Float the window and move it</td></tr>
+            <tr><td><kbd>Alt</kbd>+drag anywhere</td><td>The same, from anywhere in the window</td></tr>
+            <tr><td>Drag the gap between tiles</td><td>Resize both neighbours</td></tr>
+            <tr><td>Drag a floating window's edge</td><td>Resize it</td></tr>
+            <tr><td>Click a tab</td><td>Switch to that window</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <p>💡 <kbd>Space</kbd> is only bound together with <kbd>Alt</kbd>, on purpose — binding it bare would break using the space bar to scroll.</p>
+      </div>
+    </section>
+
+    <section id="terminal">
+      <h2>💻 The terminal</h2>
+      <p class="lede">
+        The terminal on <strong>1:home</strong> is a real shell over the site's own content.
+        <kbd>Tab</kbd> completes, <kbd>↑</kbd>/<kbd>↓</kbd> walk the history, <kbd>Ctrl</kbd>+<kbd>C</kbd> clears the line.
+      </p>
+      <div class="scroller">
+        <table>
+          <thead><tr><th scope="col">Command</th><th scope="col">What it does</th></tr></thead>
+          <tbody>
+            <tr><td><code>ls</code> <code>cd</code> <code>pwd</code> <code>tree</code></td><td>Move around the site as a filesystem</td></tr>
+            <tr><td><code>cat &lt;file&gt;</code></td><td>Read an entry, a project, or a page</td></tr>
+            <tr><td><code>open &lt;name&gt;</code></td><td>Jump to a workspace, an entry, or an external link</td></tr>
+            <tr><td><code>help</code></td><td>Commands and desktop keys, listed separately</td></tr>
+            <tr><td><code>keys</code></td><td>Just the window manager shortcuts</td></tr>
+            <tr><td><code>dmenu</code></td><td>Open the launcher (same as pressing <kbd>/</kbd>)</td></tr>
+            <tr><td><code>wiki</code></td><td>Open this guide</td></tr>
+            <tr><td><code>i3-msg &lt;command&gt;</code></td><td>Run a window manager command, e.g. <code>i3-msg layout tabbed</code></td></tr>
+            <tr><td><code>logout</code></td><td>End the session and return to the login screen</td></tr>
+            <tr><td><code>clear</code> <code>whoami</code> <code>date</code> <code>echo</code> <code>exit</code></td><td>The usual</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">
+        <p>⚠️ Desktop shortcuts are <em>not</em> shell commands. Typing <code>/</code> or <code>?</code> at the prompt will say so — press them outside the terminal, or type <code>dmenu</code> and <code>keys</code>.</p>
+      </div>
+    </section>
+
+    <section id="apps">
+      <h2>📦 Applications</h2>
+      <p class="lede">Launch any of these from the launcher (<kbd>/</kbd> then <code>exec &lt;name&gt;</code>) or by typing the name in the terminal.</p>
+      <div class="cards">
+        <div class="card"><h3>🧊 neofetch</h3><p>System information read from your own browser. Anything it cannot see prints <code>unknown</code>.</p></div>
+        <div class="card"><h3>📊 htop</h3><p>The open windows as processes, with real frame timing and heap figures.</p></div>
+        <div class="card"><h3>🖼️ feh</h3><p>Pick between three wallpapers, drawn entirely in CSS. Remembered.</p></div>
+        <div class="card"><h3>🟩 cmatrix</h3><p>A toy. Static if you have reduced motion enabled.</p></div>
+        <div class="card"><h3>⌨️ urxvt</h3><p>Another terminal — <kbd>Alt</kbd>+<kbd>Enter</kbd>.</p></div>
+      </div>
+    </section>
+
+    <section id="touch">
+      <h2>👆 Touch</h2>
+      <div class="scroller">
+        <table>
+          <thead><tr><th scope="col">Gesture</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            <tr><td>👉 Swipe left / right</td><td>Previous / next workspace</td></tr>
+            <tr><td>👆 Tap a tab</td><td>Switch window</td></tr>
+            <tr><td>✊ Long-press a title bar</td><td>Float the window, then drag it</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Each workspace uses i3's <strong>tabbed</strong> layout on a phone. Tiling, gutter-dragging and the
+        scratchpad are switched off below 768px; everything else works. Swiping never overrides scrolling —
+        if a table or code block can still scroll sideways, it gets the gesture first.
+      </p>
+    </section>
+
+    <section id="session">
+      <h2>🔐 Booting, logging in, logging out</h2>
+      <p class="lede">
+        The first time you arrive the machine boots — a Manjaro banner, kernel lines and systemd units, about
+        five seconds. Any key or click skips to the end.
+      </p>
+      <p>
+        Then the <strong>LightDM login screen</strong> appears and waits for you. The username and password are
+        already filled in; the password is decorative bullets and no password value exists anywhere in the page.
+        Press <kbd>Enter</kbd> or click <strong>Log In</strong>.
+      </p>
+      <div class="note">
+        <p>🔁 <strong>Logging in is remembered.</strong> Come back tomorrow and the desktop appears immediately, with no boot and no login, until you log out.</p>
+      </div>
+      <div class="scroller">
+        <table>
+          <thead><tr><th scope="col">To…</th><th scope="col">Do this</th></tr></thead>
+          <tbody>
+            <tr><td>🔒 Lock the screen</td><td><kbd>Shift</kbd>+<kbd>E</kbd> → <strong>Lock screen</strong>, or <code>exec i3lock</code>. Any key dismisses it.</td></tr>
+            <tr><td>🚪 Log out</td><td><kbd>Shift</kbd>+<kbd>E</kbd> → <strong>Log out</strong>, the launcher's <code>log out</code>, or <code>logout</code></td></tr>
+            <tr><td>🔓 Log back in</td><td>The login panel is already there — press <kbd>Enter</kbd></td></tr>
+            <tr><td>🎬 Watch the boot again</td><td>The launcher's <code>exec lightdm</code></td></tr>
+            <tr><td>⏭️ Never see it again</td><td>The launcher's <code>boot off</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        The boot and login never appear when you follow a link straight to an entry — a shared link must never
+        land someone on a login screen — nor on a slow or data-saving connection. With reduced motion enabled
+        the animation is skipped and the login panel appears immediately.
+      </p>
+    </section>
+
+    <section id="settings">
+      <h2>⚙️ Settings</h2>
+      <p class="lede">All of these are launcher commands (<kbd>/</kbd>), and every one is stored in your browser only.</p>
+      <div class="scroller">
+        <table>
+          <thead><tr><th scope="col">Command</th><th scope="col">Effect</th></tr></thead>
+          <tbody>
+            <tr><td><code>log out</code></td><td>End the session; the login screen returns</td></tr>
+            <tr><td><code>boot off</code> / <code>boot on</code></td><td>Skip or restore the boot and login sequence</td></tr>
+            <tr><td><code>exec lightdm</code></td><td>Replay the boot sequence now</td></tr>
+            <tr><td><code>lock off</code> / <code>lock 10m</code> / <code>lock 30m</code></td><td>Idle screen lock — off, or after 10 or 30 minutes</td></tr>
+            <tr><td><code>exec i3lock</code></td><td>Lock the screen immediately</td></tr>
+            <tr><td><code>notify off</code> / <code>notify on</code></td><td>Silence the corner notifications</td></tr>
+            <tr><td><code>wallpaper ember</code> / <code>carbon</code> / <code>ridge</code></td><td>Change the wallpaper</td></tr>
+            <tr><td><code>restart i3 inplace</code></td><td>Reset every window and layout to defaults</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>🌙 The idle lock is set to ten minutes by default. It never arms on a phone or tablet, never while you are typing or a dialog is open, and never while the tab is in the background.</p>
+    </section>
+
+    <section id="privacy">
+      <h2>🔒 Privacy</h2>
+      <div class="note">
+        <p>The status bar and <code>neofetch</code> read your CPU thread count, memory, connection type, battery, screen size, language and time zone <strong>from your own browser</strong>. None of it is transmitted, stored or logged — this site has no analytics and no backend for the public page.</p>
+      </div>
+      <p>
+        Where your browser does not expose something, the value is <strong>absent</strong> rather than guessed.
+        That is why the bar is shorter in Firefox than in Chrome, and why a desktop shows no battery.
+        Your layout, wallpaper and settings live in your browser's local storage and never leave your machine.
+      </p>
+    </section>
+
+    <section id="trouble">
+      <h2>🩹 Troubleshooting</h2>
+      <div class="scroller">
+        <table>
+          <thead><tr><th scope="col">Problem</th><th scope="col">Fix</th></tr></thead>
+          <tbody>
+            <tr><td>😵 The layout looks wrong</td><td>Press <kbd>Shift</kbd>+<kbd>R</kbd>, or run <code>restart i3 inplace</code></td></tr>
+            <tr><td>🫥 A window disappeared</td><td>Press <kbd>Shift</kbd>+<kbd>R</kbd>, or click <strong>restore this workspace</strong></td></tr>
+            <tr><td>⌨️ Keys do nothing</td><td>Your focus is in a text field — press <kbd>Escape</kbd> or click elsewhere</td></tr>
+            <tr><td>🤔 A shortcut does nothing in the terminal</td><td>Desktop keys are not shell commands. Press them outside the terminal, or type <code>keys</code></td></tr>
+            <tr><td>🔐 Stuck on the login screen</td><td>Press <kbd>Enter</kbd></td></tr>
+            <tr><td>🕳️ Nothing loads at all</td><td>The site works without JavaScript: every workspace renders as one plain stacked document</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="a11y">
+      <h2>♿ Accessibility</h2>
+      <ul>
+        <li>Every window is reachable with <kbd>Tab</kbd> alone — no keybinding is required to read anything.</li>
+        <li>Tabbed windows are real ARIA tab lists, with arrow-key support.</li>
+        <li>Workspace, mode and window changes are announced to screen readers in plain language.</li>
+        <li>Focus is never trapped outside a dialog, and never dropped onto the page body.</li>
+        <li>With <code>prefers-reduced-motion</code> enabled there is no boot animation, no idle lock, no sliding and no animation of any kind.</li>
+        <li>With JavaScript disabled the whole site renders as one plain, stacked, scrolling document.</li>
+      </ul>
+    </section>
+
+    <footer class="wiki-foot">
+      <p>
+        📖 Technical documentation lives in the repository:
+        <a href="https://github.com/j3w1/j3w1.github.io/blob/main/docs/wm-architecture.md">architecture</a>,
+        <a href="https://github.com/j3w1/j3w1.github.io/blob/main/docs/wm-accessibility.md">accessibility contract</a>,
+        <a href="https://github.com/j3w1/j3w1.github.io/blob/main/docs/wm-development.md">development</a>.
+      </p>
+      <p><a href="/#home">← back to the workstation</a></p>
+    </footer>
+  </div>
+</body>
+</html>

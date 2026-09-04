@@ -67,6 +67,7 @@
     <span id="wm-mode" class="wm-mode" hidden></span>
     <div id="i3status" class="i3status" aria-label="System status"></div>
     <div class="system-status" aria-label="Website status">
+      <a id="wiki-link" class="status-control" href="/wiki/"><span class="ui-icon" aria-hidden="true">&#xf02d;</span><span class="tray-label">wiki</span></a>
       <button id="power-menu-toggle" class="status-control" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="power-menu"><span class="ui-icon" aria-hidden="true">&#xf011;</span><span class="sr-only">Session menu</span></button>
       <button id="j3w1ctl-launch" class="status-control" type="button"><span class="ui-icon ui-icon-lock" aria-hidden="true">&#xf023;</span><span class="tray-label">j3w1ctl</span></button>
       <a class="status-github" href="https://github.com/j3w1" rel="me"><span class="ui-icon ui-icon-github" aria-hidden="true">&#xf09b;</span>GitHub <span aria-hidden="true">↗</span></a>
@@ -143,7 +144,7 @@
               <a class="file-row" href="#projects" data-workspace-link="projects"><span><span class="file-icon ui-icon" aria-hidden="true">&#xf0ae;</span>projects/</span><span>Application</span><span>8 entries</span></a>
               <a class="file-row" href="#photography" data-workspace-link="photography"><span><span class="file-icon ui-icon" aria-hidden="true">&#xf030;</span>photography/</span><span>Directory</span><span data-content-count="photography">0 entries</span></a>
               <a class="file-row" href="#books" data-workspace-link="books"><span><span class="file-icon ui-icon" aria-hidden="true">&#xf02d;</span>books/</span><span>Library</span><span data-content-count="books">0 entries</span></a>
-              <a class="file-row" href="#elsewhere" data-workspace-link="elsewhere"><span><span class="file-icon ui-icon" aria-hidden="true">&#xf0ac;</span>elsewhere/</span><span>Links</span><span>4 entries</span></a>
+              <a class="file-row" href="#elsewhere" data-workspace-link="elsewhere"><span><span class="file-icon ui-icon" aria-hidden="true">&#xf0ac;</span>elsewhere/</span><span>Links</span><span>5 entries</span></a>
               <a class="file-row" href="#about" data-workspace-link="about"><span><span class="file-icon ui-icon" aria-hidden="true">&#xf129;</span>about/</span><span>Vim buffer</span><span>readable</span></a>
             </div>
           </div>
@@ -152,7 +153,7 @@
 
         <div class="wm-empty" data-wm-empty hidden>
           <p class="wm-empty-title">no windows on <span data-empty-ws>home</span></p>
-          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu</p>
+          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu · <a href="/wiki/">wiki</a></p>
           <p><button type="button" class="wm-restore" data-wm-restore>restore this workspace</button></p>
         </div>
         <div class="wm-deco" data-wm-deco></div>
@@ -175,7 +176,7 @@
         </article>
         <div class="wm-empty" data-wm-empty hidden>
           <p class="wm-empty-title">no windows on <span data-empty-ws>writing</span></p>
-          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu</p>
+          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu · <a href="/wiki/">wiki</a></p>
           <p><button type="button" class="wm-restore" data-wm-restore>restore this workspace</button></p>
         </div>
         <div class="wm-deco" data-wm-deco></div>
@@ -240,7 +241,7 @@
 
         <div class="wm-empty" data-wm-empty hidden>
           <p class="wm-empty-title">no windows on <span data-empty-ws>projects</span></p>
-          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu</p>
+          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu · <a href="/wiki/">wiki</a></p>
           <p><button type="button" class="wm-restore" data-wm-restore>restore this workspace</button></p>
         </div>
         <div class="wm-deco" data-wm-deco></div>
@@ -267,7 +268,7 @@
         </article>
         <div class="wm-empty" data-wm-empty hidden>
           <p class="wm-empty-title">no windows on <span data-empty-ws>photography</span></p>
-          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu</p>
+          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu · <a href="/wiki/">wiki</a></p>
           <p><button type="button" class="wm-restore" data-wm-restore>restore this workspace</button></p>
         </div>
         <div class="wm-deco" data-wm-deco></div>
@@ -294,7 +295,7 @@
         </article>
         <div class="wm-empty" data-wm-empty hidden>
           <p class="wm-empty-title">no windows on <span data-empty-ws>books</span></p>
-          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu</p>
+          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu · <a href="/wiki/">wiki</a></p>
           <p><button type="button" class="wm-restore" data-wm-restore>restore this workspace</button></p>
         </div>
         <div class="wm-deco" data-wm-deco></div>
@@ -306,12 +307,12 @@
       <div class="workspace-layer elsewhere-grid" data-wm-layer="elsewhere">
         <article class="window pane terminal-window elsewhere-window is-focused" data-wm-window="elsewhere-links" data-wm-title="~/elsewhere" tabindex="0" aria-label="External links terminal">
           <header class="window-titlebar"><span>j3w1@manjaro: ~/elsewhere</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
-          <div class="terminal-buffer" role="document"><p class="terminal-line"><span class="prompt-user">j3w1</span><span class="prompt-at">@</span><span class="prompt-host">manjaro</span><span class="prompt-path"> ~/elsewhere</span><span class="prompt-mark"> $ </span><span class="command">ls -l</span></p><p class="terminal-output terminal-muted">total 4</p><ul class="link-list" aria-label="Public external destinations"><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1" rel="me">github</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1</span></li><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1/j3w1.github.io">site-source</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1/j3w1.github.io</span></li><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1/j3w1zsh">current-workstation</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1/j3w1zsh</span></li><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1/1w3j">legacy-workstation</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1/1w3j</span></li></ul><p class="terminal-line"><span class="prompt-user">j3w1</span><span class="prompt-at">@</span><span class="prompt-host">manjaro</span><span class="prompt-path"> ~/elsewhere</span><span class="prompt-mark"> $ </span><span class="command">cat note</span></p><p class="terminal-output readable-output">GitHub is the only public profile linked from this site.</p><p class="terminal-line terminal-ready"><span class="prompt-user">j3w1</span><span class="prompt-at">@</span><span class="prompt-host">manjaro</span><span class="prompt-path"> ~/elsewhere</span><span class="prompt-mark"> $ </span><span class="terminal-cursor" aria-hidden="true"></span></p></div>
-          <footer class="terminal-statusline"><span>URxvt</span><span>4 links</span><span class="status-fill">~/elsewhere</span></footer>
+          <div class="terminal-buffer" role="document"><p class="terminal-line"><span class="prompt-user">j3w1</span><span class="prompt-at">@</span><span class="prompt-host">manjaro</span><span class="prompt-path"> ~/elsewhere</span><span class="prompt-mark"> $ </span><span class="command">ls -l</span></p><p class="terminal-output terminal-muted">total 4</p><ul class="link-list" aria-label="Public external destinations"><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="/wiki/">wiki</a><span aria-hidden="true"> → </span><span>how to use this workstation</span></li><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1" rel="me">github</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1</span></li><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1/j3w1.github.io">site-source</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1/j3w1.github.io</span></li><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1/j3w1zsh">current-workstation</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1/j3w1zsh</span></li><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1/1w3j">legacy-workstation</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1/1w3j</span></li></ul><p class="terminal-line"><span class="prompt-user">j3w1</span><span class="prompt-at">@</span><span class="prompt-host">manjaro</span><span class="prompt-path"> ~/elsewhere</span><span class="prompt-mark"> $ </span><span class="command">cat note</span></p><p class="terminal-output readable-output">GitHub is the only public profile linked from this site.</p><p class="terminal-line terminal-ready"><span class="prompt-user">j3w1</span><span class="prompt-at">@</span><span class="prompt-host">manjaro</span><span class="prompt-path"> ~/elsewhere</span><span class="prompt-mark"> $ </span><span class="terminal-cursor" aria-hidden="true"></span></p></div>
+          <footer class="terminal-statusline"><span>URxvt</span><span>5 links</span><span class="status-fill">~/elsewhere</span></footer>
         </article>
         <div class="wm-empty" data-wm-empty hidden>
           <p class="wm-empty-title">no windows on <span data-empty-ws>elsewhere</span></p>
-          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu</p>
+          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu · <a href="/wiki/">wiki</a></p>
           <p><button type="button" class="wm-restore" data-wm-restore>restore this workspace</button></p>
         </div>
         <div class="wm-deco" data-wm-deco></div>
@@ -351,7 +352,7 @@
         </article>
         <div class="wm-empty" data-wm-empty hidden>
           <p class="wm-empty-title">no windows on <span data-empty-ws>about</span></p>
-          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu</p>
+          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu · <a href="/wiki/">wiki</a></p>
           <p><button type="button" class="wm-restore" data-wm-restore>restore this workspace</button></p>
         </div>
         <div class="wm-deco" data-wm-deco></div>
@@ -405,7 +406,7 @@
     <header class="window-titlebar"><h2 id="help-title">i3-help — keyboard</h2><button type="button" class="window-close" data-close-help aria-label="Close keyboard help">×</button></header>
     <div class="help-content">
       <div id="help-getting-started" class="help-intro">
-        <p class="help-intro-title">New here? Try these.</p>
+        <p class="help-intro-title">New here? Try these — or read the <a href="/wiki/">full guide in the wiki</a>.</p>
         <ol>
           <li>Press <kbd>/</kbd> and run <code>exec neofetch</code> — every command is reachable without shortcuts.</li>
           <li>In the terminal, type <code>ls</code>, then <code>cd writing</code>, then <code>cat &lt;name&gt;</code>.</li>

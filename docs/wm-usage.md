@@ -1,5 +1,9 @@
 # How to use this site
 
+> 📖 **The formatted version of this guide lives at <https://j3w1.github.io/wiki/>**, and is reachable
+> from the site itself: the **wiki** button in the bar, the `?` help dialog, `6:elsewhere`, the
+> launcher's `open wiki`, or `wiki` in the terminal.
+
 This page is a working [i3](https://i3wm.org/) window manager, rebuilt in a browser. The windows
 really tile, split, float, and close; the terminal really runs commands; the status bar really reads
 your machine. Everything on it is genuine site content — the workstation is the interface, not a

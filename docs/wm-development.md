@@ -101,16 +101,30 @@ Then bump `site.css`, `desktop.css`, `site.js`, and `public-content.js` in `inde
 **Do not** bump `content-renderer.js`, `photo-viewer.js`, or `admin/j3w1ctl.js` unless they changed —
 the j3w1ctl token in `site.js` must keep matching `admin/index.html`.
 
-## Publishing the wiki
+## The wiki
 
-`docs/` is the source of truth; the GitHub wiki is published *from* it so the two cannot drift.
+**The public wiki is `wiki/index.html`, served at <https://j3w1.github.io/wiki/>.** It is a hand-
+authored page rather than a generated one, styled from `site.css` plus a small inline `<style>` block
+so it cannot affect the desktop's stylesheet budget.
 
-GitHub only creates a repository's wiki git remote after the first page is made in the web UI, and
-there is no API for that first page. So this is a one-time manual step:
+It is deliberately part of the site rather than a GitHub wiki: GitHub only creates a repository's
+wiki git remote after the first page is made in the web UI and there is no API for that first page,
+so a GitHub wiki could never be created or kept current from here.
 
-1. Open <https://github.com/j3w1/j3w1.github.io/wiki> and click **Create the first page**. Any
-   content will do — the next step overwrites it.
-2. Then, from the repository root:
+The site points at it from five places, all asserted by `wm-contract.test.js`:
+
+- the `wiki` button in the bar tray,
+- the `?` help dialog,
+- the `6:elsewhere` link list,
+- the empty-workspace hint,
+- the launcher (`open wiki`) and the shell (`wiki`).
+
+When you change a keybinding, update `wiki/index.html` too — the contract test checks that the keys
+it documents still exist in `keys.js`, but it cannot check that new ones were added.
+
+### Optional: mirroring to a GitHub wiki
+
+If you ever enable one, create the first page at <https://github.com/j3w1/j3w1.github.io/wiki>, then:
 
 ```powershell
 git clone https://github.com/j3w1/j3w1.github.io.wiki.git ../j3w1.wiki
@@ -121,9 +135,6 @@ Copy-Item docs/wm-development.md    ../j3w1.wiki/Development.md
 cd ../j3w1.wiki
 git add -A && git commit -m "docs: publish window manager documentation" && git push
 ```
-
-`wm-usage.md` becomes `Home.md` deliberately: the visitor guide is what someone landing on the wiki
-should see first. Re-run the copy and push whenever `docs/` changes.
 
 ## Debugging
 

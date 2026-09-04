@@ -33,6 +33,7 @@ const SHELL_COMMANDS = [
   ["cmatrix", "you know what this does"],
   ["dmenu", "open the command launcher (same as pressing /)"],
   ["keys", "list the window manager keyboard shortcuts"],
+  ["wiki", "open the full guide in a new tab"],
   ["i3-msg <cmd>", "run a window manager command, e.g. i3-msg layout tabbed"],
   ["logout", "end the session and return to the login screen"],
   ["clear", "clear this terminal"],
@@ -222,6 +223,7 @@ export const createShell = ({ body, statusline, wm, close, title }) => {
       "Nothing here can be broken permanently: reloading restores the desktop.",
       "terminal-output terminal-muted",
     );
+    print("Full guide, with every hotkey: type 'wiki', or visit /wiki/", "terminal-output terminal-muted");
   };
 
   const commands = {
@@ -231,6 +233,10 @@ export const createShell = ({ body, statusline, wm, close, title }) => {
     keys: () => {
       print("Window manager keys — press these anywhere on the desktop:", "terminal-output readable-output");
       printPairs(WM_KEYS);
+    },
+    wiki: () => {
+      print("opening /wiki/ …", "terminal-output terminal-muted");
+      window.open("/wiki/", "_blank", "noopener");
     },
     dmenu: () => {
       print("opening dmenu…", "terminal-output terminal-muted");
