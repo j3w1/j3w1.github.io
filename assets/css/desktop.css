@@ -288,17 +288,25 @@ html.wm-active .window.is-floating {
 .i3status {
   display: flex;
   min-width: 0;
+  height: 100%;
   flex: 0 1 auto;
   align-items: center;
-  padding-left: 10px;
-  border-left: 1px solid var(--border-strong);
   margin-left: auto;
-  background: var(--chrome);
   overflow: hidden;
 }
 
-.i3status:empty {
-  border-left: 0;
+/* The container and its blocks must share one background, or the strip reads as
+   two mismatched panels. The boundary with the workspaces is the divider below,
+   drawn on the first block so an empty bar leaves no orphan line behind. */
+.i3block {
+  height: 100%;
+  background: var(--chrome-alt);
+}
+
+.i3block:first-child {
+  padding-left: 12px;
+  border-left: 1px solid var(--border-strong);
+  margin-left: 4px;
 }
 
 /* Below 768px the strip scrolls instead, so the tray stays reachable. */
@@ -309,7 +317,7 @@ html.wm-active .window.is-floating {
 .i3block {
   display: inline-flex;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 9px;
   color: var(--muted);
   white-space: nowrap;
 }

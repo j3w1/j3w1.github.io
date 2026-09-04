@@ -33,9 +33,10 @@ const proxyRect = (rect, bounds, point) => {
   };
 };
 
-export const installPointer = ({ wm, layers, decos, getLayout, getActive }) => {
+export const installPointer = ({ wm, layers, decos, getLayout, getActive, isEnabled }) => {
   let drag = null;
   let ghost = null;
+  let cursorAt = 0;
 
   const ghostFor = (wsName) => {
     const layer = decos.get(wsName);
@@ -68,7 +69,9 @@ export const installPointer = ({ wm, layers, decos, getLayout, getActive }) => {
   };
 
   const onPointerDown = (event) => {
-    if (event.button !== 0 || drag) return;
+    /* In plain document mode there is no window manager to drive: leaving these
+       handlers live made ordinary text selection fight a half-started drag. */
+    if (!isEnabled() || event.button !== 0 || drag) return;
     const wsName = getActive();
     const layer = layers.get(wsName);
     if (!layer || !layer.contains(event.target)) return;
@@ -206,8 +209,13 @@ export const installPointer = ({ wm, layers, decos, getLayout, getActive }) => {
     }
   };
 
+  /* Hit-testing the gutters reads layout, so it is throttled and skipped
+     entirely when the window manager is off. */
   const onCursor = (event) => {
-    if (drag) return;
+    if (drag || !isEnabled()) return;
+    const now = event.timeStamp || Date.now();
+    if (now - cursorAt < 40) return;
+    cursorAt = now;
     const wsName = getActive();
     const layer = layers.get(wsName);
     if (!layer || !layer.contains(event.target)) return;

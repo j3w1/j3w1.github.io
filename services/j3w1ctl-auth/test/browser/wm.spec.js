@@ -228,6 +228,60 @@ test("the i3 / plain toggle is reachable and reversible", async ({ page }) => {
   await expect(page.locator("html")).toHaveClass(/wm-active/);
 });
 
+test("plain mode really turns the window manager off, and toggling back restores it", async ({ page }) => {
+  await open(page);
+  const bar = await page.locator('[data-wm-window="home-terminal"] .window-titlebar').boundingBox();
+
+  await page.locator("#wm-toggle").click();
+  await expect(page.locator("html")).not.toHaveClass(/wm-active/);
+
+  /* Dragging in a plain document must do nothing at all: leaving the pointer
+     handlers live made a half-started drag fight ordinary text selection. */
+  await page.mouse.move(bar.x + 40, bar.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(bar.x + 300, bar.y + 200, { steps: 10 });
+  await page.mouse.up();
+  await expect(page.locator('[data-wm-window="home-terminal"]')).not.toHaveClass(/is-floating/);
+  await expect(page.locator("html")).not.toHaveClass(/wm-dragging/);
+
+  /* Keyboard shortcuts are off too, so plain mode behaves like a normal page. */
+  await page.locator("body").press("2");
+  await expect(page.locator("#about")).toBeVisible();
+
+  await page.locator("#wm-toggle").click();
+  await expect(page.locator("html")).toHaveClass(/wm-active/);
+  const selected = await page.evaluate(() => window.getSelection()?.toString() ?? "");
+  expect(selected).toEqual("");
+
+  /* And the window manager works again straight away. */
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("f");
+  const layer = await page.evaluate(() => {
+    const node = document.querySelector('[data-wm-layer="home"]');
+    return { w: node.clientWidth, h: node.clientHeight };
+  });
+  expect(await rect(page, "home-terminal")).toMatchObject({ x: 0, y: 0, w: layer.w, h: layer.h });
+});
+
+test("the status blocks share one background and sit behind a single divider", async ({ page }) => {
+  await open(page);
+  const style = await page.evaluate(() => {
+    const blocks = [...document.querySelectorAll("#i3status .i3block")].filter((n) => n.offsetParent);
+    const first = getComputedStyle(blocks[0]);
+    return {
+      count: blocks.length,
+      backgrounds: new Set(blocks.map((n) => getComputedStyle(n).backgroundColor)).size,
+      barBackground: getComputedStyle(document.querySelector(".wm-bar")).backgroundColor,
+      blockBackground: first.backgroundColor,
+      dividers: blocks.filter((n) => getComputedStyle(n).borderLeftWidth !== "0px").length,
+    };
+  });
+  expect(style.count).toBeGreaterThan(0);
+  expect(style.backgrounds).toBe(1);
+  expect(style.blockBackground).toBe(style.barBackground);
+  expect(style.dividers).toBe(1);
+});
+
 test("the status bar shows no fabricated values", async ({ page }) => {
   await open(page);
   const blocks = await page.evaluate(() =>

@@ -135,7 +135,7 @@ test("the window manager stays small enough to keep the site dependency-free", a
   /* Caps sit just above today's sizes: they are a ratchet against drift, not a
      target. Raise one deliberately when a feature justifies it. */
   const budget = [
-    ["assets/css/desktop.css", 20_000],
+    ["assets/css/desktop.css", 22_000],
     ["assets/js/wm/boot.js", 34_000],
     ["assets/js/wm/tree.js", 20_000],
     ["assets/js/wm/layout.js", 8_000],

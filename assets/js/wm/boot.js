@@ -108,9 +108,16 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   let active = "home";
   let spawnCounter = 0;
   let destroyed = false;
+  let enabled = true;
 
   const save = createSaver(() => state);
   const activeWs = () => state.workspaces[active];
+
+  /* One switch every input path consults, so turning the window manager off
+     really turns it off rather than leaving handlers running over a plain
+     document. Declared here so the facade below can reference it. */
+  const isEnabled = () => enabled;
+  const blocked = () => !enabled || isBlocked();
 
   const renderer = createRenderer({
     windows,
@@ -696,15 +703,25 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     bindings: () => keys.bindings(),
     resizeBindings: () => keys.resizeBindings(),
 
-    setEnabled(enabled) {
+    isEnabled,
+
+    setEnabled(next) {
+      enabled = Boolean(next);
       prefs.enabled = enabled;
       root.dataset.wm = enabled ? "on" : "off";
+      root.classList.remove("wm-dragging");
       const toggle = document.querySelector("#wm-toggle");
       if (toggle) {
         toggle.setAttribute("aria-pressed", String(enabled));
         const label = toggle.querySelector(".tray-label");
         if (label) label.textContent = enabled ? "i3" : "plain";
       }
+      /* Clear any half-made selection and any drag cursor left on the layers,
+         so the two modes never leak state into one another. */
+      const selection = window.getSelection?.();
+      if (selection && !selection.isCollapsed) selection.removeAllRanges();
+      for (const layer of layers.values()) layer.style.cursor = "";
+
       if (enabled) {
         root.classList.add("wm-active");
         renderer.invalidate();
@@ -713,6 +730,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       } else {
         root.classList.remove("wm-active");
         renderer.destroy();
+        keys.setMode("default");
         announce("plain document mode");
       }
       toggle?.focus({ preventScroll: true });
@@ -733,13 +751,14 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     },
   };
 
-  const keys = installKeys({ wm, isBlocked, onWorkspaceRequest, openLauncher });
+  const keys = installKeys({ wm, isBlocked: blocked, onWorkspaceRequest, openLauncher });
   const pointer = installPointer({
     wm,
     layers,
     decos,
     getLayout: (name) => renderer.getLayout(name),
     getActive: () => active,
+    isEnabled,
   });
 
   let lock = null;
@@ -854,7 +873,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   if (media.coarse.matches) {
     import("./touch.js?v=20260904")
       .then(({ installTouch }) => {
-        touch = installTouch({ shell, wm, isBlocked });
+        touch = installTouch({ shell, wm, isBlocked: blocked });
       })
       .catch(() => {});
   }
