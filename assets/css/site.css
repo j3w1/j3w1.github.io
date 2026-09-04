@@ -401,10 +401,6 @@ dl {
   text-overflow: ellipsis;
 }
 
-.mobile-buffer-tabs {
-  display: none;
-}
-
 /* Terminal */
 
 .terminal-buffer {
@@ -1503,81 +1499,13 @@ dl {
     height: calc(100dvh - var(--bar-height));
   }
 
-  .mobile-buffer-tabs {
-    display: flex;
-    width: 100%;
-    height: 34px;
-    min-height: 34px;
-    align-items: stretch;
-    overflow-x: auto;
-    border: 1px solid var(--border);
-    border-bottom: 0;
-    background: var(--chrome-alt);
-  }
-
-  .buffer-tab {
-    min-width: 96px;
-    min-height: 33px;
-    padding: 0 10px;
-    border: 0;
-    border-right: 1px solid var(--border);
-    background: var(--chrome);
-    color: var(--muted);
-  }
-
-  .buffer-tab.is-active,
-  .buffer-tab[aria-selected="true"] {
-    background: var(--selection);
-    color: var(--prose);
-  }
-
-  .home-grid {
-    display: block;
-    height: calc(100% - 34px);
-  }
-
-  .home-grid > .pane {
-    display: none;
-    width: 100%;
-    height: 100%;
-  }
-
-  .home-grid > .pane.is-mobile-active {
-    display: flex;
-  }
-
-  .content-workspace { height: calc(100% - 34px); }
-  .content-split { display: block; }
-  .content-split > [data-pane],
-  .photography-body > [data-pane],
-  .library-body > [data-pane] { display: none; width: 100%; height: 100%; }
-  .content-split > [data-pane].is-mobile-active,
-  .photography-body > [data-pane].is-mobile-active,
-  .library-body > [data-pane].is-mobile-active { display: block; }
-  #photography .photography-window,
-  #books .library-window { height: calc(100% - 34px); }
+  /* Single-window mobile viewing is now a real i3 tabbed container, drawn by
+     the window manager; the old ad-hoc buffer tabs and their pane-hiding rules
+     are gone. See assets/css/desktop.css. */
   .photography-body,
   .library-body { display: block; }
   .books-entry { grid-template-columns: 2fr 1.2fr; }
   .books-entry span:nth-child(n+3) { display: none; }
-
-  #projects .project-window {
-    height: calc(100% - 34px);
-  }
-
-  .project-app-body {
-    display: block;
-  }
-
-  .project-app-body > [data-pane] {
-    display: none;
-    width: 100%;
-    height: 100%;
-  }
-
-  .project-app-body > [data-pane].is-mobile-active {
-    display: block;
-  }
 
   .project-table-pane {
     border-bottom: 0;

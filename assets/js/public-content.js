@@ -29,9 +29,13 @@ const hashRoute = () => {
   return { collection, slug };
 };
 
+/* Ask the window manager to surface the reader without depending on it: with no
+   window manager present the event is simply unobserved. */
 const openMobileDetail = (collection) => {
-  if (!matchMedia("(max-width: 767px)").matches) return;
-  document.querySelector(`#${collection} [data-buffer-target="${collection}-detail"]`)?.click();
+  const suffix = collection === "writing" ? "reader" : collection === "photography" ? "viewer" : "notes";
+  document.dispatchEvent(new CustomEvent("wm:focus-window", {
+    detail: { id: `${collection}-${suffix}` },
+  }));
 };
 
 const selectRoute = () => {
