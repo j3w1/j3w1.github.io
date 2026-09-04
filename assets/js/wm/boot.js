@@ -103,6 +103,9 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   const liveIds = [...windows.keys()];
   const fallback = () => defaultState({ mobile: media.mobile.matches });
   let state = tree.validate(loadStore(), liveIds, fallback());
+  /* A name stored before the wallpaper list changed would otherwise survive and
+     leave data-wallpaper pointing at a rule that no longer exists. */
+  if (!WALLPAPERS.includes(state.wallpaper)) state.wallpaper = WALLPAPERS[0];
   let active = "home";
   let spawnCounter = 0;
   let destroyed = false;
@@ -698,6 +701,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       });
       list.push(
         { label: "open wiki (how to use this site)", aliases: "help guide manual docs wiki", run: () => window.open("/wiki/", "_blank", "noopener") },
+        { label: "exec j3w1ctl", aliases: "cms admin publish content", run: () => document.querySelector("#j3w1ctl-launch")?.click() },
         { label: "exec i3lock", aliases: "lock screen", run: () => lock?.lock() },
         { label: "lock off", aliases: "idle disable", run: () => { prefs.lock = "off"; lock?.reschedule(); announce("idle lock off"); } },
         { label: "lock 10m", aliases: "idle ten", run: () => { prefs.lock = "10m"; lock?.reschedule(); announce("idle lock ten minutes"); } },

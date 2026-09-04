@@ -19,7 +19,8 @@ export const MOBILE_QUERY = "(max-width: 767px)";
 export const COARSE_QUERY = "(pointer: coarse)";
 export const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
-export const WALLPAPERS = Object.freeze(["ember", "carbon", "ridge"]);
+/* Index 0 is the default: a plain black desktop, with the j3w1-i3 wordmark. */
+export const WALLPAPERS = Object.freeze(["black", "ember", "ridge"]);
 
 /* [layout, [[windowId, percent], ...]] */
 const LAYOUTS = Object.freeze({

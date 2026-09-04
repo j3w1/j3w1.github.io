@@ -1,8 +1,8 @@
 # How to use this site
 
 > 📖 **The formatted version of this guide lives at <https://j3w1.github.io/wiki/>**, and is reachable
-> from the site itself: the **wiki** button in the bar, the `?` help dialog, `6:elsewhere`, the
-> launcher's `open wiki`, or `wiki` in the terminal.
+> from the site itself: the file manager's *Places → Wiki* entry on `1:home`, the `?` help dialog,
+> `6:elsewhere`, the launcher's `open wiki`, or `wiki` in the terminal.
 
 This page is a working [i3](https://i3wm.org/) window manager, rebuilt in a browser. The windows
 really tile, split, float, and close; the terminal really runs commands; the status bar really reads
@@ -152,7 +152,8 @@ Launch any of these from the launcher (`/` then `exec <name>`) or from the termi
 
 - **neofetch** — system information, read from your own browser.
 - **htop** — the open windows as processes, with real frame timing and heap figures.
-- **feh** — pick between three wallpapers, drawn in CSS. Remembered.
+- **feh** — pick between three wallpapers, drawn in CSS. Black is the default and carries the
+  `j3w1-i3` wordmark. Remembered.
 - **cmatrix** — a toy. Static if you have reduced motion enabled.
 - **urxvt** — another terminal (`Alt`+`Enter`).
 
@@ -170,7 +171,7 @@ All of these are launcher commands, and all are remembered in your browser only:
 | `lock off` / `lock 10m` / `lock 30m` | Idle screen lock — off, or after 10 or 30 minutes |
 | `exec i3lock` | Lock the screen immediately |
 | `notify off` / `notify on` | Silence the corner toasts |
-| `wallpaper ember` / `carbon` / `ridge` | Change the wallpaper |
+| `wallpaper black` / `ember` / `ridge` | Change the wallpaper (black is the default) |
 | `restart i3 inplace` | Reset the layout to defaults |
 
 ### Booting and logging in

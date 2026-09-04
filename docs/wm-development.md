@@ -113,7 +113,7 @@ so a GitHub wiki could never be created or kept current from here.
 
 The site points at it from five places, all asserted by `wm-contract.test.js`:
 
-- the `wiki` button in the bar tray,
+- the file manager's *Places → Wiki* entry (the i3bar tray is for status, not destinations),
 - the `?` help dialog,
 - the `6:elsewhere` link list,
 - the empty-workspace hint,

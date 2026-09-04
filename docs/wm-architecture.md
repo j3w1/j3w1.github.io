@@ -209,7 +209,24 @@ It is skipped entirely for a stored session, a deep link (a shared link must nev
 screen), automation, `boot off`, Save-Data, and plain mode. Reduced motion skips the *animation*, not
 the login, and the panel appears immediately.
 
-## 8. Dragging
+## 8. The desktop and the bar
+
+The wallpaper defaults to flat black and carries a `j3w1-i3` wordmark, drawn as `::after` content on
+`#wallpaper` — no image request and no bytes. It sits at `z-index: -1`, which paints above the canvas
+but **below block backgrounds**, so `html.wm-active body` has to be transparent or an opaque body
+hides the wallpaper and the wordmark with it. `html` keeps the black.
+
+Only the 400-weight JetBrains Mono face is self-hosted, so the wordmark's `font-weight: 700` is
+synthesised by the browser — the right trade at display size against shipping a second
+multi-megabyte font file.
+
+`wiki` and `j3w1ctl` live in the file manager's Places and Network sections rather than the i3bar
+tray: they are destinations, not readings the bar reports, and every control in the tray costs the
+status blocks room. Moving them recovered 175px, which is what lets `net`, `cpu` and `mem` survive
+down to 1280px. Both are also reachable from the launcher (`open wiki`, `exec j3w1ctl`) so closing
+the file manager cannot strand them.
+
+## 9. Dragging
 
 A tiled or fullscreen window is far too large to steer by its title bar, so the drag carries a
 **proxy**: at most half the workspace and 760×540, which is the size the window will actually become
@@ -221,7 +238,7 @@ Selection is switched off on title bars, tab strips, grips and window marks *bef
 down. Disabling it once a drag commits still lets the first few pixels highlight the title, which
 instantly reads as a web page rather than a window manager.
 
-## 9. Honesty in the status bar
+## 10. Honesty in the status bar
 
 A block whose source does not exist is **not rendered at all** — no placeholder, no `n/a`, no
 invented value. The bar being visibly shorter in Firefox than in Chromium is correct.
@@ -234,7 +251,7 @@ quota, not a disk; labelling it `disk` would be a fabrication.) A desktop's
 The same rule governs `neofetch` (`unknown`, never a guess) and `htop` (real frame timing and heap,
 no synthesised CPU percentages).
 
-## 10. Cache busting
+## 11. Cache busting
 
 Every module under `assets/js/wm/` shares **one** `?v=` token, bumped as a unit — pinning only
 `boot.js` would let a stale cached `layout.js` load against a fresh `tree.js`.

@@ -67,9 +67,7 @@
     <span id="wm-mode" class="wm-mode" hidden></span>
     <div id="i3status" class="i3status" aria-label="System status"></div>
     <div class="system-status" aria-label="Website status">
-      <a id="wiki-link" class="status-control" href="/wiki/"><span class="ui-icon" aria-hidden="true">&#xf02d;</span><span class="tray-label">wiki</span></a>
       <button id="power-menu-toggle" class="status-control" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="power-menu"><span class="ui-icon" aria-hidden="true">&#xf011;</span><span class="sr-only">Session menu</span></button>
-      <button id="j3w1ctl-launch" class="status-control" type="button"><span class="ui-icon ui-icon-lock" aria-hidden="true">&#xf023;</span><span class="tray-label">j3w1ctl</span></button>
       <a class="status-github" href="https://github.com/j3w1" rel="me"><span class="ui-icon ui-icon-github" aria-hidden="true">&#xf09b;</span>GitHub <span aria-hidden="true">↗</span></a>
       <span id="status-workspace">1:home</span>
       <span id="status-path">~/j3w1</span>
@@ -134,8 +132,10 @@
               <a class="place-row is-selected" href="#home" data-workspace-link="home"><span class="ui-icon" aria-hidden="true">&#xf015;</span> Home</a>
               <a class="place-row" href="#projects" data-workspace-link="projects"><span class="ui-icon" aria-hidden="true">&#xf0ae;</span> Projects</a>
               <a class="place-row" href="#about" data-workspace-link="about"><span class="ui-icon" aria-hidden="true">&#xf129;</span> About</a>
+              <a class="place-row" id="wiki-link" href="/wiki/"><span class="ui-icon" aria-hidden="true">&#xf02d;</span> Wiki</a>
               <p class="sidebar-heading">▾ Network</p>
               <a class="place-row" href="https://github.com/j3w1"><span class="ui-icon ui-icon-github" aria-hidden="true">&#xf09b;</span> GitHub</a>
+              <button class="place-row" id="j3w1ctl-launch" type="button"><span class="ui-icon ui-icon-lock" aria-hidden="true">&#xf023;</span> j3w1ctl</button>
             </aside>
             <div class="file-view" role="region" aria-label="Workspace folders">
               <div class="file-row file-header" aria-hidden="true"><span>Name</span><span>Type</span><span>State</span></div>

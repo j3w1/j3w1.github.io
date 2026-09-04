@@ -242,6 +242,88 @@ test("the session menu restarts the window manager in place", async ({ page }) =
   await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
 });
 
+test("the wiki and j3w1ctl live in the file manager, not the status tray", async ({ page }) => {
+  await open(page);
+  const tray = page.locator(".system-status");
+  expect(await tray.locator("#wiki-link").count()).toBe(0);
+  expect(await tray.locator("#j3w1ctl-launch").count()).toBe(0);
+
+  const sidebar = page.locator('[data-wm-window="home-files"] .places-sidebar');
+  await expect(sidebar.locator("#wiki-link")).toBeVisible();
+  await expect(sidebar.locator("#wiki-link")).toHaveAttribute("href", "/wiki/");
+  await expect(sidebar.locator("#j3w1ctl-launch")).toBeVisible();
+
+  /* It became a <button>, so the existing click handler must still fire. */
+  await sidebar.locator("#j3w1ctl-launch").click();
+  await expect(page.locator("#j3w1ctl-root")).not.toBeEmpty();
+});
+
+test("the three system readings survive at a common laptop width", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page);
+  const blocks = await page.evaluate(() =>
+    [...document.querySelectorAll("#i3status .i3block")]
+      .filter((node) => node.offsetParent)
+      .map((node) => node.dataset.block));
+  /* The whole point of moving the tray buttons out: these three fit again. */
+  for (const block of ["net", "cpu", "mem"]) {
+    expect(blocks, `${block} should be visible at 1440px`).toContain(block);
+  }
+});
+
+test("the desktop is black by default and carries the j3w1-i3 wordmark", async ({ page }) => {
+  await open(page);
+  const desktop = await page.evaluate(() => {
+    const wallpaper = document.querySelector("#wallpaper");
+    const mark = getComputedStyle(wallpaper, "::after");
+    return {
+      name: document.documentElement.dataset.wallpaper,
+      background: getComputedStyle(wallpaper).backgroundImage,
+      content: mark.content,
+      weight: mark.fontWeight,
+    };
+  });
+  expect(desktop.name).toBe("black");
+  expect(desktop.background).toBe("none");
+  expect(desktop.content).toContain("j3w1-i3");
+  expect(Number(desktop.weight)).toBeGreaterThanOrEqual(700);
+
+  /* Declaring the wordmark is not enough: the wallpaper paints below block
+     backgrounds, so an opaque body would hide it entirely. */
+  const bodyBackground = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(["rgba(0, 0, 0, 0)", "transparent"]).toContain(bodyBackground);
+});
+
+test("a wallpaper stored before the list changed is reset rather than left dangling", async ({ page }) => {
+  await open(page);
+  /* Nothing is persisted until the layout actually changes, and the write is
+     debounced, so make a change and let it land before tampering with it. */
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("w");
+  await page.waitForFunction(() => localStorage.getItem("j3w1.wm.layout") !== null);
+  await page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem("j3w1.wm.layout"));
+    saved.wallpaper = "carbon";
+    localStorage.setItem("j3w1.wm.layout", JSON.stringify(saved));
+  });
+  await page.reload();
+  await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
+  expect(await page.evaluate(() => document.documentElement.dataset.wallpaper)).toBe("black");
+});
+
+test("feh switches wallpapers and remembers the choice", async ({ page }) => {
+  await open(page);
+  await page.locator("body").press("/");
+  await page.locator("#command-input").fill("exec feh");
+  await page.locator("#command-input").press("Enter");
+  await expect(page.locator(".feh-grid")).toBeVisible();
+  await page.locator('[data-wallpaper="ember"]').click();
+  expect(await page.evaluate(() => document.documentElement.dataset.wallpaper)).toBe("ember");
+  await page.reload();
+  await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
+  expect(await page.evaluate(() => document.documentElement.dataset.wallpaper)).toBe("ember");
+});
+
 test("the status blocks share one background and sit behind a single divider", async ({ page }) => {
   await open(page);
   const style = await page.evaluate(() => {

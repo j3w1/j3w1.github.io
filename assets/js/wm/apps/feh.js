@@ -5,8 +5,8 @@ import { element } from "../dom.js?v=20260904";
 import { WALLPAPERS } from "../defaults.js?v=20260904";
 
 const LABELS = Object.freeze({
-  ember: "ember — the default red wash",
-  carbon: "carbon — flat near-black",
+  black: "black — the default, plain",
+  ember: "ember — red wash",
   ridge: "ridge — banded gradient",
 });
 

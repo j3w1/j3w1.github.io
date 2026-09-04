@@ -316,12 +316,7 @@ const baseCommands = [
 
 let commands = baseCommands;
 
-const fuzzyMatches = (value, query) => {
-  if (!query) return true;
-  const haystack = value.toLowerCase();
-  const needle = query.toLowerCase();
-  if (haystack.includes(needle)) return true;
-
+const isSubsequence = (haystack, needle) => {
   let cursor = 0;
   for (const character of haystack) {
     if (character === needle[cursor]) cursor += 1;
@@ -330,12 +325,30 @@ const fuzzyMatches = (value, query) => {
   return false;
 };
 
+/* Rank rather than merely filter. Subsequence matching is generous enough that
+   typing an exact label can match a different command first — "exec feh" is a
+   subsequence of "exec neofetch" — so a literal match has to outrank it. */
+const commandScore = (command, query) => {
+  if (!query) return 0;
+  const label = command.label.toLowerCase();
+  const needle = query.toLowerCase();
+  if (label === needle) return 0;
+  if (label.startsWith(needle)) return 1;
+  if (label.includes(needle)) return 2;
+  if ((command.aliases ?? "").toLowerCase().includes(needle)) return 3;
+  if (isSubsequence(label, needle)) return 4;
+  if (isSubsequence(`${label} ${command.aliases ?? ""}`.toLowerCase(), needle)) return 5;
+  return -1;
+};
+
 const renderCommandResults = () => {
   if (!commandResults || !commandInput) return;
   const query = commandInput.value.trim();
-  filteredCommands = commands.filter((command) =>
-    fuzzyMatches(`${command.label} ${command.aliases ?? ""}`, query),
-  );
+  filteredCommands = commands
+    .map((command, index) => ({ command, index, score: commandScore(command, query) }))
+    .filter((entry) => entry.score >= 0)
+    .sort((a, b) => a.score - b.score || a.index - b.index)
+    .map((entry) => entry.command);
   selectedCommandIndex = Math.min(
     selectedCommandIndex,
     Math.max(filteredCommands.length - 1, 0),

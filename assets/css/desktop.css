@@ -26,12 +26,12 @@
   position: fixed;
   z-index: -1;
   inset: 0;
-  background: radial-gradient(130% 95% at 50% 0%, #1a0a0a 0%, #0b0505 48%, var(--desktop) 100%);
+  background: var(--desktop);
   pointer-events: none;
 }
 
-html[data-wallpaper="carbon"] .wallpaper {
-  background: linear-gradient(180deg, #0a0606 0%, var(--desktop) 100%);
+html[data-wallpaper="ember"] .wallpaper {
+  background: radial-gradient(130% 95% at 50% 0%, #1a0a0a 0%, #0b0505 48%, var(--desktop) 100%);
 }
 
 html[data-wallpaper="ridge"] .wallpaper {
@@ -40,27 +40,23 @@ html[data-wallpaper="ridge"] .wallpaper {
     radial-gradient(120% 100% at 18% 0%, #200c0c 0%, #0a0505 55%, var(--desktop) 100%);
 }
 
-/* The Manjaro mark: three bars plus the notched right column, four gradient
-   layers on one element. No image request, no bytes. */
+/* The desktop wordmark. Only the 400-weight JetBrains Mono face is self-hosted,
+   so the browser synthesises this bold — which reads cleanly at display size and
+   costs nothing, rather than shipping a second multi-megabyte font file. */
 .wallpaper::after {
   position: absolute;
   z-index: 0;
   top: 50%;
   left: 50%;
-  width: min(30vmin, 260px);
-  height: min(30vmin, 260px);
-  background-color: transparent;
-  background-image:
-    linear-gradient(var(--border-strong) 0 0),
-    linear-gradient(var(--border-strong) 0 0),
-    linear-gradient(var(--border-strong) 0 0),
-    linear-gradient(var(--border-strong) 0 0);
-  background-repeat: no-repeat;
-  background-position: 0 0, 37% 0, 74% 0, 74% 0;
-  background-size: 26% 100%, 26% 100%, 26% 34%, 26% 100%;
-  content: "";
-  opacity: 0.05;
+  color: var(--foreground-bright);
+  content: "j3w1-i3";
+  font-family: var(--font);
+  font-size: clamp(34px, 9vmin, 104px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  opacity: 0.17;
   transform: translate(-50%, -50%);
+  white-space: nowrap;
 }
 
 @media (prefers-contrast: more) {
@@ -76,6 +72,10 @@ html[data-wallpaper="ridge"] .wallpaper {
   min-height: 0;
 }
 
+/* The wallpaper sits at z-index -1, which paints above the canvas but *below*
+   block backgrounds — so an opaque body would hide it and the wordmark with it.
+   html keeps the black; body gets out of the way. */
+html.wm-active body,
 html.wm-active .desktop-shell,
 html.wm-active .workspace {
   background: transparent;
@@ -251,9 +251,10 @@ html.wm-active .window.is-floating {
 
 /* ------------------------------------------------------------ empty desktop */
 
+/* Sits above centre so it does not land on top of the desktop wordmark. */
 .wm-empty {
   position: absolute;
-  top: 50%;
+  top: 32%;
   left: 50%;
   width: min(30rem, calc(100% - 2rem));
   color: var(--muted);
@@ -328,6 +329,25 @@ html.wm-active .window.is-floating {
 }
 
 .i3tray { display: flex; align-items: center; }
+
+/* j3w1ctl lives in the file manager's Network section now, so the anchor-shaped
+   .place-row has to accept a real <button> too. */
+button.place-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+button.place-row:hover,
+a.place-row:hover {
+  background: var(--chrome-alt);
+  color: var(--foreground-bright);
+}
+
+button.place-row:disabled { color: var(--inactive); cursor: default; }
 
 /* The tray buttons were reading as one control: give each its own breathing
    room, a stronger divider, and space between glyph and label. */
@@ -591,8 +611,8 @@ html.wm-locked .desktop-shell { pointer-events: none; }
 .feh-thumb { padding: 6px; border: 1px solid var(--border); background: var(--terminal); color: var(--muted); text-align: left; }
 .feh-thumb.is-selected { border-color: var(--focus); color: var(--prose); }
 .feh-preview { display: block; height: 74px; border: 1px solid var(--border); }
+.feh-preview.wallpaper-black { background: var(--desktop); }
 .feh-preview.wallpaper-ember { background: radial-gradient(130% 95% at 50% 0%, #1a0a0a 0%, #0b0505 48%, var(--desktop) 100%); }
-.feh-preview.wallpaper-carbon { background: linear-gradient(180deg, #0a0606 0%, var(--desktop) 100%); }
 .feh-preview.wallpaper-ridge { background: repeating-linear-gradient(180deg, rgb(145 20 16 / 10%) 0 2px, transparent 2px 14px), #0a0505; }
 .feh-label { display: block; margin-top: 5px; }
 
@@ -720,13 +740,14 @@ html[data-wm="off"] .project-detail,
 
 /* The bar clips rather than squeezing the workspace names, so blocks are shed
    in ascending order of usefulness before they ever reach that point. */
-@media (max-width: 2199px) { .i3block-lang, .i3block-heap { display: none; } }
-@media (max-width: 1849px) { .i3block-tz { display: none; } }
-@media (max-width: 1699px) { .i3block-up { display: none; } }
-@media (max-width: 1649px) { .i3block-res { display: none; } }
-@media (max-width: 1549px) { .i3block-mem { display: none; } }
-@media (max-width: 1449px) { .i3block-net { display: none; } }
-@media (max-width: 1279px) { .i3block-cpu, .i3block-bat { display: none; } }
+@media (max-width: 1749px) { .i3block-lang { display: none; } }
+@media (max-width: 1679px) { .i3block-heap { display: none; } }
+@media (max-width: 1599px) { .i3block-tz { display: none; } }
+@media (max-width: 1479px) { .i3block-up { display: none; } }
+@media (max-width: 1419px) { .i3block-res { display: none; } }
+@media (max-width: 1339px) { .i3block-mem { display: none; } }
+@media (max-width: 1249px) { .i3block-net { display: none; } }
+@media (max-width: 1023px) { .i3block-cpu, .i3block-bat { display: none; } }
 
 @media (max-width: 1199px) {
   html.wm-active .photography-body,

@@ -160,14 +160,38 @@ test("the wiki exists and the site points at it in more than one place", async (
     assert.ok(guide.includes(topic), `the wiki should document ${topic}`);
   }
 
-  /* Discoverable from the desktop, not only from a URL someone was told about. */
-  assert.match(html, /id="wiki-link"[^>]*href="\/wiki\/"/, "the bar needs a visible wiki link");
+  /* Discoverable from the desktop, not only from a URL someone was told about.
+     The wiki and j3w1ctl live in the file manager's sidebar rather than the
+     status tray: they are places you go, not readings the bar reports. */
+  const sidebar = html.match(/<aside class="places-sidebar" aria-label="Places">[\s\S]*?<\/aside>/)?.[0] ?? "";
+  const tray = html.match(/<div class="system-status"[\s\S]*?<\/div>/)?.[0] ?? "";
+  assert.match(sidebar, /id="wiki-link"[^>]*href="\/wiki\/"/, "the Places sidebar needs the wiki link");
+  assert.match(sidebar, /id="j3w1ctl-launch"/, "the Network section needs j3w1ctl");
+  assert.doesNotMatch(tray, /wiki-link|j3w1ctl-launch/, "neither belongs in the status tray");
   assert.match(html, /help-intro-title[^<]*<a href="\/wiki\/"|<a href="\/wiki\/">full guide/, "the help dialog should link the wiki");
   assert.ok(shell.includes('"wiki"') || shell.includes("wiki:"), "the shell needs a wiki command");
   assert.match(boot, /open wiki/, "the launcher needs a wiki command");
+  /* Both now sit inside a window that can be closed, so the launcher has to be
+     able to reach them regardless. */
+  assert.match(boot, /exec j3w1ctl/, "the launcher needs a j3w1ctl command");
 
   const sitemap = await read("sitemap.xml");
   assert.match(sitemap, /https:\/\/j3w1\.github\.io\/wiki\//, "the wiki must be in the sitemap");
+});
+
+test("the desktop defaults to a black wallpaper carrying the j3w1-i3 wordmark", async () => {
+  const defaults = await read("assets", "js", "wm", "defaults.js");
+  const css = await read("assets", "css", "desktop.css");
+  const boot = await read("assets", "js", "wm", "boot.js");
+
+  assert.match(defaults, /WALLPAPERS = Object\.freeze\(\["black"/, "black must be the first, default wallpaper");
+  assert.match(defaults, /wallpaper: WALLPAPERS\[0\]/, "the default state must use it");
+  assert.match(css, /\.wallpaper \{[^}]*background: var\(--desktop\)/, "the base wallpaper must be plain black");
+  assert.match(css, /content: "j3w1-i3"/, "the wordmark must be drawn on the wallpaper");
+  assert.doesNotMatch(css, /data-wallpaper="carbon"/, "the retired wallpaper must be gone");
+
+  /* A name persisted before the list changed must not survive the rename. */
+  assert.match(boot, /WALLPAPERS\.includes\(state\.wallpaper\)/, "a stale wallpaper must be sanitised at boot");
 });
 
 test("the window manager stays small enough to keep the site dependency-free", async () => {

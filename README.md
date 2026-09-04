@@ -22,8 +22,8 @@ j3w1ctl preview.
 
 **📖 The wiki is at <https://j3w1.github.io/wiki/>** — quick start, key points, every hotkey, the
 terminal's commands, touch gestures, session and settings, privacy, and troubleshooting. It is
-reachable from the site itself: the **wiki** button in the bar, the `?` help dialog, `6:elsewhere`,
-the launcher's `open wiki`, or `wiki` in the terminal. Source: [`wiki/index.html`](wiki/index.html).
+reachable from the site itself: the file manager's *Places → Wiki* entry on `1:home`, the `?` help
+dialog, `6:elsewhere`, the launcher's `open wiki`, or `wiki` in the terminal. Source: [`wiki/index.html`](wiki/index.html).
 
 The short version:
 
