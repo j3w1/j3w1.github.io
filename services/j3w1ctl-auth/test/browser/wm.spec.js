@@ -205,62 +205,41 @@ test("content hooks stay unique so the renderer targets the right windows", asyn
   expect(counts).toEqual([[1, 1], [1, 1], [1, 1]]);
 });
 
-test("plain mode renders every workspace as a scrolling document", async ({ page }) => {
-  await page.goto(`${fixture.frontendOrigin}/?plain=1#home`);
-  await expect(page.locator("html")).toHaveAttribute("data-wm", "off");
-  await expect(page.locator("html")).not.toHaveClass(/wm-active/);
-  await expect(page.locator("#about")).toBeVisible();
-  await expect(page.locator("#writing")).toBeVisible();
-  await expect(page.locator("#greeter")).toBeHidden();
-  const scrollable = await page.evaluate(() =>
-    getComputedStyle(document.body).overflowY);
-  expect(scrollable).not.toBe("hidden");
+
+
+
+test("there is no plain-mode toggle; the tray offers a session menu instead", async ({ page }) => {
+  await open(page);
+  expect(await page.locator("#wm-toggle").count()).toBe(0);
+
+  const toggle = page.locator("#power-menu-toggle");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await toggle.click();
+  const menu = page.locator("#power-menu");
+  await expect(menu).toBeVisible();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  for (const label of ["Lock screen", "Log out", "Restart i3 in place", "Cancel"]) {
+    await expect(menu.getByRole("button", { name: label })).toBeVisible();
+  }
+
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+
+  /* Shift+E opens it rather than logging out outright, as i3's nagbar does. */
+  await page.locator("body").press("Shift+E");
+  await expect(menu).toBeVisible();
+  await menu.getByRole("button", { name: "Cancel" }).click();
+  await expect(menu).toBeHidden();
 });
 
-test("the i3 / plain toggle is reachable and reversible", async ({ page }) => {
+test("the session menu restarts the window manager in place", async ({ page }) => {
   await open(page);
-  const toggle = page.locator("#wm-toggle");
-  await expect(toggle).toHaveAttribute("aria-pressed", "true");
-  await toggle.click();
-  await expect(page.locator("html")).not.toHaveClass(/wm-active/);
-  await expect(toggle).toHaveAttribute("aria-pressed", "false");
-  await toggle.click();
-  await expect(page.locator("html")).toHaveClass(/wm-active/);
-});
-
-test("plain mode really turns the window manager off, and toggling back restores it", async ({ page }) => {
-  await open(page);
-  const bar = await page.locator('[data-wm-window="home-terminal"] .window-titlebar').boundingBox();
-
-  await page.locator("#wm-toggle").click();
-  await expect(page.locator("html")).not.toHaveClass(/wm-active/);
-
-  /* Dragging in a plain document must do nothing at all: leaving the pointer
-     handlers live made a half-started drag fight ordinary text selection. */
-  await page.mouse.move(bar.x + 40, bar.y + 10);
-  await page.mouse.down();
-  await page.mouse.move(bar.x + 300, bar.y + 200, { steps: 10 });
-  await page.mouse.up();
-  await expect(page.locator('[data-wm-window="home-terminal"]')).not.toHaveClass(/is-floating/);
-  await expect(page.locator("html")).not.toHaveClass(/wm-dragging/);
-
-  /* Keyboard shortcuts are off too, so plain mode behaves like a normal page. */
-  await page.locator("body").press("2");
-  await expect(page.locator("#about")).toBeVisible();
-
-  await page.locator("#wm-toggle").click();
-  await expect(page.locator("html")).toHaveClass(/wm-active/);
-  const selected = await page.evaluate(() => window.getSelection()?.toString() ?? "");
-  expect(selected).toEqual("");
-
-  /* And the window manager works again straight away. */
   await page.locator('[data-wm-window="home-terminal"]').focus();
-  await page.keyboard.press("f");
-  const layer = await page.evaluate(() => {
-    const node = document.querySelector('[data-wm-layer="home"]');
-    return { w: node.clientWidth, h: node.clientHeight };
-  });
-  expect(await rect(page, "home-terminal")).toMatchObject({ x: 0, y: 0, w: layer.w, h: layer.h });
+  await page.keyboard.press("q");
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toBeHidden();
+  await page.locator("#power-menu-toggle").click();
+  await page.locator("#power-menu").getByRole("button", { name: "Restart i3 in place" }).click();
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
 });
 
 test("the status blocks share one background and sit behind a single divider", async ({ page }) => {
@@ -377,6 +356,7 @@ test("a stored session skips the greeter, and logging out brings it back", async
   await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
 
   await page.locator("body").press("Shift+E");
+  await page.locator("#power-menu").getByRole("button", { name: "Log out" }).click();
   await expect(page.locator("#greeter")).toBeVisible();
   /* Logging out returns to the login panel, not through the boot log again. */
   await expect(page.locator("[data-login-screen]")).toBeVisible();

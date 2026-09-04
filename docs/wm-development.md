@@ -15,8 +15,7 @@ Useful URLs while developing:
 | --- | --- |
 | `/#home` | Normal |
 | `/?wm=selftest#home` | Runs the pure layout assertions and logs pass/fail to the console |
-| `/?plain=1#home` | The plain document fallback |
-| `/?wm=off#home` | Boots the window manager, then immediately disables it |
+| `/#home` with JavaScript disabled | The stacked fallback used when the window manager cannot run |
 
 ## Run the tests
 

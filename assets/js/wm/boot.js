@@ -20,10 +20,8 @@ import { element, readGap } from "./dom.js?v=20260904";
 import {
   clearGreetFlag,
   endSession,
-  isPlainRequested,
   isSelfTest,
   media,
-  params,
   prefs,
   shouldGreet,
   startSession,
@@ -62,7 +60,7 @@ const upgradeTitlebar = (article) => {
 };
 
 export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
-  if (!supported() || isPlainRequested()) return null;
+  if (!supported()) return null;
 
   const root = document.documentElement;
   const shell = document.querySelector(".desktop-shell");
@@ -108,16 +106,14 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   let active = "home";
   let spawnCounter = 0;
   let destroyed = false;
-  let enabled = true;
 
   const save = createSaver(() => state);
   const activeWs = () => state.workspaces[active];
 
-  /* One switch every input path consults, so turning the window manager off
-     really turns it off rather than leaving handlers running over a plain
-     document. Declared here so the facade below can reference it. */
-  const isEnabled = () => enabled;
-  const blocked = () => !enabled || isBlocked();
+  /* Pointer and key handling stand down while a curtain is up — the greeter, a
+     dialog, the launcher or the lock screen — so a drag can never start
+     underneath one. */
+  const blocked = () => isBlocked();
 
   const renderer = createRenderer({
     windows,
@@ -552,6 +548,22 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
 
     openLauncher: () => openLauncher(":"),
 
+    /* i3 answers $mod+Shift+E with a nagbar rather than exiting outright, so
+       the session actions live behind one too. */
+    togglePowerMenu(force) {
+      const menu = document.querySelector("#power-menu");
+      const toggle = document.querySelector("#power-menu-toggle");
+      if (!menu) return false;
+      const open = force ?? menu.hidden;
+      menu.hidden = !open;
+      toggle?.setAttribute("aria-expanded", String(open));
+      if (open) menu.querySelector("[data-power]")?.focus({ preventScroll: true });
+      else toggle?.focus({ preventScroll: true });
+      return open;
+    },
+
+    powerMenuIsOpen: () => document.querySelector("#power-menu")?.hidden === false,
+
     /* Ends the stored session and returns to the greeter's login panel — no
        boot log, exactly as logging out of a running X session behaves. */
     logout() {
@@ -695,47 +707,12 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
         { label: "exec lightdm", aliases: "replay greeter boot sequence", run: () => showGreeter("boot") },
         { label: "notify off", aliases: "dunst quiet", run: () => { prefs.notify = false; announce("notifications off"); } },
         { label: "notify on", aliases: "dunst", run: () => { prefs.notify = true; dunst.notify("dunst enabled", { key: "dunst" }); } },
-        { label: "exit i3 (plain page)", aliases: "plain disable wm document", run: () => wm.setEnabled(false) },
       );
       return list;
     },
 
     bindings: () => keys.bindings(),
     resizeBindings: () => keys.resizeBindings(),
-
-    isEnabled,
-
-    setEnabled(next) {
-      enabled = Boolean(next);
-      prefs.enabled = enabled;
-      root.dataset.wm = enabled ? "on" : "off";
-      root.classList.remove("wm-dragging");
-      const toggle = document.querySelector("#wm-toggle");
-      if (toggle) {
-        toggle.setAttribute("aria-pressed", String(enabled));
-        const label = toggle.querySelector(".tray-label");
-        if (label) label.textContent = enabled ? "i3" : "plain";
-      }
-      /* Clear any half-made selection and any drag cursor left on the layers,
-         so the two modes never leak state into one another. */
-      const selection = window.getSelection?.();
-      if (selection && !selection.isCollapsed) selection.removeAllRanges();
-      for (const layer of layers.values()) layer.style.cursor = "";
-
-      if (enabled) {
-        root.classList.add("wm-active");
-        renderer.invalidate();
-        renderer.renderNow();
-        announce("i3 window manager");
-      } else {
-        root.classList.remove("wm-active");
-        renderer.destroy();
-        keys.setMode("default");
-        announce("plain document mode");
-      }
-      toggle?.focus({ preventScroll: true });
-      return enabled;
-    },
 
     destroy() {
       if (destroyed) return;
@@ -758,7 +735,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     decos,
     getLayout: (name) => renderer.getLayout(name),
     getActive: () => active,
-    isEnabled,
+    isEnabled: () => !blocked(),
   });
 
   let lock = null;
@@ -799,6 +776,23 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     if (button.dataset.wmAction === "close") wm.kill();
     else if (button.dataset.wmAction === "maximize") wm.toggleFullscreen();
     else wm.scratchpadMove();
+  });
+
+  document.querySelector("#power-menu-toggle")?.addEventListener("click", () => wm.togglePowerMenu());
+
+  document.querySelector("#power-menu")?.addEventListener("click", (event) => {
+    const action = event.target.closest?.("[data-power]")?.dataset.power;
+    if (!action) return;
+    wm.togglePowerMenu(false);
+    if (action === "lock") lock?.lock();
+    else if (action === "logout") wm.logout();
+    else if (action === "restart") wm.restart();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !wm.powerMenuIsOpen()) return;
+    event.preventDefault();
+    wm.togglePowerMenu(false);
   });
 
   document.addEventListener("click", (event) => {
@@ -896,8 +890,6 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       .then(({ runSelfTest }) => runSelfTest())
       .catch((error) => console.error("[wm] selftest failed to load", error));
   }
-
-  if (params.get("wm") === "off") wm.setEnabled(false);
 
   return wm;
 };

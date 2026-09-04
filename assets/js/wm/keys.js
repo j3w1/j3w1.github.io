@@ -73,9 +73,9 @@ export const installKeys = ({ wm, isBlocked, onWorkspaceRequest, openLauncher })
     },
     {
       keys: "Shift + E",
-      description: "log out and return to the login screen",
+      description: "session menu: lock, log out, restart i3",
       test: (event) => event.key === "E" && event.shiftKey,
-      run: () => wm.logout(),
+      run: () => wm.togglePowerMenu(),
     },
     { keys: "r", description: "resize mode", test: (e) => e.key === "r", run: () => setMode("resize") },
     { keys: "d", description: "open dmenu", test: (e) => e.key === "d", run: () => openLauncher(":") },

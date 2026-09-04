@@ -21,9 +21,8 @@ Three ways, in order of least effort:
 On a phone, swipe left and right to move between workspaces, and tap the tabs at the top of a
 workspace to switch windows.
 
-**Prefer an ordinary scrolling page?** Click the **i3 / plain** button in the top-right of the bar,
-or add `?plain=1` to the address. That gives you every workspace stacked in one plain document, with
-no window manager, no animation, and no keyboard capture. The choice is remembered.
+If JavaScript is off, or anything fails to load, the whole site renders instead as one ordinary
+stacked page — every workspace readable, top to bottom.
 
 ---
 
@@ -81,7 +80,7 @@ pause automatically while you are typing in a text field.
 | `-` / `_` | Show the scratchpad / send a window to it |
 | `Alt`+`Enter` | Open a new terminal |
 | `Shift`+`R` | Restart in place: default layout, every window back |
-| `Shift`+`E` | Log out and return to the login screen |
+| `Shift`+`E` | Session menu: lock, log out, restart i3 |
 
 `Space` is only bound with `Alt` on purpose — binding it bare would break using the space bar to
 scroll.
@@ -128,6 +127,21 @@ tell you so rather than silently failing.
 
 ---
 
+## The session menu
+
+The power button at the right of the bar — or `Shift`+`E` — opens an i3-nagbar across the top with
+three actions, the same way i3 answers `$mod+Shift+E`:
+
+| Action | Does |
+| --- | --- |
+| **Lock screen** | i3lock immediately; any key dismisses it |
+| **Log out** | Ends the session and returns to the login panel |
+| **Restart i3 in place** | Resets every window and layout to defaults |
+
+`Escape` or **Cancel** closes it without doing anything.
+
+---
+
 ## Applications
 
 Launch any of these from the launcher (`/` then `exec <name>`) or from the terminal:
@@ -146,7 +160,6 @@ All of these are launcher commands, and all are remembered in your browser only:
 
 | Command | Effect |
 | --- | --- |
-| `exit i3 (plain page)` | Plain scrolling document. Same as the **i3 / plain** button. |
 | `log out` | End the session; the login screen returns |
 | `boot off` / `boot on` | Skip or restore the login and boot sequence |
 | `exec lightdm` | Replay the boot sequence now |
@@ -170,7 +183,7 @@ and no login, until you log out.
 
 | To | Do |
 | --- | --- |
-| Log out | `Shift`+`E`, the launcher's `log out`, or type `logout` in the terminal |
+| Log out | `Shift`+`E` then **Log out**, the launcher's `log out`, or type `logout` |
 | Log back in | The login panel is already there — press `Enter` |
 | Watch the boot again | The launcher's `exec lightdm` |
 | Never see it again | The launcher's `boot off` |
@@ -213,8 +226,7 @@ leave your machine.
 | A window disappeared | Press `Shift`+`R`, or click **restore this workspace** |
 | Keys do nothing | Your focus is in a text field — press `Escape` or click elsewhere |
 | A shortcut does nothing in the terminal | Desktop keys are not shell commands; press them outside the terminal, or type `keys` |
-| Stuck on the login screen | Press `Enter`, or add `?plain=1` to the address |
-| I want a normal web page | Click **i3 / plain**, or use `?plain=1` |
+| Stuck on the login screen | Press `Enter` |
 | Nothing loads at all | The site works without JavaScript: every workspace renders as a plain stacked document |
 
 ---
@@ -227,7 +239,7 @@ leave your machine.
 - Focus is never trapped outside a dialog, and never dropped onto the page body.
 - With `prefers-reduced-motion` enabled there is no boot sequence, no idle lock, no sliding, and no
   animation of any kind.
-- The **i3 / plain** button is always in the tab order, near the start of the page.
+- The session menu (`Shift`+`E`, or the power button in the bar) gathers lock, log out and restart.
 - The login panel is a labelled dialog with a real focusable button; it does not trap focus, and the
   page behind it stays readable to a screen reader throughout.
 - Notifications appear at the bottom right, clear of every window's controls, and are never

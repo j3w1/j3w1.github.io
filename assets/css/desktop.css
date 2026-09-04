@@ -352,9 +352,9 @@ html.wm-active .status-control {
   border-left-color: var(--border-strong);
 }
 
-html.wm-active #wm-toggle[aria-pressed="false"] {
-  background: var(--surface-raised);
-  color: var(--foreground-bright);
+html.wm-active #power-menu-toggle[aria-expanded="true"] {
+  background: var(--selection);
+  color: var(--prose);
 }
 
 .workspace-link.is-urgent { background: var(--selection); color: var(--prose); }
@@ -630,8 +630,9 @@ html:not(.wm-active) .wm-empty {
   display: none;
 }
 
-/* Plain document mode: the escape hatch reuses the progressive-enhancement
-   layout that already exists for no-JS visitors. */
+/* Failure fallback, not a mode anyone chooses: when JavaScript is off or the
+   window manager throws during boot, the site renders as one stacked scrolling
+   document — the progressive-enhancement layout it has always had. */
 html[data-wm="off"] body {
   height: auto;
   overflow: auto;
@@ -652,6 +653,51 @@ html[data-wm="off"] .wm-bar {
 html[data-wm="off"].js .workspace:not(.is-active),
 .no-js .workspace {
   display: block;
+}
+
+/* i3-nagbar: the session menu, as i3 answers $mod+Shift+E. */
+.nagbar {
+  position: fixed;
+  z-index: var(--wm-z-dunst);
+  top: var(--bar-height);
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--focus);
+  background: var(--surface-raised);
+  gap: 8px;
+}
+
+.nagbar[hidden] { display: none; }
+
+.nagbar-message {
+  min-width: 0;
+  flex: 1 1 auto;
+  margin: 0;
+  overflow: hidden;
+  color: var(--prose);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nagbar-action {
+  min-height: 26px;
+  flex: 0 0 auto;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  background: var(--button);
+  color: var(--prose);
+}
+
+.nagbar-action:hover { background: var(--selection); }
+.nagbar-cancel { background: var(--surface); color: var(--foreground); }
+
+@media (max-width: 767px) {
+  .nagbar { flex-wrap: wrap; }
+  .nagbar-message { flex-basis: 100%; }
+  .nagbar-action { min-height: 40px; }
 }
 
 html[data-wm="off"] .workspace {

@@ -105,14 +105,13 @@ test("content hooks stay unique so the renderer cannot target two windows", asyn
 test("the pre-paint decision script and session.js agree on storage keys", async () => {
   const html = await read("index.html");
   const session = await read("assets", "js", "wm", "session.js");
-  for (const key of ["j3w1.wm.enabled", "j3w1.wm.boot", "j3w1.wm.session"]) {
+  for (const key of ["j3w1.wm.boot", "j3w1.wm.session"]) {
     assert.ok(html.includes(`"${key}"`), `index.html is missing ${key}`);
     assert.ok(session.includes(`"${key}"`), `session.js is missing ${key}`);
   }
   /* The greeter decision has to happen before first paint, which means it lives
      in an inline script rather than in the module. */
-  assert.match(html, /data-wm|dataset\.wm/, "the plain-mode flag must be set inline");
-  assert.match(html, /navigator\.webdriver/, "automation must stay on the plain path");
+  assert.match(html, /navigator\.webdriver/, "automation must skip the greeter");
 
   /* Reduced motion no longer suppresses the greeter outright — logging in is a
      real step now — so it skips straight to the login panel with no animation. */
@@ -121,22 +120,32 @@ test("the pre-paint decision script and session.js agree on storage keys", async
   assert.match(greeter, /if \(reducedMotion\) \{?\s*skipBoot\(\)/, "reduced motion must skip the boot animation");
 });
 
-test("the fallback path covers no-JS, plain mode and a failed boot", async () => {
+test("the fallback path covers no-JS and a failed boot", async () => {
   const css = await read("assets", "css", "desktop.css");
   assert.match(css, /html:not\(\.wm-active\)/, "missing the unified fallback selector");
-  assert.match(css, /html\[data-wm="off"\] body/, "plain mode must restore document scrolling");
+  assert.match(css, /html\[data-wm="off"\] body/, "a failed boot must restore document scrolling");
+
+  /* Plain mode was removed: it is not an i3 feature. The stacked layout survives
+     only as the no-JS and boot-failure fallback, never as a mode anyone selects. */
+  const html = await read("index.html");
+  const siteScript = await read("assets", "js", "site.js");
+  assert.doesNotMatch(html, /wm-toggle/, "the plain-mode toggle must be gone");
+  assert.doesNotMatch(html, /\?plain|has\("plain"\)/, "the plain query parameter must be gone");
+  assert.doesNotMatch(siteScript, /setEnabled/, "the enable/disable switch must be gone");
+  assert.match(html, /id="power-menu"/, "the session menu replaces it");
+
   /* The old ad-hoc mobile tabs are gone; nothing may hide a window by that name. */
-  const site = await read("assets", "css", "site.css");
-  assert.doesNotMatch(site, /is-mobile-active/, "stale mobile pane rules remain");
-  assert.doesNotMatch(site, /mobile-buffer-tabs/, "stale buffer tab rules remain");
+  const siteCss = await read("assets", "css", "site.css");
+  assert.doesNotMatch(siteCss, /is-mobile-active/, "stale mobile pane rules remain");
+  assert.doesNotMatch(siteCss, /mobile-buffer-tabs/, "stale buffer tab rules remain");
 });
 
 test("the window manager stays small enough to keep the site dependency-free", async () => {
   /* Caps sit just above today's sizes: they are a ratchet against drift, not a
      target. Raise one deliberately when a feature justifies it. */
   const budget = [
-    ["assets/css/desktop.css", 22_000],
-    ["assets/js/wm/boot.js", 34_000],
+    ["assets/css/desktop.css", 24_000],
+    ["assets/js/wm/boot.js", 36_000],
     ["assets/js/wm/tree.js", 20_000],
     ["assets/js/wm/layout.js", 8_000],
     ["assets/js/wm/render.js", 10_000],

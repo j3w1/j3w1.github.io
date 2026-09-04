@@ -40,8 +40,7 @@ coding. The command launcher is non-modal and `Escape` restores focus.
 **The greeter is the deliberate exception to `inert`** — **enforced**. It waits for a real login, so
 it must be operable: it is a `role="dialog"` with an accessible name and a focusable button that
 takes focus when the panel appears. It does *not* trap focus, `<main>` is never marked hidden, and
-the page behind it stays fully readable to a screen reader. A visitor who would rather not deal with
-it at all can add `?plain=1`, and a deep link never reaches it.
+the page behind it stays fully readable to a screen reader, and a deep link never reaches it.
 
 ## 5. Focus is never lost
 
@@ -127,19 +126,27 @@ and out of scope for this work.
 
 Windows stay `<article>` elements with an `aria-label`.
 
-## 11. The escape hatch
+## 11. The session menu, and the removed escape hatch
 
-A permanently visible `<button id="wm-toggle">` sits in the bar tray with `aria-pressed`, labelled
-**i3** / **plain**, reachable within roughly ten tab stops. *An escape hatch you have to discover via
-a keyboard shortcut is not an escape hatch.* It is also exposed as `?plain=1`, as the launcher
-command `exit i3`, and in the help dialog.
+An earlier version shipped a user-facing plain mode behind an **i3 / plain** toggle. It has been
+removed: it is not an i3 feature, and it was a genuine source of bugs, since leaving the pointer and
+key handlers bound over a scrolling document produced half-started drags that fought ordinary text
+selection.
 
-The preference is read synchronously in the `<head>` so there is no flash of window manager, and
-toggling does not reload: it sets the attribute, re-runs layout, announces the change, and returns
-focus to the button.
+What replaces it, and what remains:
 
-Plain mode stacks all seven workspaces in one scrolling document with no greeter, lock, toasts,
-gestures, or bare-key bindings except `?`.
+- The tray button now opens an **i3-nagbar session menu** (`Shift`+`E`): Lock screen, Log out,
+  Restart i3 in place. It is a labelled `role="dialog"`, closes on `Escape`, and returns focus to the
+  button it came from.
+- **The stacked fallback still exists**, but only involuntarily: no JavaScript, or `createWm`
+  returning null, sets `data-wm="off"` and renders all seven workspaces as one scrolling document.
+  Content therefore remains reachable without the window manager — that guarantee is unchanged.
+- Every window is still reachable with `Tab` alone (§2), so no visitor depends on the removed toggle
+  to read anything.
+
+*Recorded trade-off:* someone who finds a tiling window manager hard to use no longer has a
+one-click way out. The keyboard-reachability, focus, live-region and reduced-motion guarantees below
+are what carry that weight now.
 
 ## 12. Gesture parity
 
@@ -169,4 +176,4 @@ Automated tests cover structure; these cover experience:
 - 200% browser zoom at 1280px.
 - `prefers-reduced-motion` enabled: confirm no greeter and no idle lock.
 - JavaScript disabled: confirm every workspace is readable and stacked.
-- `?plain=1`: confirm the same.
+- Force a boot failure (block `assets/js/wm/boot.js`): confirm the same stacked fallback.

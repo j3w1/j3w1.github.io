@@ -5,8 +5,8 @@ workstation preserved in [`j3w1/1w3j`](https://github.com/j3w1/1w3j).
 
 The page is not a picture of a window manager — it is one. Windows tile, split, float, resize, and
 close; the terminal runs commands over the site's own content; the status bar reads the visitor's
-own machine. It stays readable on a phone, without JavaScript, and as a plain scrolling document for
-anyone who would rather not use any of it.
+own machine. It stays readable on a phone, and renders as one plain stacked document whenever the
+window manager cannot run.
 
 The public site is a dependency-free GitHub Pages project: semantic HTML, CSS, vanilla ES modules,
 and no runtime build step. Its seven workspaces are deep-linked at `#home`, `#writing`, `#projects`,
@@ -29,7 +29,7 @@ The short version:
 - `1`–`7` switch workspace, or click the names in the bar. On a phone, swipe.
 - `/` opens the launcher — every command is reachable there without a keyboard shortcut.
 - `?` shows the keys.
-- **i3 / plain** in the bar (or `?plain=1`) turns the whole thing into an ordinary scrolling page.
+- `Shift`+`E` (or the power button in the bar) opens the session menu: lock, log out, restart i3.
 
 Nothing can be broken permanently: closed windows are only hidden, and reloading always restores the
 full desktop.

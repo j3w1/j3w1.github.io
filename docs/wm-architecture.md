@@ -132,7 +132,7 @@ paint and guarantee a visible reflow from the fallback grid to the window manage
 ```
 1. Inline <head> script (synchronous, pre-paint)
    → module-support probe sets html.js
-   → html[data-wm="on"|"off"] from localStorage and ?plain
+   → html[data-wm="off"] only if the window manager cannot run
    → html[data-boot="greeter"] if there is no stored session and this is not a deep link
 2. site.css + desktop.css applied. Fallback grids describe the layout.
 3. site.js executes; createWm() runs synchronously inside try/catch:
@@ -143,8 +143,7 @@ paint and guarantee a visible reflow from the fallback grid to the window manage
 
 Two flags, deliberately separate:
 
-- `html[data-wm]` is the **preference**, resolved before first paint so plain mode never flashes a
-  window manager.
+- `html[data-wm="off"]` marks a **failed or impossible boot**, so the stacked fallback applies.
 - `html.wm-active` is the **fact**, added only after a successful synchronous boot.
 
 **All fallback CSS keys off `html:not(.wm-active)`**, which covers no-JS, plain mode, and a failed
@@ -155,8 +154,11 @@ There is deliberately **no opacity curtain**: an `opacity: 0` that never clears 
 threw is a blank page. If anything throws, `wm-active` is never added and the site renders exactly
 as the static version always did.
 
-Escape hatches, all converging on that path: the **i3 / plain** button, `?plain=1`, the launcher's
-`exit i3`, and `Shift`+`R` to reset the layout.
+There is deliberately **no plain mode**: a user-facing "turn the window manager off" switch is not
+an i3 feature, and leaving its input handlers bound over a scrolling document caused half-started
+drags that fought text selection. The stacked layout survives only as the involuntary fallback —
+`site.js` sets `data-wm="off"` when `createWm` returns null — never as a mode anyone selects.
+`Shift`+`R` resets the layout; the session menu offers lock, log out, and restart.
 
 ## 6. Persistence
 
@@ -165,7 +167,6 @@ site works, preferences do not persist".
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `j3w1.wm.enabled` | `"1"` | The escape hatch |
 | `j3w1.wm.boot` | `"1"` | Greeter |
 | `j3w1.wm.lock` | `"10m"` | Idle lock threshold (`off`, `10m`, `30m`) |
 | `j3w1.wm.notify` | `"1"` | dunst toasts |

@@ -6,7 +6,6 @@
    has to run before first paint. security-static.test.js asserts they match. */
 
 export const KEYS = Object.freeze({
-  enabled: "j3w1.wm.enabled",
   boot: "j3w1.wm.boot",
   lock: "j3w1.wm.lock",
   notify: "j3w1.wm.notify",
@@ -42,12 +41,6 @@ export const removeLocal = (key) => {
 };
 
 export const prefs = {
-  get enabled() {
-    return readLocal(KEYS.enabled, "1") !== "0";
-  },
-  set enabled(value) {
-    writeLocal(KEYS.enabled, value ? "1" : "0");
-  },
   get boot() {
     return readLocal(KEYS.boot, "1") !== "0";
   },
@@ -77,8 +70,6 @@ export const media = Object.freeze({
 });
 
 export const params = new URLSearchParams(location.search);
-
-export const isPlainRequested = () => params.has("plain") || !prefs.enabled;
 
 export const isSelfTest = () => params.get("wm") === "selftest";
 

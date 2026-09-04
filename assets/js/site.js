@@ -5,7 +5,6 @@
 
 import { createWm } from "./wm/boot.js?v=20260904";
 import { isEditable } from "./wm/dom.js?v=20260904";
-import { prefs } from "./wm/session.js?v=20260904";
 
 const workspaceNames = [
   "home",
@@ -62,13 +61,14 @@ const activateWorkspace = (
   const nextName = workspaceNames.includes(name) ? name : "home";
   activeWorkspace = nextName;
 
-  /* Plain mode shows every workspace as one scrolling document, so the hidden
-     attribute (which site.css enforces with !important) must not be applied. */
-  const plain = document.documentElement.dataset.wm === "off";
+  /* If the window manager failed to boot, every workspace stays visible as one
+     scrolling document, so the hidden attribute (which site.css enforces with
+     !important) must not be applied. */
+  const stacked = document.documentElement.dataset.wm === "off";
   workspaceSections.forEach((section, sectionName) => {
     const isActive = sectionName === nextName;
     section.classList.toggle("is-active", isActive);
-    section.hidden = plain ? false : !isActive;
+    section.hidden = stacked ? false : !isActive;
   });
 
   workspaceLinks.forEach((link) => {
@@ -260,6 +260,7 @@ const launcherIsOpen = () => commandLauncher && !commandLauncher.hidden;
 const curtainIsOpen = () =>
   document.querySelector("#photo-viewer")?.open ||
   document.querySelector("#greeter")?.hidden === false ||
+  document.querySelector("#power-menu")?.hidden === false ||
   document.querySelector("#lockscreen")?.hidden === false;
 
 const renderHelpBindings = () => {
@@ -483,27 +484,6 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.altKey) activateFocusedItem();
 });
 
-/* The escape hatch has to work whether or not the window manager booted, so the
-   button is wired here rather than inside it. */
-const wmToggle = document.querySelector("#wm-toggle");
-wmToggle?.addEventListener("click", () => {
-  if (wm) {
-    wm.setEnabled(!prefs.enabled);
-    activateWorkspace(activeWorkspace);
-    return;
-  }
-  prefs.enabled = true;
-  window.location.reload();
-});
-
-const syncTogglePresentation = () => {
-  if (!wmToggle) return;
-  const enabled = document.documentElement.dataset.wm !== "off";
-  wmToggle.setAttribute("aria-pressed", String(enabled));
-  const label = wmToggle.querySelector(".tray-label");
-  if (label) label.textContent = enabled ? "i3" : "plain";
-};
-
 wm = createWm({
   onWorkspaceRequest: (index) => navigateToWorkspace(workspaceNames[index - 1], { moveFocus: true }),
   isBlocked: () => Boolean(dialogIsOpen() || launcherIsOpen() || curtainIsOpen()),
@@ -514,6 +494,9 @@ if (wm) {
   commands = [...baseCommands, ...wm.commands()];
   renderHelpBindings();
 } else {
+  /* Boot failed or the browser is too old: fall back to the same stacked,
+     scrolling layout that visitors without JavaScript already get. */
+  document.documentElement.dataset.wm = "off";
   /* Plain mode and boot failures keep their own clock; the window manager's
      status bar owns it otherwise, where it is suspended in background tabs. */
   const updateClock = () => {
@@ -529,8 +512,6 @@ if (wm) {
   updateClock();
   window.setInterval(updateClock, 1000);
 }
-
-syncTogglePresentation();
 
 const initialWorkspace = workspaceFromHash() ?? "home";
 if (!workspaceFromHash()) {
