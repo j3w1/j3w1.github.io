@@ -1,148 +1,265 @@
-/* The LightDM greeter and systemd boot log.
+/* The boot sequence and the LightDM greeter.
 
-   It is a curtain, never a gate. The markup is aria-hidden and inert from the
-   first byte, <main> is never touched, and the whole sequence is capped at just
-   over two seconds. Pressing Enter or clicking Log In gets you in immediately;
-   any other key, click, tap or scroll skips it — without preventDefault, so the
-   key that dismisses the greeter still does its normal job (pressing 2 both
-   skips the boot and switches to 2:writing). If nobody touches anything, it logs
-   in on its own, so it can never become something a visitor has to get past.
+   Two phases. The boot log scrolls (skippable with any key), then the login
+   panel appears and *waits* — it never logs itself in. Logging in stores a
+   session, so a returning visitor goes straight to the desktop until they log
+   out again; logging out returns to the greeter without replaying the boot.
 
-   Whether it runs at all was decided before first paint by the inline script in
-   index.html: never on a deep link, never twice in a session, never under
-   reduced motion, Save-Data, or automation. */
+   The panel is interactive by design, so unlike the lock screen it is neither
+   inert nor aria-hidden: it is a labelled dialog with a real focusable button.
+   It still never touches <main>, never traps focus, and never runs when the
+   visitor arrived at a deep link, when a session already exists, or under
+   automation — see the inline decision script in index.html. */
 
-import { clearGreetFlag } from "./session.js?v=20260904";
-
-const DOTS = 11;
-const DOT_MS = 55;
-const LOG_START = 900;
-const LOG_STEP = 110;
-const FADE_AT = 1800;
-const DONE_AT = 2050;
-const HINT_AT = 400;
-
-const LOG = [
-  "systemd[1]: Reached target Graphical Interface.",
-  "systemd[1]: Started Light Display Manager.",
-  "kernel: Loading j3w1 workstation profile",
-  "i3[812]: parsing ~/.config/i3/config",
-  "i3[812]: workspace 1:home 2:writing 3:projects 4:photography",
-  "i3[812]: workspace 5:books 6:elsewhere 7:about",
-  "urxvtd[840]: rendering ~/j3w1",
-  "i3[812]: session ready",
+const BOOT_BANNER = [
+  "Manjaro Linux 24.2 Yonada (tty1)",
+  "Linux 6.12.4-1-MANJARO x86_64",
 ];
 
-export const runGreeter = ({ node, onFinish, reducedMotion }) => {
+/* kind: "kernel" | "ok" | "start" | "plain" */
+const BOOT_LOG = [
+  ["kernel", "[    0.000000] Linux version 6.12.4-1-MANJARO (gcc 14.2.1, GNU ld 2.43)"],
+  ["kernel", "[    0.000000] Command line: BOOT_IMAGE=/boot/vmlinuz-6.12-x86_64 rw quiet splash"],
+  ["kernel", "[    0.184213] Memory: 16334M available"],
+  ["kernel", "[    0.291884] Run /init as init process"],
+  ["kernel", "[    0.412518] systemd[1]: systemd 257 running in system mode (+PAM +AUDIT +SELINUX)"],
+  ["kernel", "[    0.418902] systemd[1]: Detected architecture x86-64."],
+  ["ok", "Created slice Slice /system/getty."],
+  ["ok", "Reached target Swaps."],
+  ["ok", "Listening on Journal Socket."],
+  ["start", "Starting Journal Service..."],
+  ["ok", "Started Journal Service."],
+  ["ok", "Finished Load Kernel Modules."],
+  ["ok", "Mounted /boot/efi."],
+  ["ok", "Reached target Local File Systems."],
+  ["start", "Starting Rule-based Manager for Device Events..."],
+  ["ok", "Started Rule-based Manager for Device Events and Files."],
+  ["ok", "Found device /dev/disk/by-uuid/8f3a1c2e-4d7b."],
+  ["ok", "Reached target System Initialization."],
+  ["ok", "Started Daily man-db regeneration."],
+  ["ok", "Reached target Timer Units."],
+  ["ok", "Listening on D-Bus System Message Bus Socket."],
+  ["ok", "Started D-Bus System Message Bus."],
+  ["start", "Starting Network Manager..."],
+  ["ok", "Started Network Manager."],
+  ["ok", "Reached target Network."],
+  ["ok", "Started OpenSSH Daemon."],
+  ["ok", "Started Avahi mDNS/DNS-SD Stack."],
+  ["ok", "Started TLP system startup/shutdown."],
+  ["start", "Starting Light Display Manager..."],
+  ["ok", "Started Light Display Manager."],
+  ["ok", "Reached target Graphical Interface."],
+  ["start", "Starting Update UTMP about System Runlevel Changes..."],
+  ["ok", "Finished Update UTMP about System Runlevel Changes."],
+  ["plain", "lightdm[812]: Starting seat seat0"],
+  ["plain", "lightdm[812]: Starting greeter session"],
+];
+
+const BANNER_MS = 320;
+const LINE_MS = 108;
+const HINT_AT = 900;
+const SETTLE_MS = 420;
+const DOTS = 11;
+const DOT_MS = 42;
+
+export const runGreeter = ({ node, mode = "boot", reducedMotion, onLogin }) => {
   if (!node) {
-    onFinish();
+    onLogin({ silent: true });
     return { destroy() {} };
   }
 
-  const dots = node.querySelector("[data-dots]");
-  const auth = node.querySelector("[data-auth]");
+  const bootScreen = node.querySelector("[data-boot-screen]");
+  const loginScreen = node.querySelector("[data-login-screen]");
+  const banner = node.querySelector("[data-banner]");
   const log = node.querySelector("[data-log]");
   const hint = node.querySelector("[data-hint]");
+  const dots = node.querySelector("[data-dots]");
+  const auth = node.querySelector("[data-auth]");
   const loginButton = node.querySelector("[data-login]");
 
-  const started = performance.now();
   let raf = 0;
+  let dotTimer = 0;
+  let printed = 0;
+  let bannerShown = 0;
   let finished = false;
-  let logged = 0;
-  let authenticated = false;
+  let phase = mode === "login" ? "login" : "boot";
 
   const cleanup = () => {
     if (raf) cancelAnimationFrame(raf);
+    if (dotTimer) clearInterval(dotTimer);
     raf = 0;
-    window.removeEventListener("keydown", onSkip, true);
-    window.removeEventListener("pointerdown", onSkip, true);
-    window.removeEventListener("touchstart", onSkip, true);
-    window.removeEventListener("wheel", onSkip, true);
-    loginButton?.removeEventListener("click", onLogin);
+    dotTimer = 0;
+    window.removeEventListener("keydown", onKeydown, true);
+    node.removeEventListener("pointerdown", onPointerDown);
+    loginButton?.removeEventListener("click", authenticate);
   };
 
   const finish = () => {
     if (finished) return;
     finished = true;
     cleanup();
-    clearGreetFlag();
     node.classList.add("is-leaving");
-    const remove = () => {
+    const hide = () => {
       node.hidden = true;
       node.classList.remove("is-leaving");
-      onFinish();
+      document.documentElement.classList.remove("wm-greeting");
+      onLogin({ silent: false });
     };
-    if (reducedMotion) remove();
-    else setTimeout(remove, 250);
+    if (reducedMotion) hide();
+    else setTimeout(hide, 240);
   };
 
   const authenticate = () => {
-    if (authenticated) return;
-    authenticated = true;
-    if (dots) dots.textContent = "•".repeat(DOTS);
+    if (phase !== "login" || finished) return;
+    phase = "authenticating";
     if (auth) auth.textContent = "authenticating…";
     if (hint) hint.hidden = true;
+    setTimeout(() => {
+      if (auth) auth.textContent = "authentication succeeded";
+      setTimeout(finish, reducedMotion ? 0 : 260);
+    }, reducedMotion ? 0 : 340);
   };
 
-  /* Enter or the Log In button authenticates; anything else skips outright. */
-  const onLogin = () => {
-    authenticate();
-    setTimeout(finish, reducedMotion ? 0 : 160);
-  };
-
-  const onSkip = (event) => {
-    if (event.type === "keydown" && event.key === "Enter") {
-      onLogin();
-      return;
+  /* The password field is decoration: a fixed run of bullets, filled by a timer.
+     There is no password value anywhere in the source, and nothing is checked. */
+  const showLogin = () => {
+    phase = "login";
+    if (bootScreen) bootScreen.hidden = true;
+    if (loginScreen) loginScreen.hidden = false;
+    if (hint) {
+      hint.hidden = false;
+      hint.textContent = "press enter to log in";
     }
-    if (event.type === "pointerdown" && event.target.closest?.("[data-login]")) return;
-    finish();
+    if (dots) {
+      if (reducedMotion) {
+        dots.textContent = "•".repeat(DOTS);
+      } else {
+        let filled = 0;
+        dotTimer = setInterval(() => {
+          filled += 1;
+          dots.textContent = "•".repeat(filled);
+          if (filled >= DOTS) {
+            clearInterval(dotTimer);
+            dotTimer = 0;
+          }
+        }, DOT_MS);
+      }
+    }
+    loginButton?.focus({ preventScroll: true });
   };
 
+  const appendLine = ([kind, text]) => {
+    const item = document.createElement("li");
+    item.className = `greeter-line greeter-line-${kind}`;
+    if (kind === "ok") {
+      const tag = document.createElement("span");
+      tag.className = "greeter-ok";
+      tag.textContent = "[  OK  ]";
+      item.append(tag, document.createTextNode(` ${text}`));
+    } else if (kind === "start") {
+      const tag = document.createElement("span");
+      tag.className = "greeter-pending";
+      tag.textContent = "[      ]";
+      item.append(tag, document.createTextNode(` ${text}`));
+    } else {
+      item.textContent = text;
+    }
+    log?.append(item);
+    if (log) log.scrollTop = log.scrollHeight;
+  };
+
+  const started = performance.now();
+
+  /* Driven by elapsed time rather than step count, so a backgrounded tab catches
+     up instantly instead of dragging the sequence out behind the visitor. */
   const step = () => {
     const elapsed = performance.now() - started;
 
-    if (dots && !authenticated) {
-      const filled = Math.min(DOTS, Math.floor(elapsed / DOT_MS));
-      const next = "•".repeat(filled);
-      if (dots.textContent !== next) dots.textContent = next;
-    }
-    if (hint && elapsed >= HINT_AT && hint.hidden) hint.hidden = false;
-    if (elapsed >= LOG_START - 40 && !authenticated) authenticate();
-    if (auth && elapsed >= LOG_START && auth.textContent !== "authentication succeeded") {
-      auth.textContent = "authentication succeeded";
+    const wantBanner = Math.min(BOOT_BANNER.length, Math.floor(elapsed / BANNER_MS) + 1);
+    while (bannerShown < wantBanner) {
+      const line = document.createElement("span");
+      line.textContent = BOOT_BANNER[bannerShown];
+      banner?.append(line);
+      bannerShown += 1;
     }
 
-    /* Driven by elapsed time, not step count, so a backgrounded tab jumps to the
-       end state instead of dragging the animation out behind the visitor. */
-    if (log && elapsed >= LOG_START) {
-      const wanted = Math.min(LOG.length, Math.floor((elapsed - LOG_START) / LOG_STEP) + 1);
-      while (logged < wanted) {
-        const item = document.createElement("li");
-        const ok = document.createElement("span");
-        ok.className = "greeter-ok";
-        ok.textContent = "[  OK  ]";
-        item.append(ok, document.createTextNode(` ${LOG[logged]}`));
-        log.append(item);
-        logged += 1;
+    if (elapsed >= HINT_AT && hint?.hidden) hint.hidden = false;
+
+    const logElapsed = elapsed - BOOT_BANNER.length * BANNER_MS;
+    if (logElapsed >= 0) {
+      const want = Math.min(BOOT_LOG.length, Math.floor(logElapsed / LINE_MS) + 1);
+      while (printed < want) {
+        appendLine(BOOT_LOG[printed]);
+        printed += 1;
       }
     }
 
-    if (elapsed >= FADE_AT) node.classList.add("is-leaving");
-    if (elapsed >= DONE_AT) {
-      finish();
+    if (printed >= BOOT_LOG.length && logElapsed >= BOOT_LOG.length * LINE_MS + SETTLE_MS) {
+      raf = 0;
+      showLogin();
       return;
     }
     raf = requestAnimationFrame(step);
   };
 
-  node.hidden = false;
-  window.addEventListener("keydown", onSkip, true);
-  window.addEventListener("pointerdown", onSkip, true);
-  window.addEventListener("touchstart", onSkip, true);
-  window.addEventListener("wheel", onSkip, true);
-  loginButton?.addEventListener("click", onLogin);
-  raf = requestAnimationFrame(step);
+  const skipBoot = () => {
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    while (bannerShown < BOOT_BANNER.length) {
+      const line = document.createElement("span");
+      line.textContent = BOOT_BANNER[bannerShown];
+      banner?.append(line);
+      bannerShown += 1;
+    }
+    while (printed < BOOT_LOG.length) {
+      appendLine(BOOT_LOG[printed]);
+      printed += 1;
+    }
+    showLogin();
+  };
 
-  return { destroy: () => { cleanup(); node.hidden = true; } };
+  function onKeydown(event) {
+    if (finished) return;
+    if (phase === "boot") {
+      event.preventDefault();
+      skipBoot();
+      return;
+    }
+    if (phase === "login" && (event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      authenticate();
+    }
+  }
+
+  function onPointerDown(event) {
+    if (finished) return;
+    if (phase === "boot") {
+      skipBoot();
+      return;
+    }
+    if (phase === "login" && !event.target.closest("[data-login]")) authenticate();
+  }
+
+  node.hidden = false;
+  document.documentElement.classList.add("wm-greeting");
+  window.addEventListener("keydown", onKeydown, true);
+  node.addEventListener("pointerdown", onPointerDown);
+  loginButton?.addEventListener("click", authenticate);
+
+  if (phase === "login") {
+    if (bootScreen) bootScreen.hidden = true;
+    showLogin();
+  } else if (reducedMotion) {
+    skipBoot();
+  } else {
+    raf = requestAnimationFrame(step);
+  }
+
+  return {
+    destroy: () => {
+      cleanup();
+      node.hidden = true;
+      document.documentElement.classList.remove("wm-greeting");
+    },
+  };
 };

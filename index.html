@@ -31,18 +31,15 @@
     if (html.dataset.wm === "off") return;
     const hash = location.hash.replace(/^#/, "").toLowerCase();
     const connection = navigator.connection || {};
-    let booted = false;
-    try { booted = sessionStorage.getItem("j3w1.wm.booted") === "1"; } catch {}
-    const greet = !booted
+    /* A stored session means this visitor has logged in before, so the desktop
+       comes up directly. Deep links skip the greeter too: a shared link to an
+       entry must never land on a login screen. */
+    const greet = local("j3w1.wm.session", "") !== "1"
       && (hash === "" || hash === "home")
       && !(connection.saveData === true || /^(slow-)?2g$/.test(connection.effectiveType || ""))
       && local("j3w1.wm.boot", "1") !== "0"
-      && navigator.webdriver !== true
-      && !matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (greet) {
-      html.dataset.boot = "greeter";
-      try { sessionStorage.setItem("j3w1.wm.booted", "1"); } catch {}
-    }
+      && navigator.webdriver !== true;
+    if (greet) html.dataset.boot = "greeter";
   })();
   </script>
   <script type="application/ld+json">
@@ -369,17 +366,22 @@
   <div id="workspace-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   <div id="dunst" class="dunst" aria-hidden="true" inert></div>
 
-  <div id="greeter" class="greeter" aria-hidden="true" inert hidden>
-    <div class="greeter-panel">
-      <p class="greeter-host">manjaro</p>
-      <p class="greeter-session"><span class="ui-icon" aria-hidden="true">&#xf17c;</span> i3 (session)</p>
-      <p class="greeter-user">j3w1</p>
-      <p class="greeter-pass"><span class="greeter-dots" data-dots></span><span class="greeter-caret"></span></p>
-      <button type="button" class="greeter-login" data-login tabindex="-1">Log In</button>
-      <p class="greeter-auth" data-auth></p>
+  <div id="greeter" class="greeter" role="dialog" aria-label="Manjaro i3 session login" hidden>
+    <div class="greeter-boot" data-boot-screen>
+      <p class="greeter-banner" data-banner></p>
+      <ol class="greeter-log" data-log></ol>
     </div>
-    <ol class="greeter-log" data-log></ol>
-    <p class="greeter-hint" data-hint hidden>press enter to log in · any key to skip</p>
+    <div class="greeter-login-screen" data-login-screen hidden>
+      <div class="greeter-panel">
+        <p class="greeter-host">manjaro</p>
+        <p class="greeter-desktop"><span class="ui-icon" aria-hidden="true">&#xf17c;</span> i3 (session)</p>
+        <p class="greeter-user">j3w1</p>
+        <p class="greeter-pass"><span class="greeter-dots" data-dots></span><span class="greeter-caret"></span></p>
+        <button type="button" class="greeter-login" data-login>Log In</button>
+        <p class="greeter-auth" data-auth></p>
+      </div>
+    </div>
+    <p class="greeter-hint" data-hint hidden>press any key to skip</p>
   </div>
 
   <div id="lockscreen" class="lock" aria-hidden="true" inert hidden>

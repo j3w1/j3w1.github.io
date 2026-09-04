@@ -127,6 +127,17 @@ html.wm-active .wm-drag-ghost {
   pointer-events: auto;
 }
 
+/* Title bars, tabs and grips are chrome, not prose. Selection has to be off
+   before the pointer goes down: switching it off once a drag commits still lets
+   the first few pixels highlight the title, which instantly reads as a web page
+   rather than a window manager. */
+html.wm-active .window-titlebar,
+html.wm-active .wm-tabbar,
+html.wm-active .wm-grips,
+html.wm-active .window-marks {
+  user-select: none;
+}
+
 html.wm-dragging,
 html.wm-dragging * {
   user-select: none;
@@ -279,8 +290,15 @@ html.wm-active .window.is-floating {
   min-width: 0;
   flex: 0 1 auto;
   align-items: center;
+  padding-left: 10px;
+  border-left: 1px solid var(--border-strong);
   margin-left: auto;
+  background: var(--chrome);
   overflow: hidden;
+}
+
+.i3status:empty {
+  border-left: 0;
 }
 
 /* Below 768px the strip scrolls instead, so the tray stays reachable. */
@@ -312,28 +330,57 @@ html.wm-active .window.is-floating {
 
 .i3tray { display: flex; align-items: center; }
 
+/* The tray buttons were reading as one control: give each its own breathing
+   room, a stronger divider, and space between glyph and label. */
+html.wm-active .system-status > * {
+  gap: 7px;
+  padding-inline: 11px;
+  border-left-color: var(--border-strong);
+}
+
+html.wm-active .status-control {
+  gap: 7px;
+  padding-inline: 11px;
+  border-left-color: var(--border-strong);
+}
+
+html.wm-active #wm-toggle[aria-pressed="false"] {
+  background: var(--surface-raised);
+  color: var(--foreground-bright);
+}
+
 .workspace-link.is-urgent { background: var(--selection); color: var(--prose); }
 .workspace-link.is-urgent::after { margin-left: 4px; content: "!"; }
 
 /* ------------------------------------------------------------------- dunst */
 
+/* Bottom right, not top right: the top right corner belongs to the focused
+   window's minimize / maximize / close buttons, and a toast landing there after
+   every action blocked exactly the controls the action was aimed at. */
 .dunst {
   position: fixed;
   z-index: var(--wm-z-dunst);
-  top: calc(var(--bar-height) + 6px);
-  right: 6px;
+  right: 8px;
+  bottom: 8px;
   display: flex;
+  max-width: min(320px, 45vw);
   flex-direction: column;
+  align-items: flex-end;
   gap: 4px;
   pointer-events: none;
 }
 
 .dunst-toast {
-  padding: 6px 10px;
+  max-width: 100%;
+  padding: 5px 9px;
   border: 1px solid var(--border-strong);
   background: var(--surface-raised);
   color: var(--foreground-bright);
+  opacity: 0.94;
+  overflow: hidden;
   pointer-events: auto;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dunst-toast.is-critical { border-color: var(--focus); background: var(--selection-dark); color: var(--prose); }
@@ -355,14 +402,41 @@ html.wm-active .window.is-floating {
   /* Deliberately not var(--font): the Nerd Font is 2.4MB and will not have
      loaded on frame 1, and font-display:swap would re-lay-out the boot log
      halfway through the animation. */
-  padding: 24px;
+  align-content: stretch;
+  justify-items: stretch;
+  padding: 0;
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
-  gap: 22px;
+  gap: 0;
 }
 
 .greeter[hidden] { display: none; }
 
-.greeter.is-leaving { opacity: 0; transition: opacity 250ms linear; }
+.greeter.is-leaving { opacity: 0; transition: opacity 240ms linear; }
+
+.greeter-boot {
+  overflow: hidden;
+  padding: 18px 20px;
+  color: var(--muted);
+}
+
+.greeter-boot[hidden] { display: none; }
+
+.greeter-banner {
+  margin: 0 0 10px;
+  color: var(--prose);
+}
+
+.greeter-banner span { display: block; }
+
+.greeter-login-screen {
+  display: grid;
+  height: 100%;
+  align-content: center;
+  justify-items: center;
+  padding: 24px;
+}
+
+.greeter-login-screen[hidden] { display: none; }
 
 .greeter-panel {
   width: min(320px, 100%);
@@ -374,7 +448,7 @@ html.wm-active .window.is-floating {
 
 .greeter-panel p { margin: 0 0 8px; }
 .greeter-host { color: var(--muted); }
-.greeter-session { color: var(--quiet); }
+.greeter-desktop { color: var(--quiet); }
 .greeter-user { padding-top: 6px; color: var(--prose); font-size: 15px; }
 
 .greeter-pass {
@@ -409,17 +483,42 @@ html.wm-active .window.is-floating {
 .greeter-auth { min-height: 1.2em; color: var(--muted); }
 
 .greeter-log {
-  width: min(720px, 100%);
-  min-height: 9em;
+  width: 100%;
   padding: 0;
   margin: 0;
-  color: var(--muted);
   list-style: none;
 }
 
-.greeter-log li { white-space: nowrap; }
-.greeter-ok { color: var(--focus); }
-.greeter-hint { margin: 0; color: var(--quiet); }
+.greeter-log li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.greeter-line-kernel { color: var(--quiet); }
+.greeter-line-plain { color: var(--muted); }
+/* systemd pads its status tags; without pre the browser collapses them to
+   "[ OK ]" and the log stops looking like a real console. */
+.greeter-ok,
+.greeter-pending { white-space: pre; }
+.greeter-ok { color: #7fbf7a; }
+.greeter-pending { color: var(--quiet); }
+
+.greeter-hint {
+  position: absolute;
+  bottom: 16px;
+  left: 0;
+  width: 100%;
+  margin: 0;
+  color: var(--quiet);
+  text-align: center;
+}
+
+.greeter-hint[hidden] { display: none; }
+
+/* The login panel waits for a real click or keypress, so keys must not reach
+   the desktop underneath while it is up. */
+html.wm-greeting .desktop-shell { pointer-events: none; }
 
 /* ---------------------------------------------------------------- i3lock */
 
@@ -593,7 +692,7 @@ html[data-wm="off"] .project-detail,
   :root { --wm-tab-height: 44px; --wm-stack-row: 44px; }
 
   .i3status { display: none; }
-  .dunst { right: 6px; left: 6px; }
+  .dunst { right: 6px; bottom: 6px; left: 6px; max-width: none; }
   .wm-tab { min-width: 88px; padding: 0 10px; }
   .window-mark { width: 30px; height: 30px; }
 

@@ -133,7 +133,7 @@ paint and guarantee a visible reflow from the fallback grid to the window manage
 1. Inline <head> script (synchronous, pre-paint)
    → module-support probe sets html.js
    → html[data-wm="on"|"off"] from localStorage and ?plain
-   → html[data-boot="greeter"] if the greeter should run
+   → html[data-boot="greeter"] if there is no stored session and this is not a deep link
 2. site.css + desktop.css applied. Fallback grids describe the layout.
 3. site.js executes; createWm() runs synchronously inside try/catch:
    inventory → load + validate → compute → write styles → html.classList.add("wm-active")
@@ -169,10 +169,12 @@ site works, preferences do not persist".
 | `j3w1.wm.boot` | `"1"` | Greeter |
 | `j3w1.wm.lock` | `"10m"` | Idle lock threshold (`off`, `10m`, `30m`) |
 | `j3w1.wm.notify` | `"1"` | dunst toasts |
+| `j3w1.wm.session` | — | `"1"` once the visitor has logged in |
 | `j3w1.wm.layout` | — | Trees, percents, layouts, floating rects, scratchpad, wallpaper |
 
-`sessionStorage: j3w1.wm.booted` records that the greeter has run in this tab, and is set at
-*decision* time so a mid-boot refresh does not replay it.
+The login is a **stored session**, not a per-visit animation. `j3w1.wm.session` survives across
+visits, so someone who has logged in once lands on the desktop directly; logging out removes it and
+returns to the greeter's login panel without replaying the boot log.
 
 **Never persisted:** computed rects, and killed windows.
 **Never in the URL:** layout state. The hash belongs to content routing (`#writing/<slug>`).
@@ -187,7 +189,38 @@ anywhere forces a full reset to defaults.
 The storage key names are duplicated in the inline `<head>` script, which has to run before the
 module loads. `wm-contract.test.js` asserts the two agree.
 
-## 7. Honesty in the status bar
+## 7. The greeter
+
+Two phases in one overlay. The boot log scrolls for roughly five seconds — a Manjaro banner, kernel
+lines, and systemd units, driven by elapsed time rather than step count so a backgrounded tab catches
+up instantly — and any key or click skips to the end. Then the LightDM panel appears and **waits**.
+It never authenticates itself.
+
+Unlike the lock screen, the greeter is interactive, so it is neither `inert` nor `aria-hidden`: it is
+a `role="dialog"` with an accessible name and a real focusable button, which receives focus when the
+panel appears. It still never touches `<main>` and never traps focus — Tab can leave it, and the page
+behind stays readable.
+
+The password field is decoration: a fixed run of bullets filled by a timer. No password value exists
+in the source and nothing is checked.
+
+It is skipped entirely for a stored session, a deep link (a shared link must never land on a login
+screen), automation, `boot off`, Save-Data, and plain mode. Reduced motion skips the *animation*, not
+the login, and the panel appears immediately.
+
+## 8. Dragging
+
+A tiled or fullscreen window is far too large to steer by its title bar, so the drag carries a
+**proxy**: at most half the workspace and 760×540, which is the size the window will actually become
+once it floats. The grab point keeps its relative position, so the cursor stays where it was on the
+title bar rather than jumping to a corner. The proxy rect is what gets committed on release, so a
+fullscreen window drops at a manageable size instead of covering the screen.
+
+Selection is switched off on title bars, tab strips, grips and window marks *before* the pointer goes
+down. Disabling it once a drag commits still lets the first few pixels highlight the title, which
+instantly reads as a web page rather than a window manager.
+
+## 9. Honesty in the status bar
 
 A block whose source does not exist is **not rendered at all** — no placeholder, no `n/a`, no
 invented value. The bar being visibly shorter in Firefox than in Chromium is correct.
@@ -200,7 +233,7 @@ quota, not a disk; labelling it `disk` would be a fabrication.) A desktop's
 The same rule governs `neofetch` (`unknown`, never a guess) and `htop` (real frame timing and heap,
 no synthesised CPU percentages).
 
-## 8. Cache busting
+## 10. Cache busting
 
 Every module under `assets/js/wm/` shares **one** `?v=` token, bumped as a unit — pinning only
 `boot.js` would let a stale cached `layout.js` load against a fresh `tree.js`.

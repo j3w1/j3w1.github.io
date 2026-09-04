@@ -81,6 +81,7 @@ pause automatically while you are typing in a text field.
 | `-` / `_` | Show the scratchpad / send a window to it |
 | `Alt`+`Enter` | Open a new terminal |
 | `Shift`+`R` | Restart in place: default layout, every window back |
+| `Shift`+`E` | Log out and return to the login screen |
 
 `Space` is only bound with `Alt` on purpose — binding it bare would break using the space bar to
 scroll.
@@ -107,14 +108,22 @@ still scroll sideways, it gets the gesture first.
 The `1:home` terminal is a real shell. `Tab` completes, `↑`/`↓` walk the history, `Ctrl`+`C` clears
 the line.
 
+Type `help` for the full list. It is split into two sections on purpose:
+**commands you type here** and **keys you press anywhere on the desktop** — the
+shortcuts below are not shell commands, and typing `/` or `?` at the prompt will
+tell you so rather than silently failing.
+
 | Command | Does |
 | --- | --- |
 | `ls`, `cd`, `pwd`, `tree` | Move around the site as a filesystem |
 | `cat <file>` | Read an entry, a project, or a page |
 | `open <name>` | Jump to a workspace, an entry, or an external link |
-| `help`, `man i3` | The tour above |
+| `help` | Commands and keys, listed separately |
+| `keys` | Just the window manager keyboard shortcuts |
+| `dmenu` | Open the command launcher (same as pressing `/`) |
 | `neofetch`, `htop`, `cmatrix`, `feh` | Launch an application |
 | `i3-msg <command>` | Run a window manager command (`i3-msg layout tabbed`) |
+| `logout` | End the session and return to the login screen |
 | `clear`, `whoami`, `date`, `echo`, `exit` | The usual |
 
 ---
@@ -138,6 +147,7 @@ All of these are launcher commands, and all are remembered in your browser only:
 | Command | Effect |
 | --- | --- |
 | `exit i3 (plain page)` | Plain scrolling document. Same as the **i3 / plain** button. |
+| `log out` | End the session; the login screen returns |
 | `boot off` / `boot on` | Skip or restore the login and boot sequence |
 | `exec lightdm` | Replay the boot sequence now |
 | `lock off` / `lock 10m` / `lock 30m` | Idle screen lock — off, or after 10 or 30 minutes |
@@ -146,15 +156,32 @@ All of these are launcher commands, and all are remembered in your browser only:
 | `wallpaper ember` / `carbon` / `ridge` | Change the wallpaper |
 | `restart i3 inplace` | Reset the layout to defaults |
 
-### The boot sequence
+### Booting and logging in
 
-On your first visit in a browser session you get a LightDM login screen and a short boot log. The
-username and password are already filled in — press `Enter` or click **Log In**, or just wait: it
-logs itself in after about two seconds. Any key, click, or scroll skips it, and the key you press
-still does its normal job.
+The first time you arrive, the machine boots: a Manjaro banner, kernel lines, and systemd units
+coming up, taking about five seconds. Any key or click skips straight to the end.
 
-It never appears when you follow a link straight to an entry, when you have reduced motion enabled,
-on a slow or data-saving connection, or more than once per browser session.
+Then the **LightDM login screen** appears and waits for you. The username and password are already
+filled in — the password is decorative bullets, and no password value exists anywhere in the page.
+Press `Enter` or click **Log In**.
+
+**Logging in is remembered.** Come back tomorrow and the desktop appears immediately, with no boot
+and no login, until you log out.
+
+| To | Do |
+| --- | --- |
+| Log out | `Shift`+`E`, the launcher's `log out`, or type `logout` in the terminal |
+| Log back in | The login panel is already there — press `Enter` |
+| Watch the boot again | The launcher's `exec lightdm` |
+| Never see it again | The launcher's `boot off` |
+
+Logging out returns you to the login panel without replaying the boot log, exactly as leaving a real
+X session does.
+
+The boot and login never appear when you follow a link straight to an entry — a shared link must
+never land someone on a login screen — nor on a slow or data-saving connection, nor when the
+launcher's `boot off` has been used. With reduced motion enabled the boot animation is skipped and
+the login panel appears immediately.
 
 ### The idle lock
 
@@ -185,6 +212,8 @@ leave your machine.
 | The layout looks wrong | Press `Shift`+`R`, or run `restart i3 inplace` |
 | A window disappeared | Press `Shift`+`R`, or click **restore this workspace** |
 | Keys do nothing | Your focus is in a text field — press `Escape` or click elsewhere |
+| A shortcut does nothing in the terminal | Desktop keys are not shell commands; press them outside the terminal, or type `keys` |
+| Stuck on the login screen | Press `Enter`, or add `?plain=1` to the address |
 | I want a normal web page | Click **i3 / plain**, or use `?plain=1` |
 | Nothing loads at all | The site works without JavaScript: every workspace renders as a plain stacked document |
 
@@ -199,5 +228,9 @@ leave your machine.
 - With `prefers-reduced-motion` enabled there is no boot sequence, no idle lock, no sliding, and no
   animation of any kind.
 - The **i3 / plain** button is always in the tab order, near the start of the page.
+- The login panel is a labelled dialog with a real focusable button; it does not trap focus, and the
+  page behind it stays readable to a screen reader throughout.
+- Notifications appear at the bottom right, clear of every window's controls, and are never
+  announced twice.
 
 See [wm-accessibility.md](wm-accessibility.md) for the full contract.

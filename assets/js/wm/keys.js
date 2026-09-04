@@ -71,6 +71,12 @@ export const installKeys = ({ wm, isBlocked, onWorkspaceRequest, openLauncher })
       test: (event) => event.key === "R" && event.shiftKey,
       run: () => wm.restart(),
     },
+    {
+      keys: "Shift + E",
+      description: "log out and return to the login screen",
+      test: (event) => event.key === "E" && event.shiftKey,
+      run: () => wm.logout(),
+    },
     { keys: "r", description: "resize mode", test: (e) => e.key === "r", run: () => setMode("resize") },
     { keys: "d", description: "open dmenu", test: (e) => e.key === "d", run: () => openLauncher(":") },
     {

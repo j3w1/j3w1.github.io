@@ -34,8 +34,14 @@ sequence, not just the part you were thinking about.
 ## 4. Focus is never trapped outside `<dialog>`
 
 `#keyboard-help` and `#photo-viewer` use native `showModal()` and may trap. Nothing else may. The
-greeter, lock screen, toasts, and wallpaper are `inert` — trap-proof by construction rather than by
-careful coding. The command launcher is non-modal and `Escape` restores focus.
+lock screen, toasts, and wallpaper are `inert` — trap-proof by construction rather than by careful
+coding. The command launcher is non-modal and `Escape` restores focus.
+
+**The greeter is the deliberate exception to `inert`** — **enforced**. It waits for a real login, so
+it must be operable: it is a `role="dialog"` with an accessible name and a focusable button that
+takes focus when the panel appears. It does *not* trap focus, `<main>` is never marked hidden, and
+the page behind it stays fully readable to a screen reader. A visitor who would rather not deal with
+it at all can add `?plain=1`, and a deep link never reaches it.
 
 ## 5. Focus is never lost
 
@@ -58,6 +64,10 @@ and the plain-mode toggle. `a11y.js` implements the chain; the browser suite ass
 `#lockscreen`, `#wallpaper`, and `#i3status` are all silent.
 
 `#i3status` is deliberately **not** a live region: it would announce the clock every second.
+
+Toasts render at the **bottom right**, deliberately: the top right belongs to the focused window's
+minimize, maximize and close buttons, and a toast landing there after every action blocked exactly
+the controls that action was aimed at.
 
 Toasts and announcements are complements, not duplicates, and are written for different audiences:
 
@@ -83,8 +93,10 @@ something that was not true. Tab semantics now exist only where a tabbed contain
 
 ## 8. Reduced motion
 
-With `prefers-reduced-motion: reduce`: no greeter, no idle lock, no workspace slide, no drag
-inertia, no window animation, no toast slide, no haptics, and a static `cmatrix`.
+With `prefers-reduced-motion: reduce`: no boot animation (the login panel appears immediately), no
+idle lock, no workspace slide, no drag inertia, no window animation, no toast slide, no haptics, and
+a static `cmatrix`. Reduced motion suppresses the *animation*, not the login itself — those are
+different things, and skipping the login would quietly change what the visitor is looking at.
 
 **No behaviour may be sequenced on `transitionend`** — the global reduced-motion block forces a
 0.01ms duration and such handlers stop firing reliably. All sequencing is driven by timers or
@@ -140,6 +152,8 @@ Every pointer-only capability has a keyboard equivalent:
 | floating grips | `r` resize mode |
 | long-press to float | `Alt`+`Shift`+`Space` or the launcher's `floating toggle` |
 | tab click | arrow keys within the tab strip, or `h`/`l` |
+| clicking **Log In** | `Enter` on the login panel |
+| dismissing a toast | they expire on their own; `notify off` silences them |
 
 A gesture-only capability is an inaccessible capability.
 

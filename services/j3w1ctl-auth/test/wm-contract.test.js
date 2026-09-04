@@ -19,14 +19,39 @@ test("index.html never uses a positive tabindex or role=application", async () =
   assert.doesNotMatch(html, /aria-modal=/, "aria-modal outside <dialog> found");
 });
 
-test("the greeter, lock screen and toasts are inert and hidden from assistive tech", async () => {
+test("the lock screen and toasts are inert and hidden from assistive tech", async () => {
   const html = await read("index.html");
-  for (const id of ["greeter", "lockscreen", "dunst"]) {
+  /* Both are purely visual: they must never take focus or reach a screen reader. */
+  for (const id of ["lockscreen", "dunst"]) {
     const element = html.match(new RegExp(`<div id="${id}"[^>]*>`))?.[0];
     assert.ok(element, `#${id} is missing`);
     assert.match(element, /aria-hidden="true"/, `#${id} must be aria-hidden`);
     assert.match(element, /\binert\b/, `#${id} must be inert`);
   }
+});
+
+test("the greeter is an announced dialog with a real, reachable login control", async () => {
+  const html = await read("index.html");
+  const element = html.match(/<div id="greeter"[^>]*>/)?.[0];
+  assert.ok(element, "#greeter is missing");
+  /* It waits for a genuine login, so unlike the lock screen it must be
+     operable: inert or aria-hidden here would make it impossible to use. */
+  assert.doesNotMatch(element, /\binert\b/, "#greeter must not be inert");
+  assert.doesNotMatch(element, /aria-hidden/, "#greeter must not be aria-hidden");
+  assert.match(element, /role="dialog"/, "#greeter must be a dialog");
+  assert.match(element, /aria-label="/, "#greeter needs an accessible name");
+  assert.match(html, /class="greeter-login" data-login>/, "#greeter needs a focusable Log In button");
+  assert.doesNotMatch(html, /data-login[^>]*tabindex="-1"/, "the Log In button must be focusable");
+});
+
+test("the session is stored so a returning visitor is not asked to log in again", async () => {
+  const html = await read("index.html");
+  const session = await read("assets", "js", "wm", "session.js");
+  assert.match(html, /j3w1\.wm\.session/, "the inline script must read the stored session");
+  assert.match(session, /export const startSession/, "session.js must be able to start a session");
+  assert.match(session, /export const endSession/, "logging out must be possible");
+  /* A shared link to an entry must never land on a login screen. */
+  assert.match(html, /hash === "" \|\| hash === "home"/, "deep links must bypass the greeter");
 });
 
 test("the chrome has exactly one live region", async () => {
@@ -80,7 +105,7 @@ test("content hooks stay unique so the renderer cannot target two windows", asyn
 test("the pre-paint decision script and session.js agree on storage keys", async () => {
   const html = await read("index.html");
   const session = await read("assets", "js", "wm", "session.js");
-  for (const key of ["j3w1.wm.enabled", "j3w1.wm.boot", "j3w1.wm.booted"]) {
+  for (const key of ["j3w1.wm.enabled", "j3w1.wm.boot", "j3w1.wm.session"]) {
     assert.ok(html.includes(`"${key}"`), `index.html is missing ${key}`);
     assert.ok(session.includes(`"${key}"`), `session.js is missing ${key}`);
   }
@@ -88,7 +113,12 @@ test("the pre-paint decision script and session.js agree on storage keys", async
      in an inline script rather than in the module. */
   assert.match(html, /data-wm|dataset\.wm/, "the plain-mode flag must be set inline");
   assert.match(html, /navigator\.webdriver/, "automation must stay on the plain path");
-  assert.match(html, /prefers-reduced-motion/, "reduced motion must suppress the greeter");
+
+  /* Reduced motion no longer suppresses the greeter outright — logging in is a
+     real step now — so it skips straight to the login panel with no animation. */
+  const greeter = await read("assets", "js", "wm", "greeter.js");
+  assert.match(greeter, /reducedMotion/, "the greeter must honour reduced motion");
+  assert.match(greeter, /if \(reducedMotion\) \{?\s*skipBoot\(\)/, "reduced motion must skip the boot animation");
 });
 
 test("the fallback path covers no-JS, plain mode and a failed boot", async () => {

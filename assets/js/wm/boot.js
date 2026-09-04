@@ -17,7 +17,18 @@ import { installBar } from "./bar.js?v=20260904";
 import { installNotify } from "./notify.js?v=20260904";
 import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260904";
 import { element, readGap } from "./dom.js?v=20260904";
-import { isPlainRequested, isSelfTest, media, params, prefs, shouldGreet, supported } from "./session.js?v=20260904";
+import {
+  clearGreetFlag,
+  endSession,
+  isPlainRequested,
+  isSelfTest,
+  media,
+  params,
+  prefs,
+  shouldGreet,
+  startSession,
+  supported,
+} from "./session.js?v=20260904";
 import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260904";
 import {
   defaultState,
@@ -456,19 +467,18 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     },
 
     /* Dragging a tiled window by its title bar floats it, so touch and mouse
-       behave the same without a separate code path. */
-    moveFloating(id, dx, dy, startRect) {
+       behave the same without a separate code path. The rect comes from the
+       drag proxy, so a fullscreen window lands at a manageable size. */
+    placeFloating(id, rect) {
       const ws = activeWs();
+      if (ws.fullscreen === id) ws.fullscreen = null;
       if (!tree.floatingNode(ws, id)) {
         tree.setFocus(ws, id);
         if (!tree.toggleFloating(ws, id, bounds())) return false;
       }
       const node = tree.floatingNode(ws, id);
       if (!node) return false;
-      node.floatRect = clampFloating(
-        { ...(startRect ?? node.floatRect), x: (startRect ?? node.floatRect).x + dx, y: (startRect ?? node.floatRect).y + dy },
-        bounds(),
-      );
+      node.floatRect = clampFloating(rect, bounds());
       tree.raiseFloating(ws, id);
       paint();
       return true;
@@ -531,6 +541,18 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
 
     openRoute(route) {
       location.hash = `#${route}`;
+    },
+
+    openLauncher: () => openLauncher(":"),
+
+    /* Ends the stored session and returns to the greeter's login panel — no
+       boot log, exactly as logging out of a running X session behaves. */
+    logout() {
+      endSession();
+      dunst.notify("logging out", { key: "session" });
+      announce("logged out; showing the login screen");
+      showGreeter("login");
+      return true;
     },
 
     wallpaper: () => state.wallpaper,
@@ -662,7 +684,8 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
         { label: "lock 30m", aliases: "idle thirty", run: () => { prefs.lock = "30m"; lock?.reschedule(); announce("idle lock thirty minutes"); } },
         { label: "boot on", aliases: "greeter lightdm enable", run: () => { prefs.boot = true; announce("boot sequence on"); } },
         { label: "boot off", aliases: "greeter lightdm disable", run: () => { prefs.boot = false; announce("boot sequence off"); } },
-        { label: "exec lightdm", aliases: "replay greeter boot", run: () => replayGreeter() },
+        { label: "log out", aliases: "logout exit session lightdm sign out", run: () => wm.logout() },
+        { label: "exec lightdm", aliases: "replay greeter boot sequence", run: () => showGreeter("boot") },
         { label: "notify off", aliases: "dunst quiet", run: () => { prefs.notify = false; announce("notifications off"); } },
         { label: "notify on", aliases: "dunst", run: () => { prefs.notify = true; dunst.notify("dunst enabled", { key: "dunst" }); } },
         { label: "exit i3 (plain page)", aliases: "plain disable wm document", run: () => wm.setEnabled(false) },
@@ -723,14 +746,27 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   let touch = null;
   let greeterInstance = null;
 
-  const replayGreeter = () => {
+  const showGreeter = (mode) => {
     import("./greeter.js?v=20260904").then(({ runGreeter }) => {
       greeterInstance = runGreeter({
         node: document.querySelector("#greeter"),
+        mode,
         reducedMotion: media.reducedMotion.matches,
-        onFinish: () => { greeterInstance = null; },
+        onLogin: () => {
+          greeterInstance = null;
+          startSession();
+          clearGreetFlag();
+          renderer.invalidate();
+          renderer.renderNow();
+          announce("logged in to the i3 session");
+          restoreFocus(null);
+        },
       });
-    }).catch(() => {});
+    }).catch(() => {
+      /* If the greeter cannot load, do not strand the visitor behind it. */
+      startSession();
+      clearGreetFlag();
+    });
   };
 
   /* Title bar buttons: the decorative marks become real controls. */
@@ -833,7 +869,8 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     })
     .catch(() => {});
 
-  if (shouldGreet() && prefs.boot) replayGreeter();
+  if (shouldGreet() && prefs.boot) showGreeter("boot");
+  else startSession();
 
   if (isSelfTest()) {
     import("./selftest.js?v=20260904")

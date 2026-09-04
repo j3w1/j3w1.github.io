@@ -11,7 +11,7 @@ export const KEYS = Object.freeze({
   lock: "j3w1.wm.lock",
   notify: "j3w1.wm.notify",
   layout: "j3w1.wm.layout",
-  booted: "j3w1.wm.booted",
+  session: "j3w1.wm.session",
 });
 
 export const LOCK_THRESHOLDS = Object.freeze({ off: 0, "10m": 600000, "30m": 1800000 });
@@ -81,6 +81,14 @@ export const params = new URLSearchParams(location.search);
 export const isPlainRequested = () => params.has("plain") || !prefs.enabled;
 
 export const isSelfTest = () => params.get("wm") === "selftest";
+
+/* The login is a stored session, not a per-visit animation: once someone has
+   logged in, the desktop comes up directly until they log out again. */
+export const hasSession = () => readLocal(KEYS.session, "") === "1";
+
+export const startSession = () => writeLocal(KEYS.session, "1");
+
+export const endSession = () => removeLocal(KEYS.session);
 
 /* The greeter decision is made in the inline <head> script so it can act before
    first paint; this only reads the flag it left behind. */

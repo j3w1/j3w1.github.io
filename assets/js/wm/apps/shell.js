@@ -18,18 +18,39 @@ const README = [
   "recoverable, and useful long after the first release.",
 ];
 
-const TOUR = [
-  "Recommended things to try:",
-  "",
-  "  ?                    the full key map",
-  "  /                    dmenu — every command, no keyboard shortcuts needed",
-  "  ls / cd writing      walk the site as a filesystem, then: cat <name>",
-  "  w  then  e           tab the windows together, then untile them",
-  "  Alt + drag           move a window; drag the gap between tiles to resize",
-  "  f                    fullscreen the focused window; q closes it",
-  "  Shift + R            put every window back exactly as it started",
-  "",
-  "Nothing here can be broken permanently: reloading restores the desktop.",
+/* Two separate things, and conflating them was confusing: these are commands you
+   type here, and those are keys you press anywhere on the desktop. */
+const SHELL_COMMANDS = [
+  ["ls", "list what is in the current directory"],
+  ["cd <dir>", "change directory — try: cd writing (cd .. goes back)"],
+  ["cat <file>", "read an entry, a project, or a page"],
+  ["open <name>", "jump to a workspace, an entry, or a link"],
+  ["pwd", "print the current directory"],
+  ["tree", "show the whole site as a directory tree"],
+  ["neofetch", "system information, read from your own browser"],
+  ["htop", "the open windows, as processes"],
+  ["feh", "pick a wallpaper"],
+  ["cmatrix", "you know what this does"],
+  ["dmenu", "open the command launcher (same as pressing /)"],
+  ["keys", "list the window manager keyboard shortcuts"],
+  ["i3-msg <cmd>", "run a window manager command, e.g. i3-msg layout tabbed"],
+  ["logout", "end the session and return to the login screen"],
+  ["clear", "clear this terminal"],
+  ["whoami", "who you are talking to"],
+  ["help", "this list"],
+];
+
+const WM_KEYS = [
+  ["1 – 7", "switch workspace"],
+  ["h j k l", "move focus between windows"],
+  ["w / s / e", "tabbed / stacked / untile the windows"],
+  ["f", "fullscreen the focused window"],
+  ["q", "close the focused window"],
+  ["r", "resize mode (then h j k l, Escape to leave)"],
+  ["Alt + drag", "move a window; drag the gap between tiles to resize"],
+  ["Shift + R", "put every window back exactly as it started"],
+  ["/ or :", "open the command launcher"],
+  ["?", "the full key map"],
 ];
 
 let indexPromise = null;
@@ -177,9 +198,45 @@ export const createShell = ({ body, statusline, wm, close, title }) => {
 
   const listNames = () => Object.keys(currentDir().children ?? {});
 
+  /* Rendered as a real two-column list so the command and its description are
+     visually distinct — the previous flat prose was hard to read as a reference. */
+  const printPairs = (pairs) => {
+    const list = element("ul", "terminal-list shell-help");
+    pairs.forEach(([name, description]) => {
+      const item = element("li");
+      item.append(element("span", "", name));
+      item.append(document.createTextNode(description));
+      list.append(item);
+    });
+    buffer.insertBefore(list, inputLine);
+  };
+
+  const showHelp = () => {
+    print("Commands you can type here:", "terminal-output readable-output");
+    printPairs(SHELL_COMMANDS);
+    print("", "terminal-output");
+    print("Keys you press anywhere on the desktop (not in this terminal):", "terminal-output readable-output");
+    printPairs(WM_KEYS);
+    print("", "terminal-output");
+    print(
+      "Nothing here can be broken permanently: reloading restores the desktop.",
+      "terminal-output terminal-muted",
+    );
+  };
+
   const commands = {
-    help: () => printLines(TOUR),
-    man: () => printLines(TOUR),
+    help: showHelp,
+    man: showHelp,
+    "?": showHelp,
+    keys: () => {
+      print("Window manager keys — press these anywhere on the desktop:", "terminal-output readable-output");
+      printPairs(WM_KEYS);
+    },
+    dmenu: () => {
+      print("opening dmenu…", "terminal-output terminal-muted");
+      wm.openLauncher();
+    },
+    logout: () => wm.logout(),
     pwd: () => print(cwd.length ? `${HOME}/${cwd.join("/").replace(/\/$/, "")}` : HOME),
     whoami: () => {
       print("申杰 / j3w1", "terminal-output identity-output");
@@ -313,7 +370,15 @@ export const createShell = ({ body, statusline, wm, close, title }) => {
     tree = await buildTree();
     const command = commands[name];
     if (!command) {
-      print(`${name}: command not found — try 'help'`, "terminal-output terminal-muted");
+      print(`${name}: command not found`, "terminal-output terminal-muted");
+      if (name.startsWith("/") || name.startsWith(":")) {
+        print(
+          "That is a desktop shortcut, not a command: press / outside the terminal, or type 'dmenu'.",
+          "terminal-output terminal-muted",
+        );
+      } else {
+        print("Type 'help' for the commands you can use here.", "terminal-output terminal-muted");
+      }
       return;
     }
     try {

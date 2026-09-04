@@ -12,6 +12,26 @@ import { element } from "./dom.js?v=20260904";
 import { media } from "./session.js?v=20260904";
 
 const THRESHOLD = 4;
+const PROXY_FRACTION = 0.5;
+const PROXY_MAX = { w: 760, h: 540 };
+
+/* A tiled or fullscreen window is far too large to steer around by its title
+   bar, so the drag carries the size the window will actually become once it
+   floats. The grab point keeps its relative position, so the cursor stays where
+   it was on the title bar instead of jumping to a corner. */
+const proxyRect = (rect, bounds, point) => {
+  const width = Math.round(Math.min(rect.w, bounds.w * PROXY_FRACTION, PROXY_MAX.w));
+  const height = Math.round(Math.min(rect.h, bounds.h * PROXY_FRACTION, PROXY_MAX.h));
+  if (width === rect.w && height === rect.h) return { ...rect };
+  const ratioX = rect.w ? (point.x - rect.x) / rect.w : 0.5;
+  const ratioY = rect.h ? (point.y - rect.y) / rect.h : 0.5;
+  return {
+    x: Math.round(point.x - width * ratioX),
+    y: Math.round(point.y - height * ratioY),
+    w: width,
+    h: height,
+  };
+};
 
 export const installPointer = ({ wm, layers, decos, getLayout, getActive }) => {
   let drag = null;
@@ -81,7 +101,15 @@ export const installPointer = ({ wm, layers, decos, getLayout, getActive }) => {
       if (!onTitlebar && !event.altKey) return;
       const rect = layout?.floats.get(id) ?? layout?.tiles.get(id);
       if (!rect) return;
-      drag = { kind: "move", id, origin: point, rect, wsName, live: false };
+      const bounds = { x: 0, y: 0, w: layer.clientWidth, h: layer.clientHeight };
+      drag = {
+        kind: "move",
+        id,
+        origin: point,
+        rect: proxyRect(rect, bounds, point),
+        wsName,
+        live: false,
+      };
       layer.setPointerCapture?.(event.pointerId);
       return;
     }
@@ -97,6 +125,10 @@ export const installPointer = ({ wm, layers, decos, getLayout, getActive }) => {
 
   const commitDrag = () => {
     document.documentElement.classList.add("wm-dragging");
+    /* Clear anything the first few pixels managed to highlight before the drag
+       was recognised, so no stray selection survives the gesture. */
+    const selection = window.getSelection?.();
+    if (selection && !selection.isCollapsed) selection.removeAllRanges();
     drag.live = true;
   };
 
@@ -161,7 +193,11 @@ export const installPointer = ({ wm, layers, decos, getLayout, getActive }) => {
     if (!finished.live) return;
 
     if (finished.kind === "move" && finished.delta) {
-      wm.moveFloating(finished.id, finished.delta.dx, finished.delta.dy, finished.rect);
+      wm.placeFloating(finished.id, {
+        ...finished.rect,
+        x: finished.rect.x + finished.delta.dx,
+        y: finished.rect.y + finished.delta.dy,
+      });
     } else if (finished.kind === "resize" && finished.next) {
       wm.resizeFloating(finished.id, finished.next);
     } else if (finished.kind === "gutter" && finished.delta) {

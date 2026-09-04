@@ -273,6 +273,135 @@ test("layout survives a reload and killed windows always come back", async ({ pa
   await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
 });
 
+/* The suite normally runs with navigator.webdriver true, which keeps automation
+   off the greeter entirely. These tests opt back in to exercise the login. */
+const openWithGreeter = async (page, path = "/#home") => {
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, "webdriver", { get: () => false }));
+  await page.goto(`${fixture.frontendOrigin}${path}`);
+};
+
+test("the boot sequence runs, then the login waits for the visitor", async ({ page }) => {
+  await openWithGreeter(page);
+  await expect(page.locator("#greeter")).toBeVisible();
+  await expect(page.locator("[data-boot-screen]")).toBeVisible();
+  await expect(page.locator("[data-log] li").first()).toBeVisible();
+
+  await page.keyboard.press("x");
+  const panel = page.locator("[data-login-screen]");
+  await expect(panel).toBeVisible();
+  await expect(page.locator(".greeter-user")).toHaveText("j3w1");
+
+  /* It must not log itself in: still waiting several seconds later. */
+  await page.waitForTimeout(2500);
+  await expect(panel).toBeVisible();
+
+  await page.getByRole("button", { name: "Log In" }).click();
+  await expect(page.locator("#greeter")).toBeHidden();
+  await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
+});
+
+test("the password field holds only decoration, never a value", async ({ page }) => {
+  await openWithGreeter(page);
+  await page.keyboard.press("x");
+  await expect(page.locator("[data-login-screen]")).toBeVisible();
+  const dots = await page.locator("[data-dots]").textContent();
+  expect(dots.replace(/[•\s]/g, "")).toEqual("");
+  expect(await page.locator("[data-login-screen] input").count()).toBe(0);
+});
+
+test("a stored session skips the greeter, and logging out brings it back", async ({ page }) => {
+  await openWithGreeter(page);
+  await page.keyboard.press("x");
+  await page.getByRole("button", { name: "Log In" }).click();
+  await expect(page.locator("#greeter")).toBeHidden();
+
+  await page.reload();
+  await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
+  await expect(page.locator("#greeter")).toBeHidden();
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
+
+  await page.locator("body").press("Shift+E");
+  await expect(page.locator("#greeter")).toBeVisible();
+  /* Logging out returns to the login panel, not through the boot log again. */
+  await expect(page.locator("[data-login-screen]")).toBeVisible();
+  await expect(page.locator("[data-boot-screen]")).toBeHidden();
+
+  await page.getByRole("button", { name: "Log In" }).click();
+  await expect(page.locator("#greeter")).toBeHidden();
+});
+
+test("a deep link never lands on a login screen", async ({ page }) => {
+  await openWithGreeter(page, "/#photography/fixture-photographs");
+  await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
+  await expect(page.locator("#greeter")).toBeHidden();
+  await expect(page.locator('[data-content-detail="photography"] .photo-grid')).toBeVisible();
+});
+
+test("dragging a fullscreen window carries a manageable proxy, not the whole screen", async ({ page }) => {
+  await open(page);
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("f");
+  const full = await rect(page, "home-terminal");
+
+  const bar = await page.locator('[data-wm-window="home-terminal"] .window-titlebar').boundingBox();
+  await page.mouse.move(bar.x + 200, bar.y + bar.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bar.x + 260, bar.y + 180, { steps: 10 });
+  const ghost = await page.evaluate(() => {
+    const node = document.querySelector(".wm-drag-ghost");
+    return node && !node.hidden ? { w: node.offsetWidth, h: node.offsetHeight } : null;
+  });
+  await page.mouse.up();
+
+  expect(ghost).not.toBeNull();
+  expect(ghost.w).toBeLessThan(full.w * 0.75);
+  const dropped = await rect(page, "home-terminal");
+  expect(dropped.w).toBeLessThan(full.w * 0.75);
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toHaveClass(/is-floating/);
+});
+
+test("dragging a title bar never leaves text selected", async ({ page }) => {
+  await open(page);
+  const bar = await page.locator('[data-wm-window="home-terminal"] .window-titlebar').boundingBox();
+  await page.mouse.move(bar.x + 40, bar.y + bar.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bar.x + 240, bar.y + 160, { steps: 14 });
+  await page.mouse.up();
+  const selected = await page.evaluate(() => window.getSelection()?.toString() ?? "");
+  expect(selected).toEqual("");
+});
+
+test("toasts stay clear of the focused window's controls", async ({ page }) => {
+  await open(page);
+  await page.locator("body").press("/");
+  await page.locator("#command-input").fill("exec neofetch");
+  await page.locator("#command-input").press("Enter");
+  const toast = page.locator(".dunst-toast").first();
+  await expect(toast).toBeVisible();
+  const box = await toast.boundingBox();
+  const controls = await page.locator(".window-mark-close").first().boundingBox();
+  /* The window controls live at the top of a window; the toasts must not. */
+  expect(box.y).toBeGreaterThan(controls.y + controls.height);
+});
+
+test("the terminal help separates commands from desktop keys", async ({ page }) => {
+  await open(page);
+  const input = page.locator('[data-wm-window="home-terminal"] .shell-input');
+  await input.click();
+  await input.fill("help");
+  await input.press("Enter");
+  const terminal = page.locator('[data-wm-window="home-terminal"]');
+  await expect(terminal).toContainText("Commands you can type here");
+  await expect(terminal).toContainText("Keys you press anywhere on the desktop");
+
+  /* Typing a desktop shortcut into the shell should explain itself. */
+  await input.fill("/dmenu");
+  await input.press("Enter");
+  await expect(terminal).toContainText("desktop shortcut, not a command");
+});
+
 test("mobile widths use a tabbed container with large touch targets", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 780 });
   await page.goto(`${fixture.frontendOrigin}/#home`);

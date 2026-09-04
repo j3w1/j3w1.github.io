@@ -54,7 +54,7 @@ body {
   background: var(--desktop);
   color: var(--foreground);
   font-family: var(--font);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 400;
   line-height: 1.45;
   text-rendering: optimizeLegibility;
