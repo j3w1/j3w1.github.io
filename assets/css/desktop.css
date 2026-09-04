@@ -1,0 +1,631 @@
+/* Manjaro i3 desktop layer.
+ *
+ * Everything the window manager draws lives here; site.css keeps the site's
+ * appearance and is left alone. All window-manager geometry is scoped under
+ * html.wm-active, which is added only after a successful synchronous boot, so
+ * "no JavaScript", "plain mode" and "the window manager threw" all collapse into
+ * the single fallback selector html:not(.wm-active).
+ *
+ * No new colours: every value below comes from site.css's :root palette.
+ */
+
+:root {
+  --wm-tab-height: 23px;
+  --wm-stack-row: 23px;
+  --wm-grip: 6px;
+  --wm-z-tile: 1;
+  --wm-z-deco: 60;
+  --wm-z-full: 70;
+  --wm-z-dunst: 800;
+  --wm-z-curtain: 900;
+}
+
+/* ---------------------------------------------------------------- wallpaper */
+
+.wallpaper {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  background: radial-gradient(130% 95% at 50% 0%, #1a0a0a 0%, #0b0505 48%, var(--desktop) 100%);
+  pointer-events: none;
+}
+
+html[data-wallpaper="carbon"] .wallpaper {
+  background: linear-gradient(180deg, #0a0606 0%, var(--desktop) 100%);
+}
+
+html[data-wallpaper="ridge"] .wallpaper {
+  background:
+    repeating-linear-gradient(180deg, rgb(145 20 16 / 6%) 0 2px, transparent 2px 88px),
+    radial-gradient(120% 100% at 18% 0%, #200c0c 0%, #0a0505 55%, var(--desktop) 100%);
+}
+
+/* The Manjaro mark: three bars plus the notched right column, four gradient
+   layers on one element. No image request, no bytes. */
+.wallpaper::after {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 50%;
+  width: min(30vmin, 260px);
+  height: min(30vmin, 260px);
+  background-color: transparent;
+  background-image:
+    linear-gradient(var(--border-strong) 0 0),
+    linear-gradient(var(--border-strong) 0 0),
+    linear-gradient(var(--border-strong) 0 0),
+    linear-gradient(var(--border-strong) 0 0);
+  background-repeat: no-repeat;
+  background-position: 0 0, 37% 0, 74% 0, 74% 0;
+  background-size: 26% 100%, 26% 100%, 26% 34%, 26% 100%;
+  content: "";
+  opacity: 0.05;
+  transform: translate(-50%, -50%);
+}
+
+@media (prefers-contrast: more) {
+  .wallpaper::after { opacity: 0; }
+}
+
+/* ------------------------------------------------------------ tiling layout */
+
+.workspace-layer {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+html.wm-active .desktop-shell,
+html.wm-active .workspace {
+  background: transparent;
+}
+
+html.wm-active .workspace-layer {
+  position: relative;
+  display: block;
+  overflow: hidden;
+}
+
+html.wm-active .window {
+  position: absolute;
+  margin: 0;
+  contain: layout paint;
+}
+
+/* These used to be grid cells inside a larger application window. As direct
+   children of a window's flex column they now have to claim the free space
+   themselves. */
+html.wm-active .content-index,
+html.wm-active .content-reader,
+html.wm-active .project-table-pane,
+html.wm-active .project-detail-pane {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+html.wm-active .project-table-pane { border-bottom: 0; }
+
+/* Both browsers lost their third column when the reader became its own window. */
+html.wm-active .photography-body,
+html.wm-active .library-body {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+}
+
+html.wm-active .wm-deco {
+  position: absolute;
+  z-index: var(--wm-z-deco);
+  inset: 0;
+  pointer-events: none;
+}
+
+html.wm-active .wm-tabbar,
+html.wm-active .wm-grip,
+html.wm-active .wm-drag-ghost {
+  pointer-events: auto;
+}
+
+html.wm-dragging,
+html.wm-dragging * {
+  user-select: none;
+}
+
+/* ------------------------------------------------------- tabs and stack rows */
+
+.wm-tabbar {
+  position: absolute;
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--chrome);
+}
+
+.wm-tab {
+  position: absolute;
+  display: flex;
+  overflow: hidden;
+  align-items: center;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: var(--chrome);
+  color: var(--muted);
+  font: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wm-tabbar-stacked .wm-tab {
+  border-bottom: 1px solid var(--border);
+  border-right: 0;
+}
+
+.wm-tab:hover { background: var(--chrome-alt); }
+
+.wm-tab.is-active {
+  background: var(--selection);
+  color: var(--prose);
+}
+
+.wm-tab:focus-visible {
+  outline: 1px dashed var(--focus);
+  outline-offset: -3px;
+}
+
+/* ------------------------------------------------- floating grips and ghost */
+
+.wm-grips {
+  position: absolute;
+  pointer-events: none;
+}
+
+.wm-grip {
+  position: absolute;
+  pointer-events: auto;
+}
+
+.wm-grip-n, .wm-grip-s { left: var(--wm-grip); width: calc(100% - var(--wm-grip) * 2); height: var(--wm-grip); cursor: ns-resize; }
+.wm-grip-e, .wm-grip-w { top: var(--wm-grip); width: var(--wm-grip); height: calc(100% - var(--wm-grip) * 2); cursor: ew-resize; }
+.wm-grip-n { top: calc(var(--wm-grip) * -1); }
+.wm-grip-s { bottom: calc(var(--wm-grip) * -1); }
+.wm-grip-w { left: calc(var(--wm-grip) * -1); }
+.wm-grip-e { right: calc(var(--wm-grip) * -1); }
+.wm-grip-ne, .wm-grip-nw, .wm-grip-se, .wm-grip-sw { width: calc(var(--wm-grip) * 2); height: calc(var(--wm-grip) * 2); }
+.wm-grip-nw { top: calc(var(--wm-grip) * -1); left: calc(var(--wm-grip) * -1); cursor: nwse-resize; }
+.wm-grip-se { right: calc(var(--wm-grip) * -1); bottom: calc(var(--wm-grip) * -1); cursor: nwse-resize; }
+.wm-grip-ne { top: calc(var(--wm-grip) * -1); right: calc(var(--wm-grip) * -1); cursor: nesw-resize; }
+.wm-grip-sw { bottom: calc(var(--wm-grip) * -1); left: calc(var(--wm-grip) * -1); cursor: nesw-resize; }
+
+.wm-drag-ghost {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  border: 1px dashed var(--focus);
+  background: rgb(145 20 16 / 12%);
+  pointer-events: none;
+}
+
+html.wm-active .window.is-floating {
+  border-color: var(--border-strong);
+  box-shadow: 0 6px 22px rgb(0 0 0 / 55%);
+}
+
+/* ----------------------------------------------- real title bar controls */
+
+.window-mark {
+  display: inline-flex;
+  width: 20px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--quiet);
+  font: inherit;
+  line-height: 1;
+}
+
+.window-mark:hover {
+  background: var(--selection-dark);
+  color: var(--prose);
+}
+
+.window-mark-close:hover { background: var(--selection); }
+
+.window-marks { display: inline-flex; gap: 1px; letter-spacing: normal; }
+
+/* ------------------------------------------------------------ empty desktop */
+
+.wm-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(30rem, calc(100% - 2rem));
+  color: var(--muted);
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.wm-empty p { margin: 0 0 10px; }
+.wm-empty-title { color: var(--foreground-bright); }
+.wm-empty kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground-bright);
+  font: inherit;
+}
+
+.wm-restore {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  color: var(--foreground-bright);
+}
+
+.wm-restore:hover { background: var(--selection-dark); color: var(--prose); }
+
+/* --------------------------------------------------------------- i3 status */
+
+/* The workspace names are the navigation and must never be clipped, so the
+   status blocks are the flex item that gives way when the bar runs out of room. */
+.i3status {
+  display: flex;
+  min-width: 0;
+  flex: 0 1 auto;
+  align-items: center;
+  margin-left: auto;
+  overflow: hidden;
+}
+
+/* Below 768px the strip scrolls instead, so the tray stays reachable. */
+@media (min-width: 768px) {
+  html.wm-active .workspace-strip { flex: 0 0 auto; }
+}
+
+.i3block {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.i3block + .i3block::before {
+  margin-right: 8px;
+  color: var(--inactive);
+  content: "|";
+}
+
+.wm-mode {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  background: var(--focus);
+  color: var(--desktop);
+}
+
+.i3tray { display: flex; align-items: center; }
+
+.workspace-link.is-urgent { background: var(--selection); color: var(--prose); }
+.workspace-link.is-urgent::after { margin-left: 4px; content: "!"; }
+
+/* ------------------------------------------------------------------- dunst */
+
+.dunst {
+  position: fixed;
+  z-index: var(--wm-z-dunst);
+  top: calc(var(--bar-height) + 6px);
+  right: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.dunst-toast {
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  color: var(--foreground-bright);
+  pointer-events: auto;
+}
+
+.dunst-toast.is-critical { border-color: var(--focus); background: var(--selection-dark); color: var(--prose); }
+
+/* ----------------------------------------------------------------- greeter */
+
+.greeter,
+.lock {
+  position: fixed;
+  z-index: var(--wm-z-curtain);
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  background: var(--desktop);
+  inset: 0;
+}
+
+.greeter {
+  /* Deliberately not var(--font): the Nerd Font is 2.4MB and will not have
+     loaded on frame 1, and font-display:swap would re-lay-out the boot log
+     halfway through the animation. */
+  padding: 24px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  gap: 22px;
+}
+
+.greeter[hidden] { display: none; }
+
+.greeter.is-leaving { opacity: 0; transition: opacity 250ms linear; }
+
+.greeter-panel {
+  width: min(320px, 100%);
+  padding: 18px 20px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  text-align: center;
+}
+
+.greeter-panel p { margin: 0 0 8px; }
+.greeter-host { color: var(--muted); }
+.greeter-session { color: var(--quiet); }
+.greeter-user { padding-top: 6px; color: var(--prose); font-size: 15px; }
+
+.greeter-pass {
+  display: flex;
+  min-height: 26px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  background: var(--terminal);
+  color: var(--foreground-bright);
+  letter-spacing: 3px;
+}
+
+.greeter-caret {
+  width: 7px;
+  height: 13px;
+  background: var(--focus);
+}
+
+.greeter-login {
+  width: 100%;
+  min-height: 30px;
+  margin-top: 4px;
+  border: 1px solid var(--border-strong);
+  background: var(--button);
+  color: var(--prose);
+}
+
+.greeter-login:hover { background: var(--selection); }
+
+.greeter-auth { min-height: 1.2em; color: var(--muted); }
+
+.greeter-log {
+  width: min(720px, 100%);
+  min-height: 9em;
+  padding: 0;
+  margin: 0;
+  color: var(--muted);
+  list-style: none;
+}
+
+.greeter-log li { white-space: nowrap; }
+.greeter-ok { color: var(--focus); }
+.greeter-hint { margin: 0; color: var(--quiet); }
+
+/* ---------------------------------------------------------------- i3lock */
+
+.lock { background: rgb(5 3 3 / 94%); gap: 6px; }
+.lock[hidden] { display: none; }
+
+.lock-ring {
+  width: 96px;
+  height: 96px;
+  margin-bottom: 14px;
+  border: 3px solid var(--focus);
+  border-radius: 50%;
+}
+
+.lock-time { margin: 0; color: var(--prose); font-size: 30px; }
+.lock-date, .lock-user, .lock-hint { margin: 0; color: var(--muted); }
+.lock-hint { margin-top: 12px; color: var(--quiet); }
+
+html.wm-locked .desktop-shell { pointer-events: none; }
+
+/* ------------------------------------------------------------ applications */
+
+.wm-app-body {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 10px;
+  overflow: auto;
+}
+
+.shell-line { display: flex; align-items: baseline; }
+.shell-prompt { flex: 0 0 auto; white-space: pre; }
+
+.shell-input {
+  min-width: 0;
+  flex: 1 1 auto;
+  border: 0;
+  background: transparent;
+  color: var(--prose);
+  outline: 0;
+}
+
+.neofetch { display: flex; gap: 18px; }
+.neofetch-logo { margin: 0; color: var(--focus); font-size: 7px; line-height: 1.05; }
+.neofetch-column { min-width: 0; }
+.neofetch-info { margin: 0; }
+.neofetch-info div { display: flex; gap: 6px; }
+.neofetch-info dt { min-width: 84px; color: var(--focus); }
+.neofetch-info dd { margin: 0; color: var(--prose); }
+.neofetch-swatches { display: flex; margin-top: 10px; }
+.neofetch-swatch { width: 22px; height: 12px; }
+.neofetch-swatch.s0 { background: #2b0a0a; }
+.neofetch-swatch.s1 { background: var(--inactive); }
+.neofetch-swatch.s2 { background: var(--selection-dark); }
+.neofetch-swatch.s3 { background: var(--selection); }
+.neofetch-swatch.s4 { background: var(--button); }
+.neofetch-swatch.s5 { background: var(--focus); }
+.neofetch-swatch.s6 { background: var(--foreground); }
+.neofetch-swatch.s7 { background: var(--prose); }
+
+.htop-meters { margin: 0 0 10px; color: var(--foreground-bright); }
+.htop-table { width: 100%; border-collapse: collapse; }
+.htop-table th { padding: 2px 6px; background: var(--selection-dark); color: var(--prose); text-align: left; }
+.htop-table td { padding: 2px 6px; color: var(--muted); white-space: nowrap; }
+.htop-table tr.is-selected td { background: var(--selection-soft); color: var(--prose); }
+
+.cmatrix-window .wm-app-body { padding: 0; overflow: hidden; }
+.cmatrix { display: block; }
+
+.feh-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.feh-thumb { padding: 6px; border: 1px solid var(--border); background: var(--terminal); color: var(--muted); text-align: left; }
+.feh-thumb.is-selected { border-color: var(--focus); color: var(--prose); }
+.feh-preview { display: block; height: 74px; border: 1px solid var(--border); }
+.feh-preview.wallpaper-ember { background: radial-gradient(130% 95% at 50% 0%, #1a0a0a 0%, #0b0505 48%, var(--desktop) 100%); }
+.feh-preview.wallpaper-carbon { background: linear-gradient(180deg, #0a0606 0%, var(--desktop) 100%); }
+.feh-preview.wallpaper-ridge { background: repeating-linear-gradient(180deg, rgb(145 20 16 / 10%) 0 2px, transparent 2px 14px), #0a0505; }
+.feh-label { display: block; margin-top: 5px; }
+
+/* --------------------------------------- fallback: no JS, plain, boot failed */
+
+html:not(.wm-active) .workspace-layer {
+  display: grid;
+  gap: var(--gap);
+}
+
+html:not(.wm-active) .writing-grid,
+html:not(.wm-active) .photography-grid {
+  grid-template-columns: minmax(260px, 0.38fr) minmax(0, 0.62fr);
+}
+
+html:not(.wm-active) .books-grid {
+  grid-template-columns: minmax(280px, 0.48fr) minmax(0, 0.52fr);
+}
+
+html:not(.wm-active) .projects-grid {
+  grid-template-rows: minmax(0, 0.58fr) minmax(0, 0.42fr);
+}
+
+html:not(.wm-active) .wm-deco,
+html:not(.wm-active) .wm-empty {
+  display: none;
+}
+
+/* Plain document mode: the escape hatch reuses the progressive-enhancement
+   layout that already exists for no-JS visitors. */
+html[data-wm="off"] body {
+  height: auto;
+  overflow: auto;
+}
+
+html[data-wm="off"] .desktop-shell {
+  height: auto;
+  overflow: visible;
+}
+
+/* A fragment link scrolls the bar out of view in a scrolling document, so the
+   workspace navigation has to stick. */
+html[data-wm="off"] .wm-bar {
+  position: sticky;
+  top: 0;
+}
+
+html[data-wm="off"].js .workspace:not(.is-active),
+.no-js .workspace {
+  display: block;
+}
+
+html[data-wm="off"] .workspace {
+  display: block;
+  min-height: auto;
+  margin-bottom: 18px;
+}
+
+html[data-wm="off"] .workspace-layer,
+.no-js .workspace-layer {
+  display: block;
+  height: auto;
+}
+
+html[data-wm="off"] .window,
+.no-js .window {
+  height: auto;
+  min-height: 12rem;
+  margin-bottom: var(--gap);
+}
+
+html[data-wm="off"] .project-detail,
+.no-js .project-detail {
+  display: block;
+  margin-bottom: 18px;
+}
+
+/* -------------------------------------------------------------- responsive */
+
+@media (max-width: 1439px) {
+  .i3block-lang,
+  .i3block-tz,
+  .i3block-heap { display: none; }
+}
+
+@media (max-width: 1279px) {
+  .i3block-net,
+  .i3block-mem { display: none; }
+}
+
+@media (max-width: 1199px) {
+  html.wm-active .photography-body,
+  html.wm-active .library-body { grid-template-columns: 145px minmax(0, 1fr); }
+}
+
+@media (max-width: 767px) {
+  :root { --wm-tab-height: 44px; --wm-stack-row: 44px; }
+
+  .i3status { display: none; }
+  .dunst { right: 6px; left: 6px; }
+  .wm-tab { min-width: 88px; padding: 0 10px; }
+  .window-mark { width: 30px; height: 30px; }
+
+  /* The title bar is the long-press target, so it needs real area — and it is
+     not scrollable, which makes touch-action:none safe here. */
+  html.wm-active .window-titlebar { touch-action: none; }
+
+  .neofetch { flex-direction: column; }
+  .neofetch-logo { font-size: 6px; }
+  .greeter-log { min-height: 7em; overflow: hidden; font-size: 11px; }
+
+  #command-launcher { top: var(--vv-offset, 0); }
+}
+
+@media (max-width: 420px) {
+  .workspace-link { padding-inline: 9px; }
+  .tray-label { display: none; }
+}
+
+/* Landscape phones lose so much height to chrome that the app furniture has to
+   go: 44 + 44 + 32 + 27 is 39% of a 375px-tall viewport. */
+@media (max-width: 926px) and (orientation: landscape) and (pointer: coarse) {
+  :root { --bar-height: 32px; --title-height: 26px; --wm-tab-height: 38px; }
+
+  .app-statusline,
+  .terminal-statusline,
+  .vim-statusline,
+  .app-menu,
+  .vim-tabline { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .greeter.is-leaving { transition: none; }
+}

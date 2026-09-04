@@ -13,8 +13,38 @@
   <meta name="theme-color" content="#0c0909">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/assets/fonts/JetBrainsMonoNerdFont-Regular.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="/assets/css/site.css?v=20260825b">
-  <script>document.documentElement.classList.replace('no-js', 'js');</script>
+  <link rel="stylesheet" href="/assets/css/site.css?v=20260904">
+  <link rel="stylesheet" href="/assets/css/desktop.css?v=20260904">
+  <link rel="modulepreload" href="/assets/js/wm/boot.js?v=20260904">
+  <script>
+  /* Runs before first paint so plain mode never flashes a window manager and the
+     greeter never delays content. Storage keys are mirrored in wm/session.js;
+     security-static.test.js asserts the two agree. */
+  (() => {
+    const html = document.documentElement;
+    if ("noModule" in HTMLScriptElement.prototype) html.classList.replace("no-js", "js");
+    const query = new URLSearchParams(location.search);
+    const local = (key, fallback) => {
+      try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
+    };
+    html.dataset.wm = local("j3w1.wm.enabled", "1") === "0" || query.has("plain") ? "off" : "on";
+    if (html.dataset.wm === "off") return;
+    const hash = location.hash.replace(/^#/, "").toLowerCase();
+    const connection = navigator.connection || {};
+    let booted = false;
+    try { booted = sessionStorage.getItem("j3w1.wm.booted") === "1"; } catch {}
+    const greet = !booted
+      && (hash === "" || hash === "home")
+      && !(connection.saveData === true || /^(slow-)?2g$/.test(connection.effectiveType || ""))
+      && local("j3w1.wm.boot", "1") !== "0"
+      && navigator.webdriver !== true
+      && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (greet) {
+      html.dataset.boot = "greeter";
+      try { sessionStorage.setItem("j3w1.wm.booted", "1"); } catch {}
+    }
+  })();
+  </script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -29,6 +59,7 @@
 </head>
 <body>
   <a class="skip-link" href="#home" data-skip-link>Skip to workspace content</a>
+  <div id="wallpaper" class="wallpaper" aria-hidden="true"></div>
 
   <header class="wm-bar" aria-label="i3 workspace and site status bar">
     <nav class="workspace-strip" aria-label="Primary workspaces">
@@ -40,10 +71,12 @@
       <a class="workspace-link" href="#elsewhere" data-workspace-link="elsewhere"><span aria-hidden="true">6:</span>elsewhere</a>
       <a class="workspace-link" href="#about" data-workspace-link="about"><span aria-hidden="true">7:</span>about</a>
     </nav>
+    <span id="wm-mode" class="wm-mode" hidden></span>
+    <div id="i3status" class="i3status" aria-label="System status"></div>
     <div class="system-status" aria-label="Website status">
-      <button id="j3w1ctl-launch" class="status-control" type="button"><span class="ui-icon ui-icon-lock" aria-hidden="true">&#xf023;</span>j3w1ctl</button>
+      <button id="wm-toggle" class="status-control" type="button" aria-pressed="true" aria-label="Switch between the i3 window manager and a plain document page"><span class="ui-icon" aria-hidden="true">&#xf2d2;</span><span class="tray-label">i3</span></button>
+      <button id="j3w1ctl-launch" class="status-control" type="button"><span class="ui-icon ui-icon-lock" aria-hidden="true">&#xf023;</span><span class="tray-label">j3w1ctl</span></button>
       <a class="status-github" href="https://github.com/j3w1" rel="me"><span class="ui-icon ui-icon-github" aria-hidden="true">&#xf09b;</span>GitHub <span aria-hidden="true">↗</span></a>
-      <span class="status-branch">git:main</span>
       <span id="status-workspace">1:home</span>
       <span id="status-path">~/j3w1</span>
       <time id="local-clock" aria-label="Your local time">--:--:--</time>
@@ -55,12 +88,8 @@
 
     <section id="home" class="workspace is-active" data-workspace="home" aria-labelledby="workspace-home-title" tabindex="-1">
       <h2 id="workspace-home-title" class="sr-only">Home workspace</h2>
-      <div class="mobile-buffer-tabs" role="tablist" aria-label="Home panes">
-        <button type="button" class="buffer-tab is-active" data-buffer-target="home-terminal" role="tab" aria-selected="true">1 terminal</button>
-        <button type="button" class="buffer-tab" data-buffer-target="home-files" role="tab" aria-selected="false">2 files</button>
-      </div>
-      <div class="home-grid workspace-grid">
-        <article class="window pane terminal-window is-focused is-mobile-active" data-pane="home-terminal" tabindex="0" aria-label="URxvt introduction terminal">
+      <div class="workspace-layer home-grid" data-wm-layer="home">
+        <article class="window pane terminal-window is-focused" data-wm-window="home-terminal" data-wm-title="j3w1@manjaro: ~" tabindex="0" aria-label="URxvt terminal">
           <header class="window-titlebar">
             <span>j3w1@manjaro: ~</span>
             <span class="window-marks" aria-hidden="true">─ □ ×</span>
@@ -92,7 +121,7 @@
           </footer>
         </article>
 
-        <article class="window pane file-manager-window" data-pane="home-files" tabindex="0" aria-label="Thunar workspace browser">
+        <article class="window pane file-manager-window" data-wm-window="home-files" data-wm-title="j3w1 — Thunar" tabindex="0" aria-label="Thunar workspace browser">
           <header class="window-titlebar">
             <span>j3w1 — Thunar</span>
             <span class="window-marks" aria-hidden="true">─ □ ×</span>
@@ -127,37 +156,52 @@
           </div>
           <footer class="app-statusline"><span>7 folders</span><span class="status-fill">/home/j3w1</span><span>Free space: web</span></footer>
         </article>
+
+        <div class="wm-empty" data-wm-empty hidden>
+          <p class="wm-empty-title">no windows on <span data-empty-ws>home</span></p>
+          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu</p>
+          <p><button type="button" class="wm-restore" data-wm-restore>restore this workspace</button></p>
+        </div>
+        <div class="wm-deco" data-wm-deco></div>
       </div>
     </section>
 
     <section id="writing" class="workspace" data-workspace="writing" aria-labelledby="workspace-writing-title" tabindex="-1">
       <h2 id="workspace-writing-title" class="sr-only">Writing workspace</h2>
-      <div class="mobile-buffer-tabs" role="tablist" aria-label="Writing panes"><button type="button" class="buffer-tab is-active" data-buffer-target="writing-list" role="tab" aria-selected="true">1 index</button><button type="button" class="buffer-tab" data-buffer-target="writing-reader" role="tab" aria-selected="false">2 reader</button></div>
-      <article class="window pane vim-window is-focused content-workspace" tabindex="0" aria-label="Vim writing index">
-        <header class="window-titlebar"><span>writing/index.md (~/j3w1/writing) — VIM</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
-        <div class="vim-tabline" aria-hidden="true"><span class="is-active">index.md</span><span>[No Name]</span></div>
-        <div class="content-split"><div class="vim-buffer content-index is-mobile-active" data-pane="writing-list" data-content-list="writing" aria-label="Published writing"></div><article class="content-reader" data-pane="writing-reader" data-content-detail="writing" aria-live="polite"></article></div>
-        <footer class="vim-statusline"><span class="vim-mode">NORMAL</span><span data-content-status="writing">loading index…</span><span class="status-fill">utf-8 · markdown</span></footer>
-      </article>
+      <div class="workspace-layer writing-grid" data-wm-layer="writing">
+        <article class="window pane vim-window is-focused" data-wm-window="writing-index" data-wm-title="writing/index.md" tabindex="0" aria-label="Vim writing index">
+          <header class="window-titlebar"><span>writing/index.md (~/j3w1/writing) — VIM</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
+          <div class="vim-tabline" aria-hidden="true"><span class="is-active">index.md</span></div>
+          <div class="vim-buffer content-index" data-content-list="writing" aria-label="Published writing"></div>
+          <footer class="vim-statusline"><span class="vim-mode">NORMAL</span><span data-content-status="writing">loading index…</span><span class="status-fill">utf-8 · markdown</span></footer>
+        </article>
+        <article class="window pane vim-window" data-wm-window="writing-reader" data-wm-title="writing/reader" tabindex="0" aria-label="Writing reader">
+          <header class="window-titlebar"><span>reader (~/j3w1/writing) — VIM</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
+          <div class="content-reader" data-content-detail="writing" aria-live="polite"></div>
+          <footer class="vim-statusline"><span class="vim-mode">NORMAL</span><span class="status-fill">utf-8 · markdown</span></footer>
+        </article>
+        <div class="wm-empty" data-wm-empty hidden>
+          <p class="wm-empty-title">no windows on <span data-empty-ws>writing</span></p>
+          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu</p>
+          <p><button type="button" class="wm-restore" data-wm-restore>restore this workspace</button></p>
+        </div>
+        <div class="wm-deco" data-wm-deco></div>
+      </div>
     </section>
 
     <section id="projects" class="workspace" data-workspace="projects" aria-labelledby="workspace-projects-title" tabindex="-1">
       <h2 id="workspace-projects-title" class="sr-only">Projects workspace</h2>
-      <div class="mobile-buffer-tabs" role="tablist" aria-label="Project panes">
-        <button type="button" class="buffer-tab is-active" data-buffer-target="project-list" role="tab" aria-selected="true">1 list</button>
-        <button type="button" class="buffer-tab" data-buffer-target="project-detail" role="tab" aria-selected="false">2 detail</button>
-      </div>
-      <article class="window pane project-window is-focused" data-pane="projects-app" tabindex="0" aria-label="Projects application">
-        <header class="window-titlebar"><span>[8 entries] projects — j3w1</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
-        <div class="app-menu" aria-hidden="true"><span>Project</span><span>Edit</span><span>View</span><span>Tools</span><span>Help</span></div>
-        <div class="project-toolbar">
-          <button class="toolbar-label project-filter-button" type="button" data-project-visibility="all" aria-pressed="true"><span class="ui-icon" aria-hidden="true">&#xf0ae;</span><span class="project-filter-label">All projects</span><span data-project-count="all">(8)</span></button>
-          <button class="toolbar-label project-filter-button" type="button" data-project-visibility="public" aria-pressed="false"><span class="ui-icon" aria-hidden="true">&#xf0ac;</span><span class="project-filter-label">Public</span><span data-project-count="public">(5)</span></button>
-          <button class="toolbar-label project-filter-button" type="button" data-project-visibility="internal" aria-pressed="false"><span class="ui-icon" aria-hidden="true">&#xf023;</span><span class="project-filter-label">Internal</span><span data-project-count="internal">(3)</span></button>
-          <label class="filter-field" for="project-filter"><span class="ui-icon" aria-hidden="true">&#xf002;</span><span class="sr-only">Filter projects</span><input id="project-filter" type="search" autocomplete="off" placeholder="Filter project name…"></label>
-        </div>
-        <div class="project-app-body">
-          <div class="project-table-pane is-mobile-active" data-pane="project-list">
+      <div class="workspace-layer projects-grid" data-wm-layer="projects">
+        <article class="window pane project-window is-focused" data-wm-window="projects-table" data-wm-title="projects" tabindex="0" aria-label="Projects application">
+          <header class="window-titlebar"><span>[8 entries] projects — j3w1</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
+          <div class="app-menu" aria-hidden="true"><span>Project</span><span>Edit</span><span>View</span><span>Tools</span><span>Help</span></div>
+          <div class="project-toolbar">
+            <button class="toolbar-label project-filter-button" type="button" data-project-visibility="all" aria-pressed="true"><span class="ui-icon" aria-hidden="true">&#xf0ae;</span><span class="project-filter-label">All projects</span><span data-project-count="all">(8)</span></button>
+            <button class="toolbar-label project-filter-button" type="button" data-project-visibility="public" aria-pressed="false"><span class="ui-icon" aria-hidden="true">&#xf0ac;</span><span class="project-filter-label">Public</span><span data-project-count="public">(5)</span></button>
+            <button class="toolbar-label project-filter-button" type="button" data-project-visibility="internal" aria-pressed="false"><span class="ui-icon" aria-hidden="true">&#xf023;</span><span class="project-filter-label">Internal</span><span data-project-count="internal">(3)</span></button>
+            <label class="filter-field" for="project-filter"><span class="ui-icon" aria-hidden="true">&#xf002;</span><span class="sr-only">Filter projects</span><input id="project-filter" type="search" autocomplete="off" placeholder="Filter project name…"></label>
+          </div>
+          <div class="project-table-pane">
             <div class="table-scroller">
               <table class="project-table">
                 <caption class="sr-only">Current, public, and historical projects</caption>
@@ -182,8 +226,12 @@
               </table>
             </div>
           </div>
+          <footer class="app-statusline"><span>8 entries</span><span>5 public</span><span>3 internal</span><span class="status-fill">selection: <span id="project-status-selection">j3w1zsh</span></span></footer>
+        </article>
 
-          <div class="project-detail-pane" data-pane="project-detail" aria-live="polite">
+        <article class="window pane project-window" data-wm-window="projects-detail" data-wm-title="project detail" tabindex="0" aria-label="Project detail">
+          <header class="window-titlebar"><span>project detail — j3w1</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
+          <div class="project-detail-pane" aria-live="polite">
             <p id="project-no-results" class="compact-state" hidden>No projects match this view.</p>
             <article class="project-detail" data-project-detail="ce-systems"><header><span>CE Systems</span><span>private / internal · active</span></header><p>An internal business operations platform for Casa Elida, covering retail, inventory, purchasing, imports and logistics, finance, and organizational workflows.</p><dl><div><dt>Stack</dt><dd>Laravel · PHP · Vue · TypeScript · MariaDB</dd></div><div><dt>Context</dt><dd>Business systems for real operations</dd></div><div><dt>Repository</dt><dd>Private; no public link</dd></div></dl></article>
             <article class="project-detail" data-project-detail="ce-gd"><header><span>CE Governed Delivery</span><span>private / internal · active</span></header><p>An isolated, evidence-driven engineering-governance initiative focused on bounded AI assistance, delivery control, and dependable human decision points.</p><dl><div><dt>Practice</dt><dd>Evidence · Review · Delivery controls</dd></div><div><dt>Context</dt><dd>Engineering governance</dd></div><div><dt>Repository</dt><dd>Private; no public link</dd></div></dl></article>
@@ -194,88 +242,183 @@
             <article class="project-detail" data-project-detail="1w3j"><header><span>1w3j</span><span>public · legacy</span></header><p>An earlier generation of personal Linux workstation configuration, scripts, themes, package lists, and bootstrap tooling. j3w1zsh is the current public workstation framework.</p><dl><div><dt>Period</dt><dd>2017–2021</dd></div><div><dt>Context</dt><dd>Preserved workstation history</dd></div><div><dt>Repository</dt><dd><a href="https://github.com/j3w1/1w3j">github.com/j3w1/1w3j ↗</a></dd></div></dl></article>
             <article class="project-detail" data-project-detail="ce-desktop"><header><span>CE Desktop</span><span>public · historical</span></header><p>An earlier JavaFX enterprise desktop application prototype, preserved as part of the public project history.</p><dl><div><dt>Stack</dt><dd>Java · JavaFX</dd></div><div><dt>Context</dt><dd>Enterprise desktop prototype</dd></div><div><dt>Repository</dt><dd><a href="https://github.com/j3w1/CEDesktop">github.com/j3w1/CEDesktop ↗</a></dd></div></dl></article>
           </div>
+          <footer class="app-statusline"><span>detail</span><span class="status-fill">selection: j3w1zsh</span></footer>
+        </article>
+
+        <div class="wm-empty" data-wm-empty hidden>
+          <p class="wm-empty-title">no windows on <span data-empty-ws>projects</span></p>
+          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu</p>
+          <p><button type="button" class="wm-restore" data-wm-restore>restore this workspace</button></p>
         </div>
-        <footer class="app-statusline"><span>8 entries</span><span>5 public</span><span>3 internal</span><span class="status-fill">selection: <span id="project-status-selection">j3w1zsh</span></span></footer>
-      </article>
+        <div class="wm-deco" data-wm-deco></div>
+      </div>
     </section>
 
     <section id="photography" class="workspace" data-workspace="photography" aria-labelledby="workspace-photography-title" tabindex="-1">
       <h2 id="workspace-photography-title" class="sr-only">Photography workspace</h2>
-      <div class="mobile-buffer-tabs" role="tablist" aria-label="Photography panes"><button type="button" class="buffer-tab is-active" data-buffer-target="photography-list" role="tab" aria-selected="true">1 folders</button><button type="button" class="buffer-tab" data-buffer-target="photography-detail" role="tab" aria-selected="false">2 photographs</button></div>
-      <article class="window pane file-manager-window photography-window is-focused" data-pane="photography-files" tabindex="0" aria-label="Thunar photography browser">
-        <header class="window-titlebar"><span>photography — Thunar</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
-        <div class="app-menu" aria-hidden="true"><span>File</span><span>Edit</span><span>View</span><span>Go</span><span>Bookmarks</span><span>Help</span></div>
-        <div class="file-toolbar"><span class="toolbar-glyph ui-icon" aria-hidden="true">&#xf060;</span><span class="toolbar-glyph ui-icon" aria-hidden="true">&#xf061;</span><span class="toolbar-glyph ui-icon" aria-hidden="true">&#xf062;</span><span class="location-field">/home/j3w1/photography</span><span class="toolbar-glyph ui-icon" aria-hidden="true">&#xf002;</span></div>
-        <div class="file-manager-body photography-body"><aside class="places-sidebar" aria-label="Photography places"><p class="sidebar-heading">▾ Places</p><a class="place-row" href="#home" data-workspace-link="home"><span class="ui-icon" aria-hidden="true">&#xf015;</span> Home</a><span class="place-row is-selected"><span class="ui-icon" aria-hidden="true">&#xf030;</span> Photography</span><p class="sidebar-heading">▾ View</p><span class="place-row"><span class="ui-icon" aria-hidden="true">&#xf00a;</span> Icons</span><span class="place-row"><span class="ui-icon" aria-hidden="true">&#xf03a;</span> Details</span></aside><div class="file-view content-index is-mobile-active" data-pane="photography-list" data-content-list="photography"></div><div class="content-reader photo-detail" data-pane="photography-detail" data-content-detail="photography" aria-live="polite"></div></div>
-        <footer class="app-statusline"><span data-content-status="photography">loading index…</span><span class="status-fill">/home/j3w1/photography</span><span>viewer: ready</span></footer>
-      </article>
+      <div class="workspace-layer photography-grid" data-wm-layer="photography">
+        <article class="window pane file-manager-window photography-window is-focused" data-wm-window="photography-files" data-wm-title="photography" tabindex="0" aria-label="Thunar photography browser">
+          <header class="window-titlebar"><span>photography — Thunar</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
+          <div class="app-menu" aria-hidden="true"><span>File</span><span>Edit</span><span>View</span><span>Go</span><span>Bookmarks</span><span>Help</span></div>
+          <div class="file-toolbar"><span class="toolbar-glyph ui-icon" aria-hidden="true">&#xf060;</span><span class="toolbar-glyph ui-icon" aria-hidden="true">&#xf061;</span><span class="toolbar-glyph ui-icon" aria-hidden="true">&#xf062;</span><span class="location-field">/home/j3w1/photography</span><span class="toolbar-glyph ui-icon" aria-hidden="true">&#xf002;</span></div>
+          <div class="file-manager-body photography-body">
+            <aside class="places-sidebar" aria-label="Photography places"><p class="sidebar-heading">▾ Places</p><a class="place-row" href="#home" data-workspace-link="home"><span class="ui-icon" aria-hidden="true">&#xf015;</span> Home</a><span class="place-row is-selected"><span class="ui-icon" aria-hidden="true">&#xf030;</span> Photography</span><p class="sidebar-heading">▾ View</p><span class="place-row"><span class="ui-icon" aria-hidden="true">&#xf00a;</span> Icons</span><span class="place-row"><span class="ui-icon" aria-hidden="true">&#xf03a;</span> Details</span></aside>
+            <div class="file-view content-index" data-content-list="photography"></div>
+          </div>
+          <footer class="app-statusline"><span data-content-status="photography">loading index…</span><span class="status-fill">/home/j3w1/photography</span></footer>
+        </article>
+        <article class="window pane file-manager-window" data-wm-window="photography-viewer" data-wm-title="photographs" tabindex="0" aria-label="Photograph viewer">
+          <header class="window-titlebar"><span>photographs — Thunar</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
+          <div class="content-reader photo-detail" data-content-detail="photography" aria-live="polite"></div>
+          <footer class="app-statusline"><span>ristretto</span><span class="status-fill">viewer: ready</span></footer>
+        </article>
+        <div class="wm-empty" data-wm-empty hidden>
+          <p class="wm-empty-title">no windows on <span data-empty-ws>photography</span></p>
+          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu</p>
+          <p><button type="button" class="wm-restore" data-wm-restore>restore this workspace</button></p>
+        </div>
+        <div class="wm-deco" data-wm-deco></div>
+      </div>
     </section>
 
     <section id="books" class="workspace" data-workspace="books" aria-labelledby="workspace-books-title" tabindex="-1">
       <h2 id="workspace-books-title" class="sr-only">Books workspace</h2>
-      <div class="mobile-buffer-tabs" role="tablist" aria-label="Book panes"><button type="button" class="buffer-tab is-active" data-buffer-target="books-list" role="tab" aria-selected="true">1 library</button><button type="button" class="buffer-tab" data-buffer-target="books-detail" role="tab" aria-selected="false">2 notes</button></div>
-      <article class="window pane library-window is-focused" data-pane="books-library" tabindex="0" aria-label="Calibre-style public books library">
-        <header class="window-titlebar"><span>j3w1 public library — calibre</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
-        <div class="app-menu" aria-hidden="true"><span>Library</span><span>View</span><span>Preferences</span><span>Help</span></div>
-        <div class="library-toolbar" aria-hidden="true"><span><i class="ui-icon">&#xf02d;</i> Library</span><span><i class="ui-icon">&#xf002;</i> Search</span><span><i class="ui-icon">&#xf00a;</i> Cover grid</span><span><i class="ui-icon">&#xf03a;</i> Details</span></div>
-        <div class="library-body"><aside class="library-sidebar" aria-label="Library categories"><p>▾ Public library</p><span class="is-selected">All books <b data-content-count="books">(0)</b></span><span>Authors</span><span>Tags</span><p>▾ Formats</p><span>Published notes</span></aside><div class="library-list content-index is-mobile-active" data-pane="books-list" data-content-list="books"></div><article class="content-reader" data-pane="books-detail" data-content-detail="books" aria-live="polite"></article></div>
-        <footer class="app-statusline"><span data-content-status="books">loading index…</span><span class="status-fill">Virtual library: public</span><span>Git-managed</span></footer>
-      </article>
+      <div class="workspace-layer books-grid" data-wm-layer="books">
+        <article class="window pane library-window is-focused" data-wm-window="books-library" data-wm-title="library" tabindex="0" aria-label="Calibre-style public books library">
+          <header class="window-titlebar"><span>j3w1 public library — calibre</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
+          <div class="app-menu" aria-hidden="true"><span>Library</span><span>View</span><span>Preferences</span><span>Help</span></div>
+          <div class="library-toolbar" aria-hidden="true"><span><i class="ui-icon">&#xf02d;</i> Library</span><span><i class="ui-icon">&#xf002;</i> Search</span><span><i class="ui-icon">&#xf00a;</i> Cover grid</span><span><i class="ui-icon">&#xf03a;</i> Details</span></div>
+          <div class="library-body">
+            <aside class="library-sidebar" aria-label="Library categories"><p>▾ Public library</p><span class="is-selected">All books <b data-content-count="books">(0)</b></span><span>Authors</span><span>Tags</span><p>▾ Formats</p><span>Published notes</span></aside>
+            <div class="library-list content-index" data-content-list="books"></div>
+          </div>
+          <footer class="app-statusline"><span data-content-status="books">loading index…</span><span class="status-fill">Virtual library: public</span><span>Git-managed</span></footer>
+        </article>
+        <article class="window pane library-window" data-wm-window="books-notes" data-wm-title="reading notes" tabindex="0" aria-label="Reading notes">
+          <header class="window-titlebar"><span>reading notes — calibre</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
+          <div class="content-reader" data-content-detail="books" aria-live="polite"></div>
+          <footer class="app-statusline"><span>notes</span><span class="status-fill">Git-managed</span></footer>
+        </article>
+        <div class="wm-empty" data-wm-empty hidden>
+          <p class="wm-empty-title">no windows on <span data-empty-ws>books</span></p>
+          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu</p>
+          <p><button type="button" class="wm-restore" data-wm-restore>restore this workspace</button></p>
+        </div>
+        <div class="wm-deco" data-wm-deco></div>
+      </div>
     </section>
 
     <section id="elsewhere" class="workspace" data-workspace="elsewhere" aria-labelledby="workspace-elsewhere-title" tabindex="-1">
       <h2 id="workspace-elsewhere-title" class="sr-only">Elsewhere workspace</h2>
-      <article class="window pane terminal-window elsewhere-window is-focused" data-pane="elsewhere-terminal" tabindex="0" aria-label="External links terminal">
-        <header class="window-titlebar"><span>j3w1@manjaro: ~/elsewhere</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
-        <div class="terminal-buffer" role="document"><p class="terminal-line"><span class="prompt-user">j3w1</span><span class="prompt-at">@</span><span class="prompt-host">manjaro</span><span class="prompt-path"> ~/elsewhere</span><span class="prompt-mark"> $ </span><span class="command">ls -l</span></p><p class="terminal-output terminal-muted">total 4</p><ul class="link-list" aria-label="Public external destinations"><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1" rel="me">github</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1</span></li><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1/j3w1.github.io">site-source</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1/j3w1.github.io</span></li><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1/j3w1zsh">current-workstation</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1/j3w1zsh</span></li><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1/1w3j">legacy-workstation</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1/1w3j</span></li></ul><p class="terminal-line"><span class="prompt-user">j3w1</span><span class="prompt-at">@</span><span class="prompt-host">manjaro</span><span class="prompt-path"> ~/elsewhere</span><span class="prompt-mark"> $ </span><span class="command">cat note</span></p><p class="terminal-output readable-output">GitHub is the only public profile linked from this site.</p><p class="terminal-line terminal-ready"><span class="prompt-user">j3w1</span><span class="prompt-at">@</span><span class="prompt-host">manjaro</span><span class="prompt-path"> ~/elsewhere</span><span class="prompt-mark"> $ </span><span class="terminal-cursor" aria-hidden="true"></span></p></div>
-        <footer class="terminal-statusline"><span>URxvt</span><span>4 links</span><span class="status-fill">~/elsewhere</span></footer>
-      </article>
+      <div class="workspace-layer elsewhere-grid" data-wm-layer="elsewhere">
+        <article class="window pane terminal-window elsewhere-window is-focused" data-wm-window="elsewhere-links" data-wm-title="~/elsewhere" tabindex="0" aria-label="External links terminal">
+          <header class="window-titlebar"><span>j3w1@manjaro: ~/elsewhere</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
+          <div class="terminal-buffer" role="document"><p class="terminal-line"><span class="prompt-user">j3w1</span><span class="prompt-at">@</span><span class="prompt-host">manjaro</span><span class="prompt-path"> ~/elsewhere</span><span class="prompt-mark"> $ </span><span class="command">ls -l</span></p><p class="terminal-output terminal-muted">total 4</p><ul class="link-list" aria-label="Public external destinations"><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1" rel="me">github</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1</span></li><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1/j3w1.github.io">site-source</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1/j3w1.github.io</span></li><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1/j3w1zsh">current-workstation</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1/j3w1zsh</span></li><li><span class="permissions" aria-hidden="true">lrwxrwxrwx</span><a href="https://github.com/j3w1/1w3j">legacy-workstation</a><span aria-hidden="true"> → </span><span>https://github.com/j3w1/1w3j</span></li></ul><p class="terminal-line"><span class="prompt-user">j3w1</span><span class="prompt-at">@</span><span class="prompt-host">manjaro</span><span class="prompt-path"> ~/elsewhere</span><span class="prompt-mark"> $ </span><span class="command">cat note</span></p><p class="terminal-output readable-output">GitHub is the only public profile linked from this site.</p><p class="terminal-line terminal-ready"><span class="prompt-user">j3w1</span><span class="prompt-at">@</span><span class="prompt-host">manjaro</span><span class="prompt-path"> ~/elsewhere</span><span class="prompt-mark"> $ </span><span class="terminal-cursor" aria-hidden="true"></span></p></div>
+          <footer class="terminal-statusline"><span>URxvt</span><span>4 links</span><span class="status-fill">~/elsewhere</span></footer>
+        </article>
+        <div class="wm-empty" data-wm-empty hidden>
+          <p class="wm-empty-title">no windows on <span data-empty-ws>elsewhere</span></p>
+          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu</p>
+          <p><button type="button" class="wm-restore" data-wm-restore>restore this workspace</button></p>
+        </div>
+        <div class="wm-deco" data-wm-deco></div>
+      </div>
     </section>
 
     <section id="about" class="workspace" data-workspace="about" aria-labelledby="workspace-about-title" tabindex="-1">
       <h2 id="workspace-about-title" class="sr-only">About workspace</h2>
-      <article class="window pane vim-window about-window is-focused" data-pane="about-editor" tabindex="0" aria-label="Vim biography buffer">
-        <header class="window-titlebar"><span>about.md (~/j3w1/about) — VIM</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
-        <div class="vim-tabline" aria-hidden="true"><span class="is-active">about.md</span><span>interests.md</span></div>
-        <div class="vim-buffer about-buffer" role="document">
-          <div class="prose-line" data-line="1"><p class="syntax-heading"># 申杰 / j3w1</p></div>
-          <div class="prose-line" data-line="2"><p class="about-role">Writer · Software Engineer</p></div>
-          <div class="prose-line prose-line-blank" data-line="3"><span></span></div>
-          <div class="prose-line" data-line="4"><p>I work on software that has to survive contact with real organizations: business systems, operational workflows, and the tools engineers use to build and maintain them.</p></div>
-          <div class="prose-line prose-line-blank" data-line="5"><span></span></div>
-          <div class="prose-line current-line" data-line="6"><p>My interests connect software architecture with writing and developer environments. I care about clear boundaries, recoverable workflows, evidence that can be checked, and systems that remain understandable after the original implementation context is gone.</p></div>
-          <div class="prose-line prose-line-blank" data-line="7"><span></span></div>
-          <div class="prose-line" data-line="8"><p>Current work includes CE Systems, an internal operations platform for Casa Elida; CE Governed Delivery, an evidence-driven engineering-governance effort; and Metadata Reconciler, deterministic GitHub metadata operations.</p></div>
-          <div class="prose-line prose-line-blank" data-line="9"><span></span></div>
-          <div class="prose-line" data-line="10"><p>Public work includes <a href="https://github.com/j3w1/j3w1zsh">j3w1zsh</a>, a portable, resumable Zsh workstation framework for Arch Linux, WSL, and Termux; <a href="https://github.com/j3w1/1688toCSV">1688toCSV</a>, a focused browser extension for practical order-data export; and <a href="https://github.com/j3w1/j3w1.github.io">the source for this site</a>.</p></div>
-          <div class="prose-line prose-line-blank" data-line="11"><span></span></div>
-          <div class="prose-line" data-line="12"><p class="syntax-heading">## working interests</p></div>
-          <div class="prose-line about-list-line" data-line="13"><p><span>· business systems</span> operational software, architecture, data, and organizational workflows</p></div>
-          <div class="prose-line about-list-line" data-line="14"><p><span>· engineering systems</span> developer tooling, automation, review evidence, and delivery controls</p></div>
-          <div class="prose-line about-list-line" data-line="15"><p><span>· writing environments</span> Linux, Arch, WSL, Termux, Neovim, tmux, and JetBrains tooling</p></div>
-          <div class="prose-line about-list-line" data-line="16"><p><span>· selected stack</span> Laravel, PHP, Vue, TypeScript, MariaDB, Redis, and GitHub Actions</p></div>
+      <div class="workspace-layer about-grid" data-wm-layer="about">
+        <article class="window pane vim-window about-window is-focused" data-wm-window="about-editor" data-wm-title="about.md" tabindex="0" aria-label="Vim biography buffer">
+          <header class="window-titlebar"><span>about.md (~/j3w1/about) — VIM</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
+          <div class="vim-buffer about-buffer" role="document">
+            <div class="prose-line" data-line="1"><p class="syntax-heading"># 申杰 / j3w1</p></div>
+            <div class="prose-line" data-line="2"><p class="about-role">Writer · Software Engineer</p></div>
+            <div class="prose-line prose-line-blank" data-line="3"><span></span></div>
+            <div class="prose-line" data-line="4"><p>I work on software that has to survive contact with real organizations: business systems, operational workflows, and the tools engineers use to build and maintain them.</p></div>
+            <div class="prose-line prose-line-blank" data-line="5"><span></span></div>
+            <div class="prose-line current-line" data-line="6"><p>My interests connect software architecture with writing and developer environments. I care about clear boundaries, recoverable workflows, evidence that can be checked, and systems that remain understandable after the original implementation context is gone.</p></div>
+            <div class="prose-line prose-line-blank" data-line="7"><span></span></div>
+            <div class="prose-line" data-line="8"><p>Current work includes CE Systems, an internal operations platform for Casa Elida; CE Governed Delivery, an evidence-driven engineering-governance effort; and Metadata Reconciler, deterministic GitHub metadata operations.</p></div>
+            <div class="prose-line prose-line-blank" data-line="9"><span></span></div>
+            <div class="prose-line" data-line="10"><p>Public work includes <a href="https://github.com/j3w1/j3w1zsh">j3w1zsh</a>, a portable, resumable Zsh workstation framework for Arch Linux, WSL, and Termux; <a href="https://github.com/j3w1/1688toCSV">1688toCSV</a>, a focused browser extension for practical order-data export; and <a href="https://github.com/j3w1/j3w1.github.io">the source for this site</a>.</p></div>
+          </div>
+          <footer class="vim-statusline"><span class="vim-mode">NORMAL</span><span>about.md</span><span class="status-fill">utf-8 · markdown</span><span>10,1</span></footer>
+        </article>
+        <article class="window pane vim-window about-window" data-wm-window="about-interests" data-wm-title="interests.md" tabindex="0" aria-label="Vim working interests buffer">
+          <header class="window-titlebar"><span>interests.md (~/j3w1/about) — VIM</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
+          <div class="vim-buffer about-buffer" role="document">
+            <div class="prose-line" data-line="1"><p class="syntax-heading">## working interests</p></div>
+            <div class="prose-line prose-line-blank" data-line="2"><span></span></div>
+            <div class="prose-line about-list-line" data-line="3"><p><span>· business systems</span> operational software, architecture, data, and organizational workflows</p></div>
+            <div class="prose-line about-list-line" data-line="4"><p><span>· engineering systems</span> developer tooling, automation, review evidence, and delivery controls</p></div>
+            <div class="prose-line about-list-line" data-line="5"><p><span>· writing environments</span> Linux, Arch, WSL, Termux, Neovim, tmux, and JetBrains tooling</p></div>
+            <div class="prose-line about-list-line" data-line="6"><p><span>· selected stack</span> Laravel, PHP, Vue, TypeScript, MariaDB, Redis, and GitHub Actions</p></div>
+          </div>
+          <footer class="vim-statusline"><span class="vim-mode">NORMAL</span><span>interests.md</span><span class="status-fill">utf-8 · markdown</span><span>6,1</span></footer>
+        </article>
+        <div class="wm-empty" data-wm-empty hidden>
+          <p class="wm-empty-title">no windows on <span data-empty-ws>about</span></p>
+          <p>press <kbd>?</kbd> for keys · <kbd>/</kbd> for dmenu</p>
+          <p><button type="button" class="wm-restore" data-wm-restore>restore this workspace</button></p>
         </div>
-        <footer class="vim-statusline"><span class="vim-mode">NORMAL</span><span>about.md</span><span class="status-fill">utf-8 · markdown</span><span>16,1</span><span>100%</span></footer>
-      </article>
+        <div class="wm-deco" data-wm-deco></div>
+      </div>
     </section>
   </main>
 
   <div id="workspace-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  <div id="dunst" class="dunst" aria-hidden="true" inert></div>
+
+  <div id="greeter" class="greeter" aria-hidden="true" inert hidden>
+    <div class="greeter-panel">
+      <p class="greeter-host">manjaro</p>
+      <p class="greeter-session"><span class="ui-icon" aria-hidden="true">&#xf17c;</span> i3 (session)</p>
+      <p class="greeter-user">j3w1</p>
+      <p class="greeter-pass"><span class="greeter-dots" data-dots></span><span class="greeter-caret"></span></p>
+      <button type="button" class="greeter-login" data-login tabindex="-1">Log In</button>
+      <p class="greeter-auth" data-auth></p>
+    </div>
+    <ol class="greeter-log" data-log></ol>
+    <p class="greeter-hint" data-hint hidden>press enter to log in · any key to skip</p>
+  </div>
+
+  <div id="lockscreen" class="lock" aria-hidden="true" inert hidden>
+    <div class="lock-ring"></div>
+    <p class="lock-time" data-time>--:--</p>
+    <p class="lock-date" data-date></p>
+    <p class="lock-user">j3w1@manjaro</p>
+    <p class="lock-hint">press any key</p>
+  </div>
 
   <section id="command-launcher" class="command-launcher" aria-label="Command launcher" hidden>
-    <form id="command-form" class="command-form" role="search"><label for="command-input"><span id="command-prefix" aria-hidden="true">:</span><span class="sr-only">Enter a workspace command</span></label><input id="command-input" type="text" role="combobox" autocomplete="off" spellcheck="false" placeholder="open workspace or type help" aria-controls="command-results" aria-autocomplete="list" aria-expanded="false"></form>
+    <form id="command-form" class="command-form" role="search"><label for="command-input"><span id="command-prefix" aria-hidden="true">:</span><span class="sr-only">Enter a workspace command</span></label><input id="command-input" type="text" role="combobox" autocomplete="off" spellcheck="false" placeholder="open workspace, layout tabbed, exec neofetch…" aria-controls="command-results" aria-autocomplete="list" aria-expanded="false"></form>
     <ul id="command-results" class="command-results" role="listbox" aria-label="Available commands"></ul>
   </section>
 
   <dialog id="keyboard-help" class="help-window" aria-labelledby="help-title">
     <header class="window-titlebar"><h2 id="help-title">i3-help — keyboard</h2><button type="button" class="window-close" data-close-help aria-label="Close keyboard help">×</button></header>
-    <div class="help-content"><dl><div><dt>1–7</dt><dd>switch workspace</dd></div><div><dt>h / j / k / l</dt><dd>focus left / down / up / right</dd></div><div><dt>arrow keys</dt><dd>move pane focus when a pane is active</dd></div><div><dt>Enter</dt><dd>activate the focused item</dd></div><div><dt>/ or :</dt><dd>open command launcher</dd></div><div><dt>?</dt><dd>show this help</dd></div><div><dt>Escape</dt><dd>close launcher or floating window</dd></div><div><dt>Tab</dt><dd>normal browser focus navigation</dd></div></dl><p>Keyboard shortcuts pause while you type in a form control. Focus is never trapped outside an open dialog.</p></div>
+    <div class="help-content">
+      <div id="help-getting-started" class="help-intro">
+        <p class="help-intro-title">New here? Try these.</p>
+        <ol>
+          <li>Press <kbd>/</kbd> and run <code>exec neofetch</code> — every command is reachable without shortcuts.</li>
+          <li>In the terminal, type <code>ls</code>, then <code>cd writing</code>, then <code>cat &lt;name&gt;</code>.</li>
+          <li>Press <kbd>w</kbd> to tab windows together, then <kbd>e</kbd> to untile them.</li>
+          <li>Hold <kbd>Alt</kbd> and drag a window; drag the gap between tiles to resize.</li>
+          <li><kbd>q</kbd> closes a window and <kbd>Shift</kbd>+<kbd>R</kbd> puts everything back.</li>
+        </ol>
+        <p>Nothing can be broken permanently — reloading restores the desktop.</p>
+      </div>
+      <dl id="help-bindings"><div><dt>1–7</dt><dd>switch workspace</dd></div><div><dt>h / j / k / l</dt><dd>focus left / down / up / right</dd></div><div><dt>/ or :</dt><dd>open the command launcher</dd></div><div><dt>?</dt><dd>show this help</dd></div></dl>
+      <p id="help-privacy">Every status value in the bar is read from your own browser and never leaves this page.</p>
+      <p>Keyboard shortcuts pause while you type in a form control. Focus is never trapped outside an open dialog. Prefer a plain scrolling page? Use the <strong>i3 / plain</strong> button in the bar.</p>
+    </div>
   </dialog>
 
   <dialog id="photo-viewer" class="photo-viewer" aria-labelledby="photo-viewer-title"><header class="window-titlebar"><h2 id="photo-viewer-title">photograph — ristretto</h2><button type="button" class="window-close" data-close-photo aria-label="Close photograph">×</button></header><figure><img alt=""><figcaption></figcaption></figure></dialog>
   <div id="j3w1ctl-root"></div>
 
-  <script src="/assets/js/site.js?v=20260825b" defer></script>
-  <script src="/assets/js/public-content.js?v=20260825b" type="module"></script>
+  <script src="/assets/js/site.js?v=20260904" type="module"></script>
+  <script src="/assets/js/public-content.js?v=20260904" type="module"></script>
 </body>
 </html>
