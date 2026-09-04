@@ -102,6 +102,30 @@ Then bump `site.css`, `desktop.css`, `site.js`, and `public-content.js` in `inde
 **Do not** bump `content-renderer.js`, `photo-viewer.js`, or `admin/j3w1ctl.js` unless they changed —
 the j3w1ctl token in `site.js` must keep matching `admin/index.html`.
 
+## Publishing the wiki
+
+`docs/` is the source of truth; the GitHub wiki is published *from* it so the two cannot drift.
+
+GitHub only creates a repository's wiki git remote after the first page is made in the web UI, and
+there is no API for that first page. So this is a one-time manual step:
+
+1. Open <https://github.com/j3w1/j3w1.github.io/wiki> and click **Create the first page**. Any
+   content will do — the next step overwrites it.
+2. Then, from the repository root:
+
+```powershell
+git clone https://github.com/j3w1/j3w1.github.io.wiki.git ../j3w1.wiki
+Copy-Item docs/wm-usage.md          ../j3w1.wiki/Home.md
+Copy-Item docs/wm-architecture.md   ../j3w1.wiki/Architecture.md
+Copy-Item docs/wm-accessibility.md  ../j3w1.wiki/Accessibility.md
+Copy-Item docs/wm-development.md    ../j3w1.wiki/Development.md
+cd ../j3w1.wiki
+git add -A && git commit -m "docs: publish window manager documentation" && git push
+```
+
+`wm-usage.md` becomes `Home.md` deliberately: the visitor guide is what someone landing on the wiki
+should see first. Re-run the copy and push whenever `docs/` changes.
+
 ## Debugging
 
 - `?wm=selftest` — layout assertions in the console.
