@@ -294,6 +294,28 @@ test("the desktop is black by default and carries the j3w1-i3 wordmark", async (
   expect(["rgba(0, 0, 0, 0)", "transparent"]).toContain(bodyBackground);
 });
 
+test("the wordmark survives raised contrast and forced colours", async ({ browser }) => {
+  /* It was hidden outright under prefers-contrast, and painted in the canvas
+     ink under forced colours — invisible in both, which is how it reached a
+     real desktop looking like it had never shipped. */
+  for (const [label, options] of [
+    ["prefers-contrast: more", { contrast: "more" }],
+    ["forced-colors: active", { forcedColors: "active" }],
+  ]) {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, ...options });
+    const page = await context.newPage();
+    await page.goto(`${fixture.frontendOrigin}/#home`);
+    await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
+    const mark = await page.evaluate(() => {
+      const style = getComputedStyle(document.querySelector("#wallpaper"), "::after");
+      return { content: style.content, opacity: Number(style.opacity) };
+    });
+    expect(mark.content, label).toContain("j3w1-i3");
+    expect(mark.opacity, `${label} must not hide the wordmark`).toBeGreaterThan(0.2);
+    await context.close();
+  }
+});
+
 test("a wallpaper stored before the list changed is reset rather than left dangling", async ({ page }) => {
   await open(page);
   /* Nothing is persisted until the layout actually changes, and the write is

@@ -3,6 +3,7 @@
    to notice: see docs/wm-accessibility.md for the reasoning behind each one. */
 
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import test from "node:test";
@@ -219,6 +220,35 @@ test("the window manager stays small enough to keep the site dependency-free", a
   };
   const total = await walk(dir);
   assert.ok(total <= 160_000, `assets/js/wm is ${total} bytes, over its 160000 byte budget`);
+});
+
+test("the cache token is bumped whenever a versioned asset changes", async () => {
+  /* Cache busting is manual here, and forgetting it ships new HTML against old
+     CSS to every returning visitor — a failure that never shows up in tests,
+     because each test run starts from an empty browser cache. */
+  const html = await read("index.html");
+  const token = html.match(/site\.css\?v=(\d{8})/)?.[1];
+  assert.ok(token, "index.html must version site.css with a dated token");
+
+  const versioned = ["assets/css", "assets/js", "index.html", "wiki/index.html"];
+  const git = (args) => execFileSync("git", args, { cwd: repoRoot, encoding: "utf8" }).trim();
+  const dirty = git(["status", "--porcelain", "--", ...versioned]).length > 0;
+
+  if (dirty) {
+    const now = new Date();
+    const today = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+    assert.ok(
+      token >= today,
+      `versioned assets have uncommitted changes, so the ?v= token must be ${today} or later (it is ${token})`,
+    );
+    return;
+  }
+
+  const lastChanged = git(["log", "-1", "--format=%cd", "--date=format:%Y%m%d", "--", ...versioned]);
+  assert.ok(
+    !lastChanged || token >= lastChanged,
+    `versioned assets last changed on ${lastChanged} but the ?v= token is still ${token}`,
+  );
 });
 
 test("the whole wm directory shares one cache-busting token", async () => {

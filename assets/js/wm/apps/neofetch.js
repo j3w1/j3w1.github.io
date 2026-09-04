@@ -1,7 +1,7 @@
 /* neofetch. Every field is read from this browser; anything it does not expose
    prints "unknown" rather than a plausible-looking invention. */
 
-import { element } from "../dom.js?v=20260904";
+import { element } from "../dom.js?v=20260905";
 
 const LOGO = [
   "██████████████████  ████████",

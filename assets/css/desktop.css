@@ -54,13 +54,27 @@ html[data-wallpaper="ridge"] .wallpaper {
   font-size: clamp(34px, 9vmin, 104px);
   font-weight: 700;
   letter-spacing: 0.02em;
-  opacity: 0.17;
+  opacity: 0.22;
   transform: translate(-50%, -50%);
   white-space: nowrap;
 }
 
+/* A centred wordmark on an otherwise empty desktop competes with nothing, so
+   raised contrast should make it clearer rather than erase it. The opacity:0
+   here was inherited from a full-bleed background texture that genuinely did
+   compete with the text sitting on top of it. */
 @media (prefers-contrast: more) {
-  .wallpaper::after { opacity: 0; }
+  .wallpaper::after { opacity: 0.42; }
+}
+
+/* Forced colours replace `color` with the system palette, which painted the
+   wordmark in the same ink as the canvas behind it — invisible. Ask for the
+   system text colour explicitly. */
+@media (forced-colors: active) {
+  .wallpaper::after {
+    color: CanvasText;
+    opacity: 0.55;
+  }
 }
 
 /* ------------------------------------------------------------ tiling layout */

@@ -3,8 +3,8 @@
    would resolve after first paint and guarantee a visible reflow from the
    fallback grid to the window manager's layout. */
 
-import { createWm } from "./wm/boot.js?v=20260904";
-import { isEditable } from "./wm/dom.js?v=20260904";
+import { createWm } from "./wm/boot.js?v=20260905";
+import { isEditable } from "./wm/dom.js?v=20260905";
 
 const workspaceNames = [
   "home",

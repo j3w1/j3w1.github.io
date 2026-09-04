@@ -5,7 +5,7 @@
    percentage, because a fabricated number sitting three inches above a portfolio
    costs more credibility than the widget is worth. */
 
-import { element } from "../dom.js?v=20260904";
+import { element } from "../dom.js?v=20260905";
 
 const bar = (ratio, width = 20) => {
   const filled = Math.max(0, Math.min(width, Math.round(ratio * width)));
