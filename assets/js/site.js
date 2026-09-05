@@ -3,8 +3,8 @@
    would resolve after first paint and guarantee a visible reflow from the
    fallback grid to the window manager's layout. */
 
-import { createWm } from "./wm/boot.js?v=20260905d";
-import { isEditable } from "./wm/dom.js?v=20260905d";
+import { createWm } from "./wm/boot.js?v=20260905e";
+import { isEditable } from "./wm/dom.js?v=20260905e";
 
 const workspaceNames = [
   "home",
@@ -519,15 +519,12 @@ if (wm) {
   document.documentElement.dataset.wm = "off";
   /* Plain mode and boot failures keep their own clock; the window manager's
      status bar owns it otherwise, where it is suspended in background tabs. */
+  const clockFormat = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const updateClock = () => {
     if (!clock) return;
     const now = new Date();
     clock.dateTime = now.toISOString();
-    clock.textContent = new Intl.DateTimeFormat(undefined, {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    }).format(now);
+    clock.textContent = clockFormat.format(now);
   };
   updateClock();
   window.setInterval(updateClock, 1000);

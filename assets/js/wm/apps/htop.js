@@ -5,7 +5,7 @@
    percentage, because a fabricated number sitting three inches above a portfolio
    costs more credibility than the widget is worth. */
 
-import { element } from "../dom.js?v=20260905d";
+import { element } from "../dom.js?v=20260905e";
 
 const bar = (ratio, width = 20) => {
   const filled = Math.max(0, Math.min(width, Math.round(ratio * width)));
@@ -83,9 +83,14 @@ export const createHtop = ({ body, wm }) => {
 
   tick();
   raf = requestAnimationFrame(sample);
-  const timer = setInterval(tick, 1000);
+  /* A hidden window — another workspace, a tab behind this one, a background
+     tab — gets no rows rebuilt and no frames sampled until it is seen again. */
+  const shown = () => document.visibilityState === "visible" && !view.closest("[data-wm-window]")?.hidden;
+  const timer = setInterval(() => {
+    if (shown()) tick();
+  }, 1000);
   const onVisibility = () => {
-    if (document.visibilityState === "visible") {
+    if (shown()) {
       if (!raf) raf = requestAnimationFrame(sample);
     } else if (raf) {
       cancelAnimationFrame(raf);

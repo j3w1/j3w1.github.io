@@ -2,11 +2,12 @@
    window-manager owned, holding no authored site content, and therefore safe to
    create and destroy at will. */
 
-import { createShell } from "./shell.js?v=20260905d";
-import { createNeofetch } from "./neofetch.js?v=20260905d";
-import { createHtop } from "./htop.js?v=20260905d";
-import { createMatrix } from "./cmatrix.js?v=20260905d";
-import { createFeh } from "./feh.js?v=20260905d";
+import { createShell } from "./shell.js?v=20260905e";
+
+/* Only the shell is in the boot graph: it drives the home terminal at first
+   paint. Everything else is fetched the first time it is launched, so a visitor
+   who never runs htop never downloads it. */
+const lazy = (load, pick) => async (context) => pick(await load())(context);
 
 export const APPS = Object.freeze({
   urxvt: {
@@ -27,28 +28,28 @@ export const APPS = Object.freeze({
     title: "neofetch — j3w1@manjaro",
     className: "neofetch-window",
     status: ["neofetch", "local only"],
-    create: (context) => createNeofetch(context),
+    create: lazy(() => import("./neofetch.js?v=20260905e"), (m) => m.createNeofetch),
   },
   htop: {
     label: "htop",
     title: "htop — j3w1@manjaro",
     className: "htop-window",
     status: ["htop", "browser metrics"],
-    create: (context) => createHtop(context),
+    create: lazy(() => import("./htop.js?v=20260905e"), (m) => m.createHtop),
   },
   cmatrix: {
     label: "cmatrix",
     title: "cmatrix",
     className: "cmatrix-window",
     status: ["cmatrix"],
-    create: (context) => createMatrix(context),
+    create: lazy(() => import("./cmatrix.js?v=20260905e"), (m) => m.createMatrix),
   },
   feh: {
     label: "feh",
     title: "feh — wallpaper",
     className: "feh-window",
     status: ["feh", "CSS wallpapers"],
-    create: (context) => createFeh(context),
+    create: lazy(() => import("./feh.js?v=20260905e"), (m) => m.createFeh),
   },
 });
 

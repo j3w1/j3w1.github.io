@@ -7,10 +7,10 @@
    no new way for content to reach the DOM as markup. */
 
 import { renderAst } from "../../content-renderer.js?v=20260824";
-import { element } from "../dom.js?v=20260905d";
+import { loadContentIndex } from "../../content-index.js?v=20260905e";
+import { element } from "../dom.js?v=20260905e";
 
 const HOME = "/home/j3w1";
-const INDEX_URL = "/assets/data/content-index.json";
 
 const README = [
   "I build the machinery behind dependable work: business platforms, developer",
@@ -54,14 +54,7 @@ const WM_KEYS = [
   ["?", "the full key map"],
 ];
 
-let indexPromise = null;
-const loadIndex = () => {
-  indexPromise ??= fetch(INDEX_URL, { cache: "no-cache" })
-    .then((response) => (response.ok ? response.json() : null))
-    .then((value) => (value?.schemaVersion === 1 ? value : null))
-    .catch(() => null);
-  return indexPromise;
-};
+const loadIndex = loadContentIndex;
 
 const readProjects = () =>
   [...document.querySelectorAll("[data-project-row]")].map((row) => ({

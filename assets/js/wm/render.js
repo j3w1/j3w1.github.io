@@ -4,9 +4,9 @@
    their style, hidden, class and ARIA attributes are touched. Everything the
    window manager draws for itself lives in the per-workspace .wm-deco layer. */
 
-import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260905d";
-import { isTabular } from "./tree.js?v=20260905d";
-import { element, rafBatch, readPx, sameRect } from "./dom.js?v=20260905d";
+import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260905e";
+import { isTabular } from "./tree.js?v=20260905e";
+import { element, rafBatch, readPx, sameRect } from "./dom.js?v=20260905e";
 
 const GRIPS = Object.freeze(["n", "s", "e", "w", "ne", "nw", "se", "sw"]);
 
@@ -153,6 +153,8 @@ export const createRenderer = ({ windows, layers, decos, empties, getState, getA
     return { x: 0, y: 0, w: width, h: height };
   };
 
+  let geometry = null;
+
   const renderNow = () => {
     const state = getState();
     const wsName = getActive();
@@ -163,7 +165,10 @@ export const createRenderer = ({ windows, layers, decos, empties, getState, getA
     const bounds = measure(wsName);
     if (!layer || !bounds) return;
 
-    const geometry = {
+    /* Three getComputedStyle reads per frame is three forced style recalcs
+       per frame of a drag; the values only change at a breakpoint, and every
+       breakpoint change already calls invalidate(). */
+    geometry ??= {
       ...GEOMETRY,
       gapInner: gap(),
       tabHeight: readPx("--wm-tab-height", GEOMETRY.tabHeight),
@@ -214,7 +219,10 @@ export const createRenderer = ({ windows, layers, decos, empties, getState, getA
     renderNow,
     measure,
     getLayout: (wsName) => layouts.get(wsName ?? getActive()) ?? null,
-    invalidate: () => rects.clear(),
+    invalidate: () => {
+      rects.clear();
+      geometry = null;
+    },
     destroy: () => {
       for (const store of tabbars.values()) {
         for (const bar of store.values()) bar.remove();

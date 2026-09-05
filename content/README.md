@@ -36,6 +36,6 @@ authoritative Markdown.
 - Slugs use lowercase letters, numbers, and single hyphens, are at most 80 characters, and never change after first publication.
 - Writing requires `title`, `slug`, `date`, `summary`, and a Markdown body; `tags` is optional.
 - Books require `title`, `slug`, `author`, `year`, `status`, and Markdown notes. Status is `want-to-read`, `reading`, `finished`, or `abandoned`; rating, dates, and tags are optional.
-- Photography requires `title`, `slug`, `date`, `caption`, and an ordered image list. Location, camera, and per-image captions are optional; every image requires an ID, derived full/thumbnail filename, and meaningful alt text.
+- Photography requires `title`, `slug`, `date`, `caption`, and an ordered image list. Location, camera, and per-image captions are optional; every image requires an ID, derived full/thumbnail filename, and meaningful alt text. Pixel dimensions (`width`/`height` for the full file, `thumbnailWidth`/`thumbnailHeight` for the thumbnail) are optional but strongly recommended: with them the grid reserves each image's real box before it loads and serves the right file via `srcset`; j3w1ctl records them automatically.
 - An entry may contain at most 12 photograph pairs. Full files are limited to 2 MiB, thumbnails to 256 KiB, and the entry to 28 MiB total. The validator reads each RIFF/WEBP signature rather than trusting its name.
 - Markdown is limited to headings, paragraphs, lists, blockquotes, code blocks, text, emphasis, strong text, inline code, and safe links. Raw HTML is not rendered.

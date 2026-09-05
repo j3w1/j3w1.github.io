@@ -2,7 +2,14 @@ import { renderAst } from "/assets/js/content-renderer.js?v=20260824";
 import { ActivityGate, buildPhotographyPreviewItems, MutationGate, ObjectUrlRegistry, protocolCompatibility, publicationTarget, shortCommit } from "/admin/j3w1ctl-core.js?v=20260831";
 import { EXAMPLES } from "/admin/j3w1ctl-examples.js?v=20260825";
 import { IMAGE_ACCEPT, IMAGE_LIMITS, generatedImageBytes, normalizePhotograph } from "/admin/j3w1ctl-images.js?v=20260825";
-import { upload as uploadPrivateBlob } from "/admin/j3w1ctl-blob-client.js?v=20260831";
+
+/* The Vercel Blob client is a 221 KB bundle needed only while staging a
+   photograph, so it is fetched on first use rather than with the editor. */
+let blobClient = null;
+const uploadPrivateBlob = async (...args) => {
+  blobClient ??= import("/admin/j3w1ctl-blob-client.js?v=20260831").then((module) => module.upload);
+  return (await blobClient)(...args);
+};
 
 const TOKEN_KEY = "j3w1ctl.session";
 const COLLECTIONS = ["writing", "books", "photography"];
@@ -424,6 +431,12 @@ class J3w1ctl {
         thumbnail: thumbnailBlob ? { ...(saved.thumbnailInfo ?? {}), blob: thumbnailBlob, size: thumbnailBlob.size } : null,
         publicSrc: image.src ?? published.src ?? "",
         publicThumbnailSrc: image.thumbnailSrc ?? published.thumbnailSrc ?? "",
+        /* Published dimensions travel with an existing image; a freshly
+           generated pair carries its own in full/thumbnail. */
+        dimensions: {
+          width: image.width ?? published.width, height: image.height ?? published.height,
+          thumbnailWidth: image.thumbnailWidth ?? published.thumbnailWidth, thumbnailHeight: image.thumbnailHeight ?? published.thumbnailHeight,
+        },
         existing: !fullBlob && !thumbnailBlob,
       };
     });
@@ -524,7 +537,13 @@ class J3w1ctl {
     for (const item of this.photoItems) {
       if (validate && !item.alt) throw new Error(`Add meaningful alt text for ${item.id} before publication.`);
       if (validate && !item.existing && (!(item.full?.blob instanceof Blob) || !(item.thumbnail?.blob instanceof Blob))) throw new Error(`${item.id} is missing its generated WebP pair.`);
-      images.push({ id: item.id, file: `${item.id}.webp`, thumbnail: `${item.id}-thumb.webp`, alt: item.alt, ...(item.caption ? { caption: item.caption } : {}) });
+      const dims = {
+        width: item.full?.width ?? item.dimensions?.width, height: item.full?.height ?? item.dimensions?.height,
+        thumbnailWidth: item.thumbnail?.width ?? item.dimensions?.thumbnailWidth, thumbnailHeight: item.thumbnail?.height ?? item.dimensions?.thumbnailHeight,
+      };
+      const known = Object.fromEntries(Object.entries(dims).filter(([, value]) => Number.isInteger(value) && value > 0));
+      const pairs = { ...(known.width && known.height ? { width: known.width, height: known.height } : {}), ...(known.thumbnailWidth && known.thumbnailHeight ? { thumbnailWidth: known.thumbnailWidth, thumbnailHeight: known.thumbnailHeight } : {}) };
+      images.push({ id: item.id, file: `${item.id}.webp`, thumbnail: `${item.id}-thumb.webp`, alt: item.alt, ...(item.caption ? { caption: item.caption } : {}), ...pairs });
       files.push({
         id: item.id,
         full: item.full?.blob,

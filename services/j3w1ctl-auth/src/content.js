@@ -147,11 +147,28 @@ export const parseFrontMatter = (source) => {
   return { metadata, body: match[2].replace(/^\r?\n/, "").replace(/\s+$/, "") };
 };
 
+const IMAGE_FIELDS = ["id", "file", "thumbnail", "alt", "caption", "width", "height", "thumbnailWidth", "thumbnailHeight"];
+const IMAGE_MAX_EDGE = 8192;
+
+/* Pixel dimensions are optional (hand-authored entries may not know them) but
+   come in pairs, so the renderer can always reserve the right box: an <img>
+   with width and height never shifts the layout while it loads. */
+const dimensionPair = (image, widthKey, heightKey, index) => {
+  const width = image[widthKey];
+  const height = image[heightKey];
+  if (width === undefined && height === undefined) return {};
+  const valid = (value) => Number.isInteger(value) && value > 0 && value <= IMAGE_MAX_EDGE;
+  if (!valid(width) || !valid(height)) {
+    fail("invalid_image", `images[${index}].${widthKey} and .${heightKey} must both be integers between 1 and ${IMAGE_MAX_EDGE}.`);
+  }
+  return { [widthKey]: width, [heightKey]: height };
+};
+
 const normalizeImage = (image, index) => {
   if (!image || typeof image !== "object" || Array.isArray(image)) {
     fail("invalid_image", `images[${index}] must be an object.`);
   }
-  const unexpected = Object.keys(image).filter((key) => !["id", "file", "thumbnail", "alt", "caption"].includes(key));
+  const unexpected = Object.keys(image).filter((key) => !IMAGE_FIELDS.includes(key));
   if (unexpected.length) fail("invalid_image", `images[${index}] contains unsupported fields.`, { fields: unexpected });
   const id = requireString(image.id, `images[${index}].id`, { max: 64 });
   if (!IMAGE_ID_PATTERN.test(id)) {
@@ -173,6 +190,8 @@ const normalizeImage = (image, index) => {
     })
       ? { caption: image.caption.trim() }
       : {}),
+    ...dimensionPair(image, "width", "height", index),
+    ...dimensionPair(image, "thumbnailWidth", "thumbnailHeight", index),
   };
 };
 

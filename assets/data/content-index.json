@@ -18,6 +18,10 @@
             "thumbnail": "image-01-thumb.webp",
             "alt": "two werewolves sitting in a log watching a full moon",
             "caption": "two werewolves sitting in a log watching a full moon",
+            "width": 1448,
+            "height": 1086,
+            "thumbnailWidth": 640,
+            "thumbnailHeight": 480,
             "src": "/assets/photography/we-were-werewolves/image-01.webp",
             "thumbnailSrc": "/assets/photography/we-were-werewolves/image-01-thumb.webp"
           },
@@ -27,11 +31,15 @@
             "thumbnail": "image-02-thumb.webp",
             "alt": "two werewolves living at full moon or full of life?",
             "caption": "two werewolves living at full moon or full of life?",
+            "width": 1122,
+            "height": 1402,
+            "thumbnailWidth": 512,
+            "thumbnailHeight": 640,
             "src": "/assets/photography/we-were-werewolves/image-02.webp",
             "thumbnailSrc": "/assets/photography/we-were-werewolves/image-02-thumb.webp"
           }
         ],
-        "contentDigest": "dbf3400176181d904bd37b073b7e57f3f639896089b33bec63f0d4bd9f9f2e87"
+        "contentDigest": "358d0a5137d8584be44d0864cc994e3a270bfe933824d20b3a89ea2725b3dd99"
       }
     ]
   }

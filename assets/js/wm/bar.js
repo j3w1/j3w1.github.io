@@ -9,7 +9,7 @@
    disk usage, CPU load, temperature, network SSID, and system uptime.
    (navigator.storage.estimate() reports an origin quota, not a disk.) */
 
-import { element } from "./dom.js?v=20260905d";
+import { element } from "./dom.js?v=20260905e";
 
 const FAST_MS = 1000;
 const SLOW_MS = 10000;
@@ -105,15 +105,12 @@ export const installBar = ({ container, modeNode, clockNode, workspaceLinks }) =
     define("up", "Session uptime", () => `up ${formatUptime(performance.now())}`);
   };
 
+  const clockFormat = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const tickClock = () => {
     if (!clockNode) return;
     const now = new Date();
     clockNode.dateTime = now.toISOString();
-    clockNode.textContent = new Intl.DateTimeFormat(undefined, {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    }).format(now);
+    clockNode.textContent = clockFormat.format(now);
   };
 
   /* Timers stop entirely while the tab is hidden. The static site ticked a one

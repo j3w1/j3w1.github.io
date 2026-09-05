@@ -1,5 +1,6 @@
 import { renderAst } from "./content-renderer.js?v=20260824";
 import { closePhotoViewer, isPhotoViewerBackdropClick } from "./photo-viewer.js?v=20260825b";
+import { loadContentIndex } from "./content-index.js?v=20260905e";
 
 const collections = ["writing", "books", "photography"];
 let index;
@@ -73,6 +74,18 @@ const selectRoute = () => {
       const thumbnail = element("img");
       thumbnail.src = image.thumbnailSrc;
       thumbnail.alt = image.alt;
+      /* Off-screen photographs cost nothing until the workspace is opened, and
+         the grid reserves each image's real box so nothing shifts. */
+      thumbnail.loading = "lazy";
+      thumbnail.decoding = "async";
+      if (image.thumbnailWidth && image.thumbnailHeight) {
+        thumbnail.width = image.thumbnailWidth;
+        thumbnail.height = image.thumbnailHeight;
+      }
+      if (image.width && image.thumbnailWidth) {
+        thumbnail.srcset = `${image.thumbnailSrc} ${image.thumbnailWidth}w, ${image.src} ${image.width}w`;
+        thumbnail.sizes = "(max-width: 767px) calc(100vw - 40px), 320px";
+      }
       button.append(thumbnail);
       if (image.caption) button.append(element("span", "", image.caption));
       button.addEventListener("click", () => openPhoto(target, image, button));
@@ -122,6 +135,13 @@ const openPhoto = (entry, image, sourceThumbnail) => {
   photoReturnFocus = sourceThumbnail;
   img.src = image.src;
   img.alt = image.alt;
+  if (image.width && image.height) {
+    img.width = image.width;
+    img.height = image.height;
+  } else {
+    img.removeAttribute("width");
+    img.removeAttribute("height");
+  }
   dialog.querySelector("figcaption").textContent = image.caption || entry.caption;
   dialog.querySelector("#photo-viewer-title").textContent = `${image.id}.webp — ristretto`;
   dialog.showModal();
@@ -149,13 +169,11 @@ document.addEventListener("keydown", (event) => {
 window.addEventListener("hashchange", selectRoute);
 window.addEventListener("popstate", selectRoute);
 
-try {
-  const response = await fetch("/assets/data/content-index.json", { cache: "no-cache" });
-  const candidate = await response.json();
-  if (!response.ok || candidate?.schemaVersion !== 1 || !candidate.collections || collections.some((name) => !Array.isArray(candidate.collections[name]))) throw new Error("unsupported index");
+const candidate = await loadContentIndex();
+if (candidate) {
   index = candidate;
   collections.forEach(renderCollection);
   selectRoute();
-} catch {
+} else {
   collections.forEach((collection) => setState(collection, "content unavailable", true));
 }

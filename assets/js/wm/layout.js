@@ -2,7 +2,7 @@
    rect, returns where everything goes. No DOM, no measurement, no side effects
    beyond caching each node's rect for hit-testing. */
 
-import { isTabular, representativeLeaf } from "./tree.js?v=20260905d";
+import { isTabular, representativeLeaf } from "./tree.js?v=20260905e";
 
 export const GEOMETRY = Object.freeze({
   tabHeight: 23,

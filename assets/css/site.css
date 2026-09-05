@@ -1320,7 +1320,7 @@ html.wm-active .window:not([hidden]) {
 .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
 .photo-thumb { padding: 6px; border: 1px solid var(--border); background: var(--terminal); color: var(--muted); cursor: pointer; }
 .photo-thumb:hover { border-color: var(--border-strong); background: var(--chrome-alt); }
-.photo-thumb img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.photo-thumb img { display: block; width: 100%; height: auto; }
 .photo-thumb span { display: block; margin-top: 5px; text-align: left; }
 .library-body { grid-template-columns: 210px minmax(320px, 0.48fr) minmax(0, 0.52fr); }
 .photo-viewer { width: min(1100px, calc(100vw - 30px)); height: min(820px, calc(100dvh - 50px)); padding: 0; border: 1px solid var(--focus); border-radius: 0; background: var(--terminal); color: var(--prose); }

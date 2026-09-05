@@ -8,8 +8,8 @@
    asks for no password, and — like the greeter — is aria-hidden and inert, so it
    never moves focus in or out and <main> is untouched throughout. */
 
-import { LOCK_THRESHOLDS, media, prefs } from "./session.js?v=20260905d";
-import { throttle } from "./dom.js?v=20260905d";
+import { LOCK_THRESHOLDS, media, prefs } from "./session.js?v=20260905e";
+import { throttle } from "./dom.js?v=20260905e";
 
 /* Activity that counts as "still here" for the idle timer. Dismissing the
    lock is deliberately narrower — see onUnlockKey. */
@@ -24,21 +24,12 @@ export const installIdleLock = ({ node, isBusy, onLock, onUnlock }) => {
   let clock = 0;
   let locked = false;
 
+  const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" });
+  const dateFormat = new Intl.DateTimeFormat(undefined, { weekday: "short", day: "2-digit", month: "short" });
   const paint = () => {
     const now = new Date();
-    if (timeNode) {
-      timeNode.textContent = new Intl.DateTimeFormat(undefined, {
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(now);
-    }
-    if (dateNode) {
-      dateNode.textContent = new Intl.DateTimeFormat(undefined, {
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-      }).format(now);
-    }
+    if (timeNode) timeNode.textContent = timeFormat.format(now);
+    if (dateNode) dateNode.textContent = dateFormat.format(now);
   };
 
   const unlock = () => {

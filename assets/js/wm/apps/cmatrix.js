@@ -1,16 +1,16 @@
-/* cmatrix. Pure eye candy, used both as a window and as the i3lock backdrop.
+/* cmatrix. Pure eye candy.
    Renders a single static frame under prefers-reduced-motion and stops entirely
    while the tab is hidden. */
 
-import { element } from "../dom.js?v=20260905d";
-import { media } from "../session.js?v=20260905d";
+import { element } from "../dom.js?v=20260905e";
+import { media } from "../session.js?v=20260905e";
 
 const GLYPHS = "アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789j3w1";
 
 /* The canvas cannot inherit CSS, so the page's own font stack is read once. */
 const fontFamily = getComputedStyle(document.body).fontFamily || "monospace";
 
-export const createMatrix = ({ body, density = 1 }) => {
+export const createMatrix = ({ body }) => {
   const canvas = element("canvas", "cmatrix");
   canvas.setAttribute("aria-hidden", "true");
   body.append(canvas);
@@ -18,11 +18,13 @@ export const createMatrix = ({ body, density = 1 }) => {
   let columns = [];
   let raf = 0;
   let cell = 14;
+  let width = 0;
+  let height = 0;
 
   const resize = () => {
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
-    const width = body.clientWidth;
-    const height = body.clientHeight;
+    width = body.clientWidth;
+    height = body.clientHeight;
     if (!width || !height) return false;
     canvas.width = Math.floor(width * ratio);
     canvas.height = Math.floor(height * ratio);
@@ -30,14 +32,12 @@ export const createMatrix = ({ body, density = 1 }) => {
     canvas.style.height = `${height}px`;
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     cell = 14;
-    const count = Math.max(1, Math.floor((width / cell) * density));
+    const count = Math.max(1, Math.floor(width / cell));
     columns = Array.from({ length: count }, () => Math.random() * (height / cell));
     return true;
   };
 
   const draw = () => {
-    const width = body.clientWidth;
-    const height = body.clientHeight;
     context.fillStyle = "rgba(5, 3, 3, 0.09)";
     context.fillRect(0, 0, width, height);
     context.font = `${cell}px ${fontFamily}`;
@@ -55,8 +55,6 @@ export const createMatrix = ({ body, density = 1 }) => {
   };
 
   const staticFrame = () => {
-    const width = body.clientWidth;
-    const height = body.clientHeight;
     context.fillStyle = "#050303";
     context.fillRect(0, 0, width, height);
     context.font = `${cell}px ${fontFamily}`;
@@ -92,16 +90,18 @@ export const createMatrix = ({ body, density = 1 }) => {
     start();
   };
 
+  /* The tile, not the window, is what changes size under a gutter drag; and a
+     zero-sized body means the window is hidden, which stops the loop. */
+  const observer = new ResizeObserver(onResize);
+  observer.observe(body);
   document.addEventListener("visibilitychange", onVisibility);
-  window.addEventListener("resize", onResize, { passive: true });
   start();
 
   return {
-    refresh: onResize,
     destroy: () => {
       stop();
+      observer.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("resize", onResize);
       canvas.remove();
     },
   };

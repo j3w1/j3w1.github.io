@@ -8,15 +8,15 @@
    added, and every fallback rule in the stylesheet renders the site exactly as
    the static version always did. */
 
-import * as tree from "./tree.js?v=20260905d";
-import { clampFloating, GEOMETRY } from "./layout.js?v=20260905d";
-import { createRenderer } from "./render.js?v=20260905d";
-import { installPointer } from "./pointer.js?v=20260905d";
-import { installKeys } from "./keys.js?v=20260905d";
-import { installBar } from "./bar.js?v=20260905d";
-import { installNotify } from "./notify.js?v=20260905d";
-import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260905d";
-import { element, listen, readGap } from "./dom.js?v=20260905d";
+import * as tree from "./tree.js?v=20260905e";
+import { clampFloating, GEOMETRY } from "./layout.js?v=20260905e";
+import { createRenderer } from "./render.js?v=20260905e";
+import { installPointer } from "./pointer.js?v=20260905e";
+import { installKeys } from "./keys.js?v=20260905e";
+import { installBar } from "./bar.js?v=20260905e";
+import { installNotify } from "./notify.js?v=20260905e";
+import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260905e";
+import { element, listen, rafBatch, readGap } from "./dom.js?v=20260905e";
 import {
   clearGreetFlag,
   endSession,
@@ -26,8 +26,8 @@ import {
   shouldGreet,
   startSession,
   supported,
-} from "./session.js?v=20260905d";
-import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260905d";
+} from "./session.js?v=20260905e";
+import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260905e";
 import {
   defaultState,
   defaultWindowIds,
@@ -35,8 +35,8 @@ import {
   reapplyResponsiveDefaults,
   WALLPAPERS,
   WORKSPACES,
-} from "./defaults.js?v=20260905d";
-import { APP_NAMES, APPS } from "./apps/index.js?v=20260905d";
+} from "./defaults.js?v=20260905e";
+import { APP_NAMES, APPS } from "./apps/index.js?v=20260905e";
 
 const TITLE_BUTTONS = [
   ["minimize", "─", "Send to scratchpad"],
@@ -205,12 +205,22 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     focusWindow(id, { moveBrowserFocus = true } = {}) {
       const ws = activeWs();
       if (!tree.allIds(ws).includes(id)) return false;
+      const before = `${ws.focused}/${ws.focusMode}`;
       tree.setFocus(ws, id);
       if (ws.focusMode === "floating") tree.raiseFloating(ws, id);
-      renderer.schedule();
-      save();
+      /* Tabbing through a link list fires focusin for every link; only a real
+         focus change is worth a frame and a serialised write. */
+      if (before !== `${ws.focused}/${ws.focusMode}` || ws.focusMode === "floating") {
+        renderer.schedule();
+        save();
+      }
       if (moveBrowserFocus) windows.get(id)?.focus({ preventScroll: true });
       return true;
+    },
+
+    isVisible: (id) => {
+      const node = windows.get(id);
+      return Boolean(node) && !node.hidden && tree.allIds(activeWs()).includes(id);
     },
 
     focusTab(conId, index, id, { moveBrowserFocus = true } = {}) {
@@ -591,7 +601,9 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       return true;
     },
 
-    spawn(appName) {
+    /* Resolves once the application is running. The window itself appears
+       synchronously so `exec` feels immediate; its module may still be loading. */
+    async spawn(appName) {
       const spec = APPS[appName];
       if (!spec) return false;
       spawnCounter += 1;
@@ -625,8 +637,14 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
 
       let instance;
       try {
-        instance = spec.create({ body, statusline: status, title, wm, close: () => wm.killWindow(id) });
+        instance = await spec.create({ body, statusline: status, title, wm, close: () => wm.killWindow(id) });
+        if (!windows.has(id)) {
+          /* Killed while its module was still loading. */
+          instance?.destroy?.();
+          return false;
+        }
       } catch (error) {
+        if (!windows.has(id)) return false;
         /* An application that throws must not leave a window with no app behind
            it: the leaf and the node go, and the desktop is exactly as before. */
         console.error(`[wm] exec ${appName} failed`, error);
@@ -666,7 +684,11 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       if (head === "kill") return wm.kill() ? "" : "no window";
       if (head === "floating") return wm.toggleFloating() ? "" : "no window";
       if (head === "restart") return wm.restart() ? "" : "";
-      if (head === "exec") return wm.spawn(argument) ? "" : `unknown program: ${argument}`;
+      if (head === "exec") {
+        if (!APPS[argument]) return `unknown program: ${argument}`;
+        wm.spawn(argument);
+        return "";
+      }
       if (head === "workspace") {
         const index = Number.parseInt(argument, 10);
         if (Number.isFinite(index)) {
@@ -779,7 +801,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     greeterInstance?.destroy();
     greeterInstance = null;
     if (greeterLoading) return greeterLoading;
-    greeterLoading = import("./greeter.js?v=20260905d").then(({ runGreeter }) => {
+    greeterLoading = import("./greeter.js?v=20260905e").then(({ runGreeter }) => {
       greeterLoading = null;
       greeterInstance = runGreeter({
         node: document.querySelector("#greeter"),
@@ -876,11 +898,11 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     if (id && windows.has(id)) wm.focusWindow(id);
   }));
 
-  const onResize = () => {
+  const onResize = rafBatch(() => {
     if (reapplyResponsiveDefaults(state, { mobile: media.mobile.matches })) save();
     renderer.invalidate();
     renderer.renderNow();
-  };
+  });
   cleanup.push(listen(window, "resize", onResize, { passive: true }));
   if (media.mobile.addEventListener) cleanup.push(listen(media.mobile, "change", onResize));
 
@@ -914,14 +936,14 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   attachHomeShell();
 
   if (media.coarse.matches) {
-    import("./touch.js?v=20260905d")
+    import("./touch.js?v=20260905e")
       .then(({ installTouch }) => {
         touch = installTouch({ shell, wm, isBlocked: blocked });
       })
       .catch(() => {});
   }
 
-  import("./idle-lock.js?v=20260905d")
+  import("./idle-lock.js?v=20260905e")
     .then(({ installIdleLock }) => {
       lock = installIdleLock({
         node: document.querySelector("#lockscreen"),
@@ -935,7 +957,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   else startSession();
 
   if (isSelfTest()) {
-    import("./selftest.js?v=20260905d")
+    import("./selftest.js?v=20260905e")
       .then(({ runSelfTest }) => runSelfTest())
       .catch((error) => console.error("[wm] selftest failed to load", error));
   }

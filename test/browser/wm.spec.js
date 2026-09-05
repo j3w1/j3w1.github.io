@@ -806,3 +806,42 @@ test("the subset font loads, renders the bar's glyphs, and the swap moves nothin
   const cls = await page.evaluate(() => window.__shifts.reduce((sum, value) => sum + value, 0));
   expect(cls).toBeLessThan(0.02);
 });
+
+test("the content index is requested once per page load, and a resize storm stays cheap", async ({ page }) => {
+  await open(page);
+  const input = page.locator('[data-wm-window="home-terminal"] .shell-input');
+  await input.click();
+  await input.fill("cd writing");
+  await input.press("Enter");
+  await input.fill("ls");
+  await input.press("Enter");
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toContainText("fixture-essay");
+  const requests = await page.evaluate(() => performance.getEntriesByType("resource").filter((entry) => entry.name.includes("content-index.json")).length);
+  expect(requests).toBe(1);
+
+  await page.evaluate(() => {
+    window.__long = 0;
+    new PerformanceObserver((list) => { window.__long += list.getEntries().length; }).observe({ type: "longtask" });
+  });
+  for (let i = 0; i < 30; i += 1) {
+    await page.setViewportSize({ width: 1000 + i * 12, height: 900 - (i % 3) * 20 });
+  }
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(() => window.__long)).toBeLessThanOrEqual(1);
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
+});
+
+test("photographs reserve their real box, load lazily, and are not cropped to 4:3", async ({ page }) => {
+  await open(page, "/#photography/fixture-photographs");
+  const thumbs = page.locator('[data-content-detail="photography"] .photo-thumb img');
+  await expect(thumbs).toHaveCount(2);
+  await expect(thumbs.nth(1)).toHaveAttribute("loading", "lazy");
+  await expect(thumbs.nth(1)).toHaveAttribute("width", "512");
+  await expect(thumbs.nth(1)).toHaveAttribute("height", "640");
+  await expect(thumbs.nth(1)).toHaveAttribute("srcset", /512w.*1122w/);
+  /* The fixture image is 1×1, so the rendered box follows the file; what must
+     hold is that nothing forces a 4:3 crop on a portrait photograph. */
+  const style = await thumbs.nth(1).evaluate((node) => ({ fit: getComputedStyle(node).objectFit, ratio: getComputedStyle(node).aspectRatio }));
+  expect(style.fit).not.toBe("cover");
+  expect(style.ratio).not.toMatch(/^4 \/ 3$/);
+});

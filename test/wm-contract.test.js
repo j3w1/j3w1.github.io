@@ -316,7 +316,7 @@ test("global window manager handlers are registered through listen() so destroy(
   const boot = await read("assets", "js", "wm", "boot.js");
   assert.doesNotMatch(boot, /\n  document\.addEventListener\(/, "boot.js must register document handlers through listen()");
   assert.doesNotMatch(boot, /\n  window\.addEventListener\(/, "boot.js must register window handlers through listen()");
-  assert.match(boot, /try \{\s*instance = spec\.create\(/, "spawn needs an error boundary");
+  assert.match(boot, /try \{\s*instance = await spec\.create\(/, "spawn needs an error boundary");
   const greeter = await read("assets", "js", "wm", "greeter.js");
   assert.doesNotMatch(greeter.replace(/const later = [\s\S]*?\n  \};/, ""), /\bsetTimeout\(/, "greeter timers must be tracked through later()");
 });
@@ -337,4 +337,18 @@ test("the self-hosted font is the generated WOFF2 subset, never a whole TTF", as
   const html = await read("index.html");
   const token = css.match(/sauce-code-pro-text\.woff2\?v=([0-9a-f]{8})/)[1];
   assert.ok(html.includes(`<link rel="preload" href="/assets/fonts/sauce-code-pro-text.woff2?v=${token}" as="font" type="font/woff2" crossorigin>`), "index.html must preload the text face with its content hash");
+});
+
+test("index.html preloads exactly the static module graph, and the applications are lazy", async () => {
+  const { collectStaticGraph } = await import("../scripts/lib/preloads.mjs");
+  const graph = await collectStaticGraph(repoRoot);
+  const html = await read("index.html");
+  const preloaded = [...html.matchAll(/<link rel="modulepreload" href="([^"]+)">/g)].map((match) => match[1]).sort();
+  assert.deepEqual(preloaded, graph, "run npm run generate to refresh the modulepreload list");
+  assert.ok(graph.some((href) => href.startsWith("/assets/js/wm/tree.js")), "the wm modules are in the graph");
+  for (const app of ["neofetch", "htop", "cmatrix", "feh"]) {
+    assert.ok(!graph.some((href) => href.includes(`/apps/${app}.js`)), `${app} must be loaded on first launch, not at boot`);
+  }
+  const admin = await read("admin", "j3w1ctl.js");
+  assert.doesNotMatch(admin, /^import .* from "\/admin\/j3w1ctl-blob-client\.js/m, "the blob client is fetched on first upload only");
 });

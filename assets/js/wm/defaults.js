@@ -1,7 +1,7 @@
 /* Default desktop. The percents match the CSS grid fractions the static site
    uses, so the handoff from fallback layout to window manager is sub-pixel. */
 
-import { makeCon, makeLeaf, normalize } from "./tree.js?v=20260905d";
+import { makeCon, makeLeaf, normalize } from "./tree.js?v=20260905e";
 
 export const STATE_VERSION = 2;
 
@@ -41,7 +41,7 @@ export const homeWorkspaceFor = (id) =>
 
 const buildWorkspace = (name, { mobile }) => {
   const [layout, windows] = LAYOUTS[name];
-  const root = makeCon(mobile && windows.length > 1 ? "tabbed" : layout, []);
+  const root = makeCon(defaultLayoutFor(name, { mobile }), []);
   root.children = windows.map(([id, percent]) => makeLeaf(id, percent));
   normalize(root);
   return {
@@ -66,15 +66,20 @@ export const defaultState = ({ mobile = false } = {}) => ({
   wallpaper: WALLPAPERS[0],
 });
 
+/* The root layout a workspace gets by default at this viewport. */
+export const defaultLayoutFor = (name, { mobile }) => {
+  const [layout, windows] = LAYOUTS[name];
+  return mobile && windows.length > 1 ? "tabbed" : layout;
+};
+
 /* Re-apply the responsive default to any workspace the visitor has not edited. */
 export const reapplyResponsiveDefaults = (state, { mobile }) => {
   let changed = false;
-  const fresh = defaultState({ mobile });
   for (const name of WORKSPACES) {
     const ws = state.workspaces[name];
     if (!ws || ws.userTouched) continue;
     if (ws.floating.length || ws.killed.length) continue;
-    const wanted = fresh.workspaces[name].root.layout;
+    const wanted = defaultLayoutFor(name, { mobile });
     if (ws.root.layout === wanted) continue;
     ws.root.layout = wanted;
     changed = true;
