@@ -9,7 +9,7 @@
    disk usage, CPU load, temperature, network SSID, and system uptime.
    (navigator.storage.estimate() reports an origin quota, not a disk.) */
 
-import { element } from "./dom.js?v=20260905j";
+import { element } from "./dom.js?v=20260905k";
 
 const FAST_MS = 1000;
 const SLOW_MS = 10000;
@@ -63,21 +63,25 @@ export const installBar = ({ container, modeNode, clockNode, workspaceLinks, lab
     node.append(element("span", "sr-only", `${label}: `));
     const glyph = element("span", "i3block-glyph", GLYPH[name] ?? "");
     glyph.setAttribute("aria-hidden", "true");
+    /* The label is its own element so a narrow viewport can drop it and keep
+       the glyph and the reading: the screen-reader label above is unaffected. */
+    const prefix = element("span", "i3block-label");
+    prefix.setAttribute("aria-hidden", "true");
     const text = element("span", "i3block-value");
-    node.append(glyph, text);
+    node.append(glyph, prefix, text);
     container.append(node);
-    blocks.set(name, { node, text, glyph, read, label });
+    blocks.set(name, { node, text, glyph, prefix, read, label });
     paintBlock(blocks.get(name), value);
   };
 
   /* value: a string, or { glyph, text } when the glyph depends on the reading. */
   const paintBlock = (block, value) => {
     const reading = typeof value === "string" ? { text: value } : value;
-    const prefix = LABELS[language][block.node.dataset.block] ?? "";
-    const next = `${prefix}${prefix && !prefix.endsWith("：") && !prefix.endsWith(" ") ? " " : ""}${reading.text}`;
-    if (block.text.textContent !== next) block.text.textContent = next;
-    if (language === "zh" && prefix) block.text.setAttribute("lang", "zh");
-    else block.text.removeAttribute("lang");
+    const prefix = (LABELS[language][block.node.dataset.block] ?? "").trim();
+    if (block.prefix.textContent !== prefix) block.prefix.textContent = prefix;
+    if (language === "zh" && prefix) block.prefix.setAttribute("lang", "zh");
+    else block.prefix.removeAttribute("lang");
+    if (block.text.textContent !== reading.text) block.text.textContent = reading.text;
     const glyph = reading.glyph ?? GLYPH[block.node.dataset.block] ?? "";
     if (block.glyph.textContent !== glyph) block.glyph.textContent = glyph;
     block.node.classList.toggle("is-degraded", Boolean(reading.degraded));

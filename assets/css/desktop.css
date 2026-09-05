@@ -329,6 +329,8 @@ html.wm-active .window.is-floating {
    (color1 — 3.4:1, so the degraded glyph is color5 instead), and the glyphs
    themselves sit at the decorative floor in color15. */
 .i3block-glyph { color: var(--color15); }
+.i3block-label { color: var(--color2); }
+.i3block-label:empty { display: none; }
 .i3block.is-degraded .i3block-glyph { color: var(--color5); }
 .i3block-glyph:empty { display: none; }
 
@@ -906,14 +908,19 @@ html[data-wm="off"] .project-detail,
 
 /* The bar clips rather than squeezing the workspace names, so blocks are shed
    in ascending order of usefulness before they ever reach that point. */
-/* Shedding order, re-tuned for the 13px bar: least useful readings go first. */
+/* Shedding order: the labels go first — a glyph and a reading say the same
+   thing in a third of the width, and the screen-reader label never moves — then
+   the least useful readings. Tuned with headroom rather than to the pixel: text
+   measures differently across platforms, and the workspace names must never be
+   squeezed on any of them. */
+@media (max-width: 1699px) { .i3block-label { display: none; } }
 @media (max-width: 2199px) { .i3block-lang { display: none; } }
 @media (max-width: 2019px) { .i3block-tz { display: none; } }
 @media (max-width: 1839px) { .i3block-heap { display: none; } }
 @media (max-width: 1719px) { .i3block-up { display: none; } }
 @media (max-width: 1579px) { .i3block-res { display: none; } }
-@media (max-width: 1399px) { .i3block-mem { display: none; } }
-@media (max-width: 1319px) { .i3block-net { display: none; } }
+@media (max-width: 1339px) { .i3block-mem { display: none; } }
+@media (max-width: 1259px) { .i3block-net { display: none; } }
 @media (max-width: 1079px) { .i3block-cpu, .i3block-bat { display: none; } }
 
 @media (max-width: 1199px) {

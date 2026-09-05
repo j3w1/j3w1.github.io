@@ -1135,12 +1135,16 @@ test("a sticky spawned window follows every workspace; a site window is refused"
 });
 
 test("the bar speaks the original config's Chinese by default, English on request, and persists it", async ({ page }) => {
-  await page.setViewportSize({ width: 1600, height: 900 });
+  /* Wide enough that the labels are not shed — below ~1700px only the glyph
+     and the reading survive, which is what keeps the workspace names intact. */
+  await page.setViewportSize({ width: 1920, height: 900 });
   await open(page);
   await page.evaluate(() => document.fonts.ready);
+  const label = page.locator('#i3status [data-block="cpu"] .i3block-label');
   const cpu = page.locator('#i3status [data-block="cpu"] .i3block-value');
-  await expect(cpu).toContainText("处理器");
-  await expect(cpu).toHaveAttribute("lang", "zh");
+  await expect(label).toHaveText("处理器");
+  await expect(label).toHaveAttribute("lang", "zh");
+  await expect(cpu).toHaveText("16 thr");
   await expect(page.locator('#i3status [data-block="cpu"] .sr-only')).toHaveText("CPU threads: ");
   await expect(page.locator("#local-clock")).toHaveText(/^\d{2}月\d{2}号 \d{2}时\d{2}分\d{2}秒$/);
   const loaded = await page.evaluate(() => [...document.fonts].some((face) => face.family.includes("SauceCodePro NFM") && face.status === "loaded" && face.unicodeRange.includes("4E00")));
@@ -1149,13 +1153,36 @@ test("the bar speaks the original config's Chinese by default, English on reques
   await page.locator("body").press("/");
   await page.locator("#command-input").fill("bar labels en");
   await page.locator("#command-input").press("Enter");
-  await expect(cpu).toContainText("cpu");
-  await expect(cpu).not.toContainText("处理器");
-  await expect(cpu).not.toHaveAttribute("lang", /.+/);
+  await expect(label).toHaveText("cpu");
+  await expect(label).not.toHaveAttribute("lang", /.+/);
   await expect(page.locator("#local-clock")).toHaveText(/^\d{2}:\d{2}:\d{2}/);
   await page.reload();
   await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
-  await expect(cpu).toContainText("cpu");
+  await expect(label).toHaveText("cpu");
+});
+
+test("the bar sheds its labels before it squeezes anything, keeping the glyph and the reading", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 900 });
+  await open(page);
+  await page.evaluate(() => document.fonts.ready);
+  const label = page.locator('#i3status [data-block="cpu"] .i3block-label');
+  await expect(label).toBeVisible();
+  /* A common laptop width: the label goes, the reading and its glyph stay, and
+     the screen-reader label is untouched. */
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(label).toBeHidden();
+  await expect(page.locator('#i3status [data-block="cpu"] .i3block-value')).toHaveText("16 thr");
+  await expect(page.locator('#i3status [data-block="cpu"] .i3block-glyph')).toBeVisible();
+  await expect(page.locator('#i3status [data-block="cpu"] .sr-only')).toHaveText("CPU threads: ");
+  /* And the bar has real room to spare, not a pixel: text measures differently
+     on every platform, and CI is not this machine. */
+  const spare = await page.evaluate(() => {
+    const bar = document.querySelector(".wm-bar");
+    const wanted = [".workspace-strip", "#i3status", ".system-status"]
+      .reduce((total, selector) => total + document.querySelector(selector).scrollWidth, 0);
+    return bar.clientWidth - wanted;
+  });
+  expect(spare).toBeGreaterThan(40);
 });
 
 test("the terminal is the original machine's: agnoster prompt, dotfiles, journalctl, i3exit, notify-send", async ({ page }) => {

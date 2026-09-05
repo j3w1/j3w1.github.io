@@ -16,7 +16,7 @@
    greeter and i3lock (which listen on document), so the key that wakes a
    suspended machine cannot also unlock it. */
 
-import { playLines, RESUME_LOG, SHUTDOWN_LOG, TIMING } from "./console.js?v=20260905j";
+import { playLines, RESUME_LOG, SHUTDOWN_LOG, TIMING } from "./console.js?v=20260905k";
 
 const BLACK_MS = 1400;
 const HALT_HINT_MS = 3000;

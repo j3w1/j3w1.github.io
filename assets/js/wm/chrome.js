@@ -4,7 +4,7 @@
    here owns state. installChrome returns the function that removes them all,
    so a restart in place never stacks a second set. */
 
-import { listen, rafBatch } from "./dom.js?v=20260905j";
+import { listen, rafBatch } from "./dom.js?v=20260905k";
 
 export const installChrome = ({ wm, windows, renderer, restoreFocus, isBlocked, onResize, root, power }) => {
   const cleanup = [];
