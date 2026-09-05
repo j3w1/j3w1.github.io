@@ -785,3 +785,24 @@ test("title bar buttons do nothing while a curtain is up", async ({ page }) => {
   await expect(page.locator('[data-wm-window="home-files"]')).toBeVisible();
   void before;
 });
+
+test("the subset font loads, renders the bar's glyphs, and the swap moves nothing", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__shifts = [];
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) if (!entry.hadRecentInput) window.__shifts.push(entry.value);
+    }).observe({ type: "layout-shift", buffered: true });
+  });
+  await open(page);
+  await page.evaluate(() => document.fonts.ready);
+  const loaded = await page.evaluate(() => [...document.fonts].filter((face) => face.status === "loaded").map((face) => `${face.family}/${face.weight}`));
+  expect(loaded).toContain("SauceCodePro NFM/400");
+  expect(loaded).toContain("SauceCodePro NFM/700");
+  const requests = await page.evaluate(() => performance.getEntriesByType("resource").filter((entry) => entry.name.includes("/assets/fonts/")).map((entry) => entry.name.split("/").pop()));
+  expect(requests.some((name) => name.startsWith("sauce-code-pro-text.woff2"))).toBe(true);
+  expect(requests.some((name) => name.endsWith(".ttf"))).toBe(false);
+  const powerGlyph = await page.evaluate(() => document.fonts.check('12px "SauceCodePro NFM"', ""));
+  expect(powerGlyph).toBe(true);
+  const cls = await page.evaluate(() => window.__shifts.reduce((sum, value) => sum + value, 0));
+  expect(cls).toBeLessThan(0.02);
+});

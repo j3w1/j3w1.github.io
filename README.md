@@ -75,7 +75,9 @@ npm run check                                        # committed generated artif
 
 Opening the site with `?wm=selftest` runs the pure layout assertions in the browser console.
 
-JetBrains Mono is self-hosted under `assets/fonts/`; its OFL license is included alongside the font.
+The font is Source Code Pro as the Nerd Fonts build (SauceCodePro Nerd Font Mono), subset to the
+glyphs the site uses and committed as ~39 KB of WOFF2 under `assets/fonts/` by `npm run generate`;
+the OFL license is included alongside. See `docs/wm-architecture.md` §8.
 
 ## Asset versioning
 

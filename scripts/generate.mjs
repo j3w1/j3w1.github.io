@@ -9,11 +9,12 @@
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { fontsGenerator } from "./lib/fonts.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const check = process.argv.includes("--check");
 
-const generators = [];
+const generators = [fontsGenerator];
 
 let failures = 0;
 for (const { name, run } of generators) {

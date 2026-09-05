@@ -40,9 +40,8 @@ html[data-wallpaper="ridge"] .wallpaper {
     radial-gradient(120% 100% at 18% 0%, #200c0c 0%, #0a0505 55%, var(--desktop) 100%);
 }
 
-/* The desktop wordmark. Only the 400-weight JetBrains Mono face is self-hosted,
-   so the browser synthesises this bold — which reads cleanly at display size and
-   costs nothing, rather than shipping a second multi-megabyte font file. */
+/* The desktop wordmark, set in a 4 KB bold face that holds exactly these six
+   characters (see scripts/lib/fonts.mjs). */
 .wallpaper::after {
   position: absolute;
   z-index: 0;
@@ -432,13 +431,13 @@ html.wm-active #power-menu-toggle[aria-expanded="true"] {
 }
 
 .greeter {
-  /* Deliberately not var(--font): the Nerd Font is 2.4MB and will not have
-     loaded on frame 1, and font-display:swap would re-lay-out the boot log
-     halfway through the animation. */
+  /* The text face is 29 KB and preloaded, and its local fallbacks are
+     metric-matched, so the boot log can use the site's own font without a
+     mid-animation reflow when the swap lands. */
   align-content: stretch;
   justify-items: stretch;
   padding: 0;
-  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-family: var(--font);
   gap: 0;
 }
 

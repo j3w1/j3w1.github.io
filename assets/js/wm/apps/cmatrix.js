@@ -7,6 +7,9 @@ import { media } from "../session.js?v=20260905d";
 
 const GLYPHS = "アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789j3w1";
 
+/* The canvas cannot inherit CSS, so the page's own font stack is read once. */
+const fontFamily = getComputedStyle(document.body).fontFamily || "monospace";
+
 export const createMatrix = ({ body, density = 1 }) => {
   const canvas = element("canvas", "cmatrix");
   canvas.setAttribute("aria-hidden", "true");
@@ -37,7 +40,7 @@ export const createMatrix = ({ body, density = 1 }) => {
     const height = body.clientHeight;
     context.fillStyle = "rgba(5, 3, 3, 0.09)";
     context.fillRect(0, 0, width, height);
-    context.font = `${cell}px "JetBrains Mono", monospace`;
+    context.font = `${cell}px ${fontFamily}`;
     columns.forEach((row, index) => {
       const glyph = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
       const x = (index * width) / columns.length;
@@ -56,7 +59,7 @@ export const createMatrix = ({ body, density = 1 }) => {
     const height = body.clientHeight;
     context.fillStyle = "#050303";
     context.fillRect(0, 0, width, height);
-    context.font = `${cell}px "JetBrains Mono", monospace`;
+    context.font = `${cell}px ${fontFamily}`;
     context.fillStyle = "#911410";
     for (let column = 0; column < columns.length; column += 1) {
       for (let row = 0; row < height / cell; row += 3) {

@@ -1,0 +1,57 @@
+{
+  "source": "SauceCodePro Nerd Font Mono v3.5.1",
+  "faces": {
+    "sauce-code-pro-text.woff2": {
+      "bytes": 29412,
+      "sha256": "db62d388b5039aea9b0656fa8b752488662aaf48b50a4dd0ad3a13fb8d43001e"
+    },
+    "sauce-code-pro-icons.woff2": {
+      "bytes": 5496,
+      "sha256": "88a9a1bd4b0a68ccdcd79fd010c014e735910c76785b1c3c9a8a092d2d147a7d"
+    },
+    "sauce-code-pro-wordmark.woff2": {
+      "bytes": 4416,
+      "sha256": "8e993e72103774f6e61e5d3748a63beee216799e029ac4b9d79af5767d8099ae"
+    }
+  },
+  "icons": [
+    "U+E0A0",
+    "U+E0A1",
+    "U+E0A2",
+    "U+E0A3",
+    "U+E0A4",
+    "U+E0A5",
+    "U+E0A6",
+    "U+E0A7",
+    "U+E0A8",
+    "U+E0A9",
+    "U+E0AA",
+    "U+E0AB",
+    "U+E0AC",
+    "U+E0AD",
+    "U+E0AE",
+    "U+E0AF",
+    "U+E0B0",
+    "U+E0B1",
+    "U+E0B2",
+    "U+E0B3",
+    "U+F002",
+    "U+F00A",
+    "U+F011",
+    "U+F015",
+    "U+F023",
+    "U+F02D",
+    "U+F030",
+    "U+F03A",
+    "U+F044",
+    "U+F060",
+    "U+F061",
+    "U+F062",
+    "U+F07B",
+    "U+F09B",
+    "U+F0AC",
+    "U+F0AE",
+    "U+F129",
+    "U+F17C"
+  ]
+}

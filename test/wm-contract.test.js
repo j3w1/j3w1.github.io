@@ -320,3 +320,21 @@ test("global window manager handlers are registered through listen() so destroy(
   const greeter = await read("assets", "js", "wm", "greeter.js");
   assert.doesNotMatch(greeter.replace(/const later = [\s\S]*?\n  \};/, ""), /\bsetTimeout\(/, "greeter timers must be tracked through later()");
 });
+
+test("the self-hosted font is the generated WOFF2 subset, never a whole TTF", async () => {
+  const dir = path.join(repoRoot, "assets", "fonts");
+  const entries = await fs.readdir(dir);
+  assert.ok(!entries.some((name) => /\.(ttf|otf)$/i.test(name)), "no whole font files under assets/fonts");
+  let total = 0;
+  for (const name of entries.filter((entry) => entry.endsWith(".woff2"))) {
+    total += (await fs.stat(path.join(dir, name))).size;
+  }
+  assert.ok(total > 0 && total <= 64_000, `font faces total ${total} bytes, over the 64000 byte budget`);
+  const css = await read("assets", "css", "site.css");
+  assert.match(css, /\/\* @generated-fonts:start \*\/[\s\S]*sauce-code-pro-text\.woff2\?v=[0-9a-f]{8}[\s\S]*\/\* @generated-fonts:end \*\//);
+  assert.match(css, /size-adjust:/, "fallback faces must be metric-matched");
+  assert.doesNotMatch(css, /JetBrains/);
+  const html = await read("index.html");
+  const token = css.match(/sauce-code-pro-text\.woff2\?v=([0-9a-f]{8})/)[1];
+  assert.ok(html.includes(`<link rel="preload" href="/assets/fonts/sauce-code-pro-text.woff2?v=${token}" as="font" type="font/woff2" crossorigin>`), "index.html must preload the text face with its content hash");
+});

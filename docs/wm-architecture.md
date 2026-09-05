@@ -227,9 +227,15 @@ The wallpaper defaults to flat black and carries a `j3w1-i3` wordmark, drawn as 
 but **below block backgrounds**, so `html.wm-active body` has to be transparent or an opaque body
 hides the wallpaper and the wordmark with it. `html` keeps the black.
 
-Only the 400-weight JetBrains Mono face is self-hosted, so the wordmark's `font-weight: 700` is
-synthesised by the browser — the right trade at display size against shipping a second
-multi-megabyte font file.
+The font is the workstation's own: Source Code Pro (the Xresources said "Source Code Pro for
+Powerline"), shipped as the Nerd Fonts build so the bar's glyphs are real. It is **generated, not
+committed whole**: `scripts/lib/fonts.mjs` downloads the 2.5 MB patched TTF at a pinned release and
+checksum into a gitignored cache and cuts three WOFF2 faces — text (~29 KB), icons (Powerline plus
+every private-use codepoint found in the sources, ~5 KB), and a bold wordmark face holding exactly
+`j3w1-i3` (~4 KB). Each is served with `?v=<content hash>`. Four metric-matched `local()` fallbacks
+(`size-adjust` from the advance widths, ascent/descent from the real `hhea` table) mean the swap
+from the fallback to the web font moves nothing: every `ch`-measured width is identical before and
+after. `npm run check` fails if the committed faces are stale.
 
 `wiki` and `j3w1ctl` live in the file manager's Places and Network sections rather than the i3bar
 tray: they are destinations, not readings the bar reports, and every control in the tray costs the
