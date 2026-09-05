@@ -18,6 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The cache-token ratchets compare a file's last commit date against
+          # its ?v= token, so they need real history: a depth-1 clone makes
+          # every file look added today.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -41,6 +46,11 @@ jobs:
     needs: checks
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The cache-token ratchets compare a file's last commit date against
+          # its ?v= token, so they need real history: a depth-1 clone makes
+          # every file look added today.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24

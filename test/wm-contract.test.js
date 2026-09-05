@@ -263,6 +263,9 @@ test("the cache token is bumped whenever a versioned asset changes", async () =>
 
   const versioned = ["assets/css", "assets/js", "index.html", "wiki/index.html"];
   const git = (args) => execFileSync("git", args, { cwd: repoRoot, encoding: "utf8" }).trim();
+  /* A shallow clone grafts its one commit as a root commit, so every file
+     looks like it was added today; the ratchet needs real history. */
+  if (git(["rev-parse", "--is-shallow-repository"]) === "true") return;
   const dirty = git(["status", "--porcelain", "--", ...versioned]).length > 0;
 
   if (dirty) {

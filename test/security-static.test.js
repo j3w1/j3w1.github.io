@@ -95,6 +95,11 @@ test("the admin stylesheet token is bumped whenever the stylesheet changes", asy
   const token = source.match(/\/admin\/j3w1ctl\.css\?v=(\d{8})/)?.[1];
   assert.ok(token, "j3w1ctl.js must version its stylesheet with a dated token");
   const git = (args) => execFileSync("git", args, { cwd: repoRoot, encoding: "utf8" }).trim();
+  /* A shallow clone grafts its one commit as a root commit, so every file
+     looks like it was added today and the ratchet would demand a token dated
+     now. CI fetches full history; anywhere else the date check is skipped
+     rather than asserted against a fabricated date. */
+  if (git(["rev-parse", "--is-shallow-repository"]) === "true") return;
   const target = ["--", "admin/j3w1ctl.css"];
   const dirty = git(["status", "--porcelain", ...target]).length > 0;
   const lastChanged = dirty
