@@ -1,0 +1,22 @@
+{
+  "name": "j3w1.github.io",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Public site checks and generators. The site itself has no runtime dependencies and no build step; everything here is development tooling.",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:browser": "playwright test",
+    "test:all": "npm test && npm --prefix services/j3w1ctl-auth test && npm run test:browser && npm --prefix services/j3w1ctl-auth run test:browser",
+    "generate": "node scripts/generate.mjs",
+    "check": "node scripts/generate.mjs --check && npm --prefix services/j3w1ctl-auth run client:check",
+    "bump-cache-token": "node scripts/bump-cache-token.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "subset-font": "^2.4.0"
+  }
+}

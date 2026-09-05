@@ -3,7 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-const repoRoot = path.resolve(import.meta.dirname, "../../..");
+const repoRoot = path.resolve(import.meta.dirname, "..");
 
 const filesUnder = async (directory) => {
   const result = [];

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { startBrowserFixture } from "../browser-fixture-server.mjs";
+import { startBrowserFixture } from "../../../../test/browser-fixture-server.mjs";
 
 let fixture;
 

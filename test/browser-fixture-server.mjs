@@ -3,7 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const frontendOrigin = "http://127.0.0.1:8010";
 const authOrigin = "http://127.0.0.1:8011";
 const ast = (text) => [{ type: "paragraph", children: [{ type: "text", value: text }] }];

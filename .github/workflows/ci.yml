@@ -1,0 +1,65 @@
+name: ci
+
+# GitHub Pages serves `main` verbatim; nothing here deploys. This is the gate
+# that keeps the committed generated artifacts current, the cache tokens in
+# step, the byte budgets honest, and the accessibility contract enforced.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            services/j3w1ctl-auth/package-lock.json
+      - run: npm ci
+      - run: npm --prefix services/j3w1ctl-auth ci
+      - name: Public site contract, tree and static tests
+        run: npm test
+      - name: j3w1ctl-auth service tests
+        run: npm --prefix services/j3w1ctl-auth test
+      - name: Generated artifacts are current
+        run: npm run check
+      - name: Content index matches content/
+        run: npm --prefix services/j3w1ctl-auth run content:check
+
+  browser:
+    runs-on: ubuntu-latest
+    needs: checks
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            services/j3w1ctl-auth/package-lock.json
+      - run: npm ci
+      - run: npm --prefix services/j3w1ctl-auth ci
+      - run: npx playwright install --with-deps chromium
+      - name: Window manager in a real browser
+        run: npm run test:browser
+      - name: j3w1ctl client in a real browser
+        run: npm --prefix services/j3w1ctl-auth run test:browser
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: |
+            test-results/
+            services/j3w1ctl-auth/test-results/
+          if-no-files-found: ignore

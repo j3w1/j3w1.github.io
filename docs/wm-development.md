@@ -20,17 +20,22 @@ Useful URLs while developing:
 ## Run the tests
 
 ```powershell
-npm --prefix services/j3w1ctl-auth ci            # once
-npm --prefix services/j3w1ctl-auth test          # node: 96 tests
-npm --prefix services/j3w1ctl-auth run test:browser   # playwright: 20 tests
+npm ci                       # once: Playwright and the generators (development tooling only)
+npm test                     # node: tree maths, contract, static security
+npm run test:browser         # playwright; PW_CHANNEL=msedge to run in Edge instead of bundled Chromium
 ```
 
-| Suite | Covers |
+| Suite (repository root) | Covers |
 | --- | --- |
 | `test/wm-tree.test.js` | The pure tree and rect maths — every direction × layout combination, seam-free tiling, focus bookkeeping, `validate` reconciliation |
-| `test/wm-contract.test.js` | Structure and accessibility invariants asserted against the source |
-| `test/security-static.test.js` | Pre-existing: credentials, the project table columns, the j3w1ctl cache key |
-| `test/browser/wm.spec.js` | The real thing in a browser: tiling geometry, keys, tabs, drag, shell, plain mode, mobile |
+| `test/wm-contract.test.js` | Structure and accessibility invariants asserted against the source, byte budgets, cache tokens |
+| `test/security-static.test.js` | Credentials, the project table columns, the j3w1ctl cache key |
+| `test/public-photo-viewer.test.js` | The photo viewer's route-neutral close |
+| `test/browser/wm.spec.js` | The real thing in a browser: tiling geometry, keys, tabs, drag, shell, boot, mobile |
+
+`test/browser-fixture-server.mjs` serves the repository with a synthetic content index and a fake
+auth service; the backend's own Playwright spec imports the same fixture. The backend suite stays
+under `services/j3w1ctl-auth/`. `.github/workflows/ci.yml` runs all of it on every push.
 
 The tree and layout modules are pure and DOM-free specifically so they can be tested in node without
 a browser or a DOM shim. Keep them that way.
@@ -89,17 +94,19 @@ Do not hard-code a pixel size in `layout.js` that a breakpoint needs to change.
 
 ## Cache busting
 
-Every module under `assets/js/wm/` shares one `?v=` token, bumped as a unit:
+Every asset of the public shell (`site.css`, `desktop.css`, `site.js`, `public-content.js`, and every
+module under `assets/js/wm/`, dynamic imports included) shares one `?v=` token, bumped as a unit:
 
 ```powershell
-# from the repo root, replacing the date
-(Get-ChildItem -Recurse assets/js/wm -Filter *.js) + (Get-Item index.html, assets/js/site.js) |
-  ForEach-Object { (Get-Content $_ -Raw) -replace '\?v=20260904', '?v=YYYYMMDD' | Set-Content $_ }
+npm run bump-cache-token            # today's date, or the next letter suffix if already today
+npm run bump-cache-token -- --check # list every token in use; fails on a mixed shared set
 ```
 
-Then bump `site.css`, `desktop.css`, `site.js`, and `public-content.js` in `index.html`.
-**Do not** bump `content-renderer.js`, `photo-viewer.js`, or `admin/j3w1ctl.js` unless they changed —
-the j3w1ctl token in `site.js` must keep matching `admin/index.html`.
+The script rewrites `index.html`, `wiki/index.html`, `admin/index.html`, `404.html`, `site.js`,
+`public-content.js`, and `assets/js/wm/**`. It never touches `content-renderer.js`, `photo-viewer.js`,
+or `admin/j3w1ctl*.js` — those are versioned independently and only when they change — nor font
+URLs, which `npm run generate` content-hashes. `scripts/lib/cache-tokens.mjs` is the single
+definition of the shared set, and the contract test uses the same definition.
 
 ## The wiki
 

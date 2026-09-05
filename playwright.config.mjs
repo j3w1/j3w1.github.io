@@ -1,5 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
+/* PW_CHANNEL=msedge reproduces the original local setup; CI leaves it unset
+   and runs the bundled Chromium, which ubuntu-latest can install. */
 export default defineConfig({
   testDir: "./test/browser",
   fullyParallel: false,

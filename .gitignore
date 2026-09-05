@@ -6,6 +6,9 @@ services/j3w1ctl-auth/.env.*
 services/j3w1ctl-auth/.vercel/
 services/j3w1ctl-auth/test-results/
 services/j3w1ctl-auth/playwright-report/
+/test-results/
+/playwright-report/
+/.cache/
 *.log
 /.vercel/
 /.env.local

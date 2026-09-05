@@ -58,11 +58,20 @@ Then open <http://localhost:8000/#home>.
 
 ## Tests
 
+The public site's own checks live at the repository root and need only development tooling — the site
+itself has no runtime dependencies. The backend keeps its own suite under `services/j3w1ctl-auth/`.
+
 ```powershell
-npm --prefix services/j3w1ctl-auth ci
-npm --prefix services/j3w1ctl-auth test              # 96 node tests
-npm --prefix services/j3w1ctl-auth run test:browser  # 20 Playwright tests
+npm ci                                               # once: Playwright + generators
+npm --prefix services/j3w1ctl-auth ci                # once: the backend
+npm test                                             # tree maths, structure/accessibility contract, static security
+npm run test:browser                                 # the window manager in a real browser (PW_CHANNEL=msedge to use Edge)
+npm --prefix services/j3w1ctl-auth test              # backend
+npm --prefix services/j3w1ctl-auth run test:browser  # j3w1ctl client
+npm run check                                        # committed generated artifacts are current
 ```
+
+`npm run test:all` runs every suite. The same checks run in GitHub Actions on every push and pull request.
 
 Opening the site with `?wm=selftest` runs the pure layout assertions in the browser console.
 
@@ -70,11 +79,13 @@ JetBrains Mono is self-hosted under `assets/fonts/`; its OFL license is included
 
 ## Asset versioning
 
-Cache busting is manual `?v=` query strings. **Every module under `assets/js/wm/` shares one token
-and is bumped as a unit** — pinning only `boot.js` would let a stale cached `layout.js` load against
-a fresh `tree.js`. `content-renderer.js`, `photo-viewer.js`, and `admin/j3w1ctl.js` keep their own
-tokens and are bumped only when they change; the j3w1ctl token in `assets/js/site.js` must always
-equal the one in `admin/index.html`.
+Cache busting is manual `?v=` query strings. **Every asset of the public shell — the stylesheets,
+`site.js`, `public-content.js`, and every module under `assets/js/wm/` — shares one token and is
+bumped as a unit** — pinning only `boot.js` would let a stale cached `layout.js` load against a fresh
+`tree.js`. `npm run bump-cache-token` rewrites every reference (including dynamic imports and
+`wiki/` and `admin/` pages); the contract test fails on a mixed set. `content-renderer.js`,
+`photo-viewer.js`, and `admin/j3w1ctl.js` keep their own tokens and are bumped only when they change;
+the j3w1ctl token in `assets/js/site.js` must always equal the one in `admin/index.html`.
 
 ## Content management
 

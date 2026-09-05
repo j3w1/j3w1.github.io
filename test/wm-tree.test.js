@@ -21,9 +21,9 @@ import {
   toggleFullscreen,
   toggleSplit,
   validate,
-} from "../../../assets/js/wm/tree.js";
-import { computeWorkspace, GEOMETRY } from "../../../assets/js/wm/layout.js";
-import { defaultState, defaultWindowIds, WORKSPACES } from "../../../assets/js/wm/defaults.js";
+} from "../assets/js/wm/tree.js";
+import { computeWorkspace, GEOMETRY } from "../assets/js/wm/layout.js";
+import { defaultState, defaultWindowIds, WORKSPACES } from "../assets/js/wm/defaults.js";
 
 const workspace = (layout, entries) => {
   const root = makeCon(layout, []);

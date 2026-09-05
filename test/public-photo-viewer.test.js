@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { closePhotoViewer, isPhotoViewerBackdropClick } from "../../../assets/js/photo-viewer.js";
+import { closePhotoViewer, isPhotoViewerBackdropClick } from "../assets/js/photo-viewer.js";
 
 test("closing a photograph preserves route state and restores thumbnail focus", () => {
   const route = { hash: "#photography/test-entry" };

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { startBrowserFixture } from "./browser-fixture-server.mjs";
+import { startBrowserFixture } from "../../../test/browser-fixture-server.mjs";
 
 test("browser fixture models a cross-origin frontend and OAuth service", async () => {
   const fixture = await startBrowserFixture();
