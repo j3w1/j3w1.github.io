@@ -950,3 +950,114 @@ test("gaps mode widens the gap and reload re-applies it; border keys change the 
   await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
   await expect(page.locator('[data-wm-window="home-terminal"]')).toHaveClass(/wm-border-none/);
 });
+
+/* The power sequences run under reduced motion so every state change is
+   asserted in milliseconds; one un-reduced test checks the log really scrolls. */
+const reduced = async (page) => page.emulateMedia({ reducedMotion: "reduce" });
+
+test("reboot: spawned windows close, the session ends, the machine boots to the login, the layout survives", async ({ page }) => {
+  await reduced(page);
+  await open(page);
+  await page.locator("body").press("/");
+  await page.locator("#command-input").fill("exec neofetch");
+  await page.locator("#command-input").press("Enter");
+  await expect(page.locator('[data-wm-window^="neofetch-"]')).toBeVisible();
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("w");
+  await expect(page.locator('[data-wm-layer="home"] .wm-tabbar')).toBeVisible();
+
+  await page.keyboard.press("0");
+  await page.keyboard.press("r");
+  await expect(page.locator("#greeter")).toBeVisible();
+  await expect(page.locator("[data-login-screen]")).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("j3w1.wm.session"))).toBeNull();
+  expect(await page.locator('[data-wm-window^="neofetch-"]').count()).toBe(0);
+  /* Under reduced motion the boot log landed at once and the login panel is
+     already up; the log still holds the whole boot. */
+  expect(await page.locator("[data-log]").textContent()).toContain("Reached target Graphical Interface");
+
+  await page.getByRole("button", { name: "Log In" }).click();
+  await expect(page.locator("#greeter")).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem("j3w1.wm.session"))).toBe("1");
+  await expect(page.locator('[data-wm-layer="home"] .wm-tabbar')).toBeVisible();
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
+});
+
+test("shutdown halts to a power button; powering on boots to the login", async ({ page }) => {
+  await reduced(page);
+  await open(page);
+  await page.keyboard.press("Shift+E");
+  await page.getByRole("button", { name: "Shut down" }).click();
+  await expect(page.locator("#greeter")).toHaveAttribute("data-phase", "off");
+  const power = page.locator("[data-power-on]");
+  await expect(power).toBeVisible();
+  await expect(power).toBeFocused();
+  /* A key powers the machine on — and reaches nothing underneath: the
+     terminal is not killed by the q. */
+  await page.keyboard.press("q");
+  await expect(page.locator("[data-login-screen]")).toBeVisible();
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toHaveCount(1);
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#greeter")).toBeHidden();
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
+});
+
+test("suspend sleeps over a locked session; the wake key does not unlock it", async ({ page }) => {
+  await reduced(page);
+  await open(page);
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("0");
+  await page.keyboard.press("s");
+  await expect(page.locator("#greeter")).toHaveAttribute("data-phase", "sleep");
+  await expect(page.locator("#lockscreen")).toBeVisible();
+  await page.keyboard.press("x");
+  await expect(page.locator("#greeter")).toBeHidden();
+  await expect(page.locator("#lockscreen")).toBeVisible();
+  await page.keyboard.press("x");
+  await expect(page.locator("#lockscreen")).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem("j3w1.wm.session"))).toBe("1");
+});
+
+test("hibernate resumes through the kernel log to the lock screen", async ({ page }) => {
+  await reduced(page);
+  await open(page);
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("0");
+  await page.keyboard.press("h");
+  await expect(page.locator("#greeter")).toHaveAttribute("data-phase", "sleep");
+  await page.keyboard.press("x");
+  await expect(page.locator("#greeter")).toBeHidden();
+  await expect(page.locator("#lockscreen")).toBeVisible();
+});
+
+test("switch user shows the login panel and keeps the session and layout", async ({ page }) => {
+  await reduced(page);
+  await open(page);
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("w");
+  await page.keyboard.press("0");
+  await page.keyboard.press("u");
+  await expect(page.locator("[data-login-screen]")).toBeVisible();
+  await expect(page.locator("[data-boot-screen]")).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem("j3w1.wm.session"))).toBe("1");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#greeter")).toBeHidden();
+  await expect(page.locator('[data-wm-layer="home"] .wm-tabbar')).toBeVisible();
+});
+
+test("the shutdown log really scrolls, then the boot log follows, in order", async ({ page }) => {
+  await open(page);
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("0");
+  await page.keyboard.press("r");
+  await expect(page.locator("#greeter")).toHaveAttribute("data-phase", "shutdown");
+  const early = await page.locator("[data-log] li").count();
+  await page.waitForTimeout(500);
+  const later = await page.locator("[data-log] li").count();
+  expect(later).toBeGreaterThan(early);
+  await expect(page.locator("[data-log]")).toContainText("reboot: Restarting system.", { timeout: 6000 });
+  await expect(page.locator("#greeter")).toHaveAttribute("data-phase", "black", { timeout: 4000 });
+  await expect(page.locator("[data-banner]")).toContainText("Manjaro Linux", { timeout: 4000 });
+  await page.keyboard.press("x");
+  await expect(page.locator("[data-login-screen]")).toBeVisible();
+});

@@ -204,7 +204,7 @@ test("the window manager stays small enough to keep the site dependency-free", a
   /* Caps sit just above today's sizes: they are a ratchet against drift, not a
      target. Raise one deliberately when a feature justifies it. */
   const budget = [
-    ["assets/css/desktop.css", 26_000],
+    ["assets/css/desktop.css", 30_000],
     /* boot.js is over its intended size and is split in the realism phase
        (commands.js, chrome.js, console.js); this cap is the interim ceiling. */
     ["assets/js/wm/boot.js", 40_000],
@@ -226,7 +226,7 @@ test("the window manager stays small enough to keep the site dependency-free", a
     return total;
   };
   const total = await walk(dir);
-  assert.ok(total <= 196_000, `assets/js/wm is ${total} bytes, over its 196000 byte budget`);
+  assert.ok(total <= 216_000, `assets/js/wm is ${total} bytes, over its 216000 byte budget`);
 
   /* The ratchet that matters for first paint is the eager graph — modules a
      static import chain reaches from boot.js. Lazy curtains, apps and the

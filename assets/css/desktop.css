@@ -624,6 +624,41 @@ html[data-boot] .desktop-shell { pointer-events: none; }
    the desktop underneath while it is up. */
 html.wm-greeting .desktop-shell { pointer-events: none; }
 
+/* The power sequences borrow this screen. `shutdown` is the boot-log look;
+   `black`, `sleep` and `off` are a dark screen — above the lock screen too,
+   which is what a sleeping machine over a locked session is. */
+.greeter[data-phase="black"] .greeter-boot,
+.greeter[data-phase="sleep"] .greeter-boot,
+.greeter[data-phase="off"] .greeter-boot { visibility: hidden; }
+
+.greeter[data-phase="black"],
+.greeter[data-phase="sleep"],
+.greeter[data-phase="off"] {
+  z-index: calc(var(--wm-z-curtain) + 1);
+  background: #000;
+  cursor: default;
+}
+
+.greeter-power {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 64px;
+  height: 64px;
+  border: 1px solid var(--quiet);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--quiet);
+  cursor: pointer;
+  font: inherit;
+  font-size: 26px;
+  transform: translate(-50%, -50%);
+}
+
+.greeter-power:hover,
+.greeter-power:focus-visible { border-color: var(--foreground-bright); color: var(--foreground-bright); outline: 0; }
+.greeter-power[hidden] { display: none; }
+
 /* ---------------------------------------------------------------- i3lock */
 
 .lock { background: rgb(5 3 3 / 94%); gap: 6px; }

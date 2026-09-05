@@ -679,7 +679,55 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       return false;
     },
 
-    runPower: () => false,
+    /* The power sequences live in power.js and borrow the greeter's screen.
+       A reboot or shutdown ends the stored session at the *start*, so a reload
+       mid-sequence lands on the boot screen — the right outcome for a machine
+       that was going down — and closes every spawned window, as a real reboot
+       would; the saved layout survives, like persisted i3 layout files. */
+    runPower(action) {
+      powerInstance?.destroy();
+      greeterInstance?.destroy();
+      greeterInstance = null;
+      import("./power.js?v=20260905h").then(({ runPower }) => {
+        powerInstance = runPower({
+          node: document.querySelector("#greeter"),
+          action,
+          reducedMotion: media.reducedMotion.matches,
+          hooks: {
+            beforeShutdown: () => {
+              save.flush();
+              for (const [id, app] of apps) {
+                const node = windows.get(id);
+                if (!node?.classList.contains("wm-spawned")) continue;
+                app.destroy?.();
+                apps.delete(id);
+                for (const name of WORKSPACES) tree.detachLeaf(state.workspaces[name], id);
+                windows.delete(id);
+                node.remove();
+              }
+              state.scratchpad = state.scratchpad.filter((leaf) => windows.has(leaf.id));
+              endSession();
+              dunst.closeAll();
+              renderer.renderNow();
+            },
+            showGreeter: (mode) => {
+              powerInstance = null;
+              showGreeter(mode);
+            },
+            lock: () => {
+              powerInstance = null;
+              lock?.lock();
+              announce("screen locked");
+            },
+          },
+        });
+      }).catch(() => {
+        powerInstance = null;
+        dunst.notify(`${action}: power management unavailable`, { key: "power" });
+      });
+      dunst.notify(`i3exit ${action}`, { key: "power" });
+      return true;
+    },
 
     /* Ends the stored session and returns to the greeter's login panel — no
        boot log, exactly as logging out of a running X session behaves. */
@@ -783,6 +831,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       lock?.destroy();
       touch?.destroy();
       greeterInstance?.destroy();
+      powerInstance?.destroy();
       for (const [, app] of apps) app.destroy?.();
       apps.clear();
       removeChrome();
@@ -823,6 +872,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   let lock = null;
   let touch = null;
   let greeterInstance = null;
+  let powerInstance = null;
 
   let greeterLoading = null;
   const showGreeter = (mode) => {
@@ -911,7 +961,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     .then(({ installIdleLock }) => {
       lock = installIdleLock({
         node: document.querySelector("#lockscreen"),
-        isBusy: () => isBlocked() || Boolean(greeterInstance),
+        isBusy: () => isBlocked() || Boolean(greeterInstance) || Boolean(powerInstance),
         onLock: () => dunst.notify("i3lock", { key: "lock" }),
       });
     })
