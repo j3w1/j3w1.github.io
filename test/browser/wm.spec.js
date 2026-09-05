@@ -26,6 +26,16 @@ const gaps = (page) =>
     return { inner, edge: Math.max(0, inner + outer) };
   });
 
+/* Geometry changes land on a requestAnimationFrame, so a measurement taken
+   straight after the keypress can still read the previous layout — which is
+   how this passed here and failed on a CI runner. Wait for the frame. */
+const awaitFullscreen = (page, id) =>
+  page.waitForFunction((windowId) => {
+    const node = document.querySelector(`[data-wm-window="${windowId}"]`);
+    const layer = node?.closest("[data-wm-layer]");
+    return Boolean(node) && Boolean(layer) && node.offsetWidth >= layer.clientWidth - 1;
+  }, id);
+
 const rect = (page, id) =>
   page.evaluate((windowId) => {
     const node = document.querySelector(`[data-wm-window="${windowId}"]`);
@@ -106,6 +116,7 @@ test("f fullscreens, q closes, and Shift+R restores every window", async ({ page
   await open(page);
   await page.locator('[data-wm-window="home-terminal"]').focus();
   await page.keyboard.press("f");
+  await awaitFullscreen(page, "home-terminal");
   const layer = await page.evaluate(() => {
     const node = document.querySelector('[data-wm-layer="home"]');
     return { w: node.clientWidth, h: node.clientHeight };
@@ -546,6 +557,7 @@ test("dragging a fullscreen window carries a manageable proxy, not the whole scr
   await open(page);
   await page.locator('[data-wm-window="home-terminal"]').focus();
   await page.keyboard.press("f");
+  await awaitFullscreen(page, "home-terminal");
   const full = await rect(page, "home-terminal");
 
   const bar = await page.locator('[data-wm-window="home-terminal"] .window-titlebar').boundingBox();
