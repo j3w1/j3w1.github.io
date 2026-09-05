@@ -62,15 +62,21 @@ export const prefs = {
   },
 };
 
+/* Media queries are created on first use rather than at import, so the pure
+   modules that import store.js (and through it this file) load in node. */
+const queries = new Map();
+const query = (text) => {
+  if (!queries.has(text)) queries.set(text, matchMedia(text));
+  return queries.get(text);
+};
+
 export const media = Object.freeze({
-  mobile: matchMedia("(max-width: 767px)"),
-  coarse: matchMedia("(pointer: coarse)"),
-  reducedMotion: matchMedia("(prefers-reduced-motion: reduce)"),
+  get mobile() { return query("(max-width: 767px)"); },
+  get coarse() { return query("(pointer: coarse)"); },
+  get reducedMotion() { return query("(prefers-reduced-motion: reduce)"); },
 });
 
-export const params = new URLSearchParams(location.search);
-
-export const isSelfTest = () => params.get("wm") === "selftest";
+export const isSelfTest = () => new URLSearchParams(location.search).get("wm") === "selftest";
 
 /* The login is a stored session, not a per-visit animation: once someone has
    logged in, the desktop comes up directly until they log out again. */

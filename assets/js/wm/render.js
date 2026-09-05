@@ -4,7 +4,7 @@
    their style, hidden, class and ARIA attributes are touched. Everything the
    window manager draws for itself lives in the per-workspace .wm-deco layer. */
 
-import { findLeaf, floatingNode } from "./tree.js?v=20260905h";
+import { findCon, findLeaf, floatingNode } from "./tree.js?v=20260905h";
 import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260905h";
 import { element, rafBatch, readPx, sameRect } from "./dom.js?v=20260905h";
 
@@ -117,6 +117,28 @@ export const createRenderer = ({ windows, layers, decos, empties, getState, getA
     renderGrips(layer, ws, result);
   };
 
+  /* focus parent: i3 draws the focused container's border; here an outline
+     in the deco layer, over the container's cached rect. */
+  let conFocusNode = null;
+  const renderConFocus = (deco, ws) => {
+    const con = ws.conFocus ? findCon(ws.root, ws.conFocus) : null;
+    const rect = con?.rect;
+    if (!rect || ws.fullscreen) {
+      conFocusNode?.remove();
+      conFocusNode = null;
+      return;
+    }
+    if (!conFocusNode) {
+      conFocusNode = element("div", "wm-confocus");
+      conFocusNode.setAttribute("aria-hidden", "true");
+    }
+    if (conFocusNode.parentElement !== deco) deco.append(conFocusNode);
+    conFocusNode.style.left = `${rect.x}px`;
+    conFocusNode.style.top = `${rect.y}px`;
+    conFocusNode.style.width = `${rect.w}px`;
+    conFocusNode.style.height = `${rect.h}px`;
+  };
+
   const renderGrips = (layer, ws, result) => {
     const focused = ws.focusMode === "floating" ? ws.focused : null;
     const rect = focused ? result.floats.get(focused) : null;
@@ -205,9 +227,16 @@ export const createRenderer = ({ windows, layers, decos, empties, getState, getA
       const border = borderOf(ws, id);
       node.classList.toggle("wm-border-pixel", border === "pixel");
       node.classList.toggle("wm-border-none", border === "none");
+      const marks = (findLeaf(ws.root, id)?.node ?? floatingNode(ws, id))?.marks;
+      const title = node.querySelector(".window-titlebar > :first-child");
+      if (title) {
+        if (marks?.length) title.dataset.wmMarks = marks.join(" ");
+        else delete title.dataset.wmMarks;
+      }
     }
 
     if (deco) renderDeco(wsName, deco, result, state);
+    if (deco) renderConFocus(deco, ws);
 
     const empty = empties.get(wsName);
     if (empty) {
@@ -236,6 +265,8 @@ export const createRenderer = ({ windows, layers, decos, empties, getState, getA
       tabbars.clear();
       grips?.node.remove();
       grips = null;
+      conFocusNode?.remove();
+      conFocusNode = null;
       for (const [id, node] of windows) {
         node.removeAttribute("style");
         node.hidden = false;

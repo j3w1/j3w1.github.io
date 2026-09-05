@@ -1061,3 +1061,75 @@ test("the shutdown log really scrolls, then the boot log follows, in order", asy
   await page.keyboard.press("x");
   await expect(page.locator("[data-login-screen]")).toBeVisible();
 });
+
+test("focus parent outlines the container and layout commands act on it", async ({ page }) => {
+  await open(page);
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("a");
+  await expect(page.locator(".wm-confocus")).toBeVisible();
+  await expect(page.locator("#workspace-announcer")).toContainText("container of 2 windows focused");
+  const outline = await page.locator(".wm-confocus").boundingBox();
+  const layer = await page.locator('[data-wm-layer="home"]').boundingBox();
+  expect(outline.width).toBeGreaterThan(layer.width * 0.9);
+  /* w on the container tabs the whole workspace; then a direction key returns focus to a window. */
+  await page.keyboard.press("w");
+  await expect(page.locator('[data-wm-layer="home"] .wm-tabbar')).toBeVisible();
+  await page.keyboard.press("e");
+  await page.keyboard.press("l");
+  await expect(page.locator(".wm-confocus")).toHaveCount(0);
+});
+
+test("marks show in the title bar, [con_mark] focus finds them across workspaces, and swap trades places", async ({ page }) => {
+  await open(page);
+  const input = page.locator('[data-wm-window="home-terminal"] .shell-input');
+  await input.click();
+  await input.fill("i3-msg mark term");
+  await input.press("Enter");
+  await expect(page.locator('[data-wm-window="home-terminal"] .window-titlebar > :first-child')).toHaveAttribute("data-wm-marks", "term");
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("3");
+  await expect(page).toHaveURL(/#projects$/);
+  await page.locator("body").press("/");
+  await page.locator("#command-input").fill("[con_mark=term] focus");
+  await page.locator("#command-input").press("Enter");
+  await expect(page).toHaveURL(/#home$/);
+  expect(await page.evaluate(() => document.activeElement?.closest("[data-wm-window]")?.dataset.wmWindow)).toBe("home-terminal");
+
+  const before = await rect(page, "home-terminal");
+  await page.locator('[data-wm-window="home-files"]').focus();
+  await input.click();
+  await page.locator('[data-wm-window="home-files"]').focus();
+  await page.locator("body").press("/");
+  await page.locator("#command-input").fill("swap container with mark term");
+  await page.locator("#command-input").press("Enter");
+  const after = await rect(page, "home-terminal");
+  expect(after.x).toBeGreaterThan(before.x);
+  /* Marks survive a reload. */
+  await page.reload();
+  await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
+  await expect(page.locator('[data-wm-window="home-terminal"] .window-titlebar > :first-child')).toHaveAttribute("data-wm-marks", "term");
+});
+
+test("a sticky spawned window follows every workspace; a site window is refused", async ({ page }) => {
+  await open(page);
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("Shift+S");
+  await expect(page.locator("#dunst")).toContainText("site windows stay on their workspace");
+  await page.locator("body").press("/");
+  await page.locator("#command-input").fill("exec neofetch");
+  await page.locator("#command-input").press("Enter");
+  const neofetch = page.locator('[data-wm-window^="neofetch-"]');
+  await expect(neofetch).toBeVisible();
+  await neofetch.focus();
+  await page.keyboard.press("Shift+S");
+  await expect(neofetch).toHaveClass(/is-floating/);
+  await page.keyboard.press("2");
+  await expect(page).toHaveURL(/#writing$/);
+  await expect(neofetch).toBeVisible();
+  await page.keyboard.press("4");
+  await expect(neofetch).toBeVisible();
+  await neofetch.focus();
+  await page.keyboard.press("Shift+S");
+  await page.keyboard.press("1");
+  await expect(neofetch).toBeHidden();
+});

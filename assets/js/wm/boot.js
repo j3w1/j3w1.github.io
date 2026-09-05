@@ -9,6 +9,7 @@
    the static version always did. */
 
 import * as tree from "./tree.js?v=20260905h";
+import * as extra from "./tree-extras.js?v=20260905h";
 import { clampFloating, focusTarget, GEOMETRY } from "./layout.js?v=20260905h";
 import { createRenderer } from "./render.js?v=20260905h";
 import { installPointer } from "./pointer.js?v=20260905h";
@@ -37,6 +38,7 @@ import {
 import { APP_NAMES, APPS, buildAppWindow } from "./apps/index.js?v=20260905h";
 import { commandList, runCommand } from "./commands.js?v=20260905h";
 import { installChrome } from "./chrome.js?v=20260905h";
+import { installFeatures } from "./features.js?v=20260905h";
 
 const TITLE_BUTTONS = [
   ["minimize", "─", "Send to scratchpad"],
@@ -109,6 +111,9 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   let active = "home";
   /* workspace back_and_forth: the workspace before this one. */
   let previous = null;
+  /* sticky: spawned floating windows shown on every workspace (never
+     persisted — spawned windows are not). */
+  const stickyIds = new Set();
   let spawnCounter = 0;
   let destroyed = false;
 
@@ -187,7 +192,23 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
 
     setActiveWorkspace(name) {
       if (!state.workspaces[name]) return;
-      if (name !== active) previous = active;
+      if (name !== active) {
+        previous = active;
+        extra.clearConFocus(state.workspaces[active]);
+        /* Sticky windows follow the visitor: their leaves move between the
+           workspaces' floating lists and their (spawned) nodes between layers. */
+        for (const id of stickyIds) {
+          const from = state.workspaces[active];
+          const leaf = tree.floatingNode(from, id);
+          if (!leaf) continue;
+          from.floating.splice(from.floating.indexOf(leaf), 1);
+          if (from.focused === id) from.focused = tree.leafIds(from.root)[0] ?? from.floating[0]?.id ?? null;
+          state.workspaces[name].floating.push(leaf);
+          const node = windows.get(id);
+          const layer = layers.get(name);
+          if (node && layer && node.parentElement !== layer) layer.insertBefore(node, decos.get(name) ?? null);
+        }
+      }
       active = name;
       bar.setUrgent(name, false);
       renderer.renderNow();
@@ -213,6 +234,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       const ws = activeWs();
       if (!tree.allIds(ws).includes(id)) return false;
       const before = `${ws.focused}/${ws.focusMode}`;
+      extra.clearConFocus(ws);
       tree.setFocus(ws, id);
       if (ws.focusMode === "floating") tree.raiseFloating(ws, id);
       /* Tabbing through a link list fires focusin for every link; only a real
@@ -245,10 +267,14 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       const ws = activeWs();
       const layout = renderer.getLayout(active);
       if (!layout || !ws.focused) return false;
+      extra.clearConFocus(ws);
       const best = focusTarget(layout, ws.focused, direction);
       if (!best) {
         /* Nothing visible that way: step through the focused tab container instead. */
-        if (!tree.stepTabular(ws, direction)) return false;
+        if (!tree.stepTabular(ws, direction)) {
+          renderer.schedule();
+          return false;
+        }
         paint({ persist: false, announceText: `${focusedTitle()} focused` });
         windows.get(ws.focused)?.focus({ preventScroll: true });
         return true;
@@ -291,6 +317,13 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
 
     setLayout(layout) {
       const ws = activeWs();
+      const con = extra.focusedCon(ws);
+      if (con) {
+        if (!tree.LAYOUTS.has(layout) || con.layout === layout) return false;
+        con.layout = layout;
+        paint({ announceText: `container ${layout} layout`, toast: { text: `layout ${layout}`, key: "layout" } });
+        return true;
+      }
       if (!ws.focused || !tree.setLayout(ws, ws.focused, layout)) return false;
       paint({ announceText: `${layout} layout`, toast: { text: `layout ${layout}`, key: "layout" } });
       return true;
@@ -298,6 +331,12 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
 
     toggleSplit() {
       const ws = activeWs();
+      const con = extra.focusedCon(ws);
+      if (con) {
+        con.layout = tree.axisOf(con.layout) === "h" ? "splitv" : "splith";
+        paint({ announceText: "container split orientation toggled", toast: { text: "toggle split", key: "layout" } });
+        return true;
+      }
       if (!ws.focused || !tree.toggleSplit(ws, ws.focused)) return false;
       paint({ announceText: "split orientation toggled", toast: { text: "toggle split", key: "layout" } });
       return true;
@@ -349,8 +388,19 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
 
     kill() {
       const ws = activeWs();
+      const con = extra.focusedCon(ws);
+      if (con) {
+        const ids = tree.leafIds(con);
+        extra.clearConFocus(ws);
+        for (const id of ids) {
+          tree.setFocus(ws, id);
+          wm.kill();
+        }
+        return ids.length > 0;
+      }
       const id = ws.focused;
       if (!id) return false;
+      stickyIds.delete(id);
       const node = windows.get(id);
       const movingFocus = focusIsInside(node);
       const title = describeWindow(node);
@@ -465,107 +515,27 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       return true;
     },
 
-    /* workspace_auto_back_and_forth: the active workspace's own number goes
-       back to the previous one, as the original config had it. */
-    requestWorkspace(index) {
-      if (WORKSPACES[index - 1] === active) return wm.workspaceBackAndForth();
-      onWorkspaceRequest(index);
-      return true;
-    },
-
-    workspaceBackAndForth() {
-      if (!previous || previous === active) return false;
-      onWorkspaceRequest(WORKSPACES.indexOf(previous) + 1);
-      return true;
-    },
-
-    moveToWorkspaceBackAndForth() {
-      if (!previous || previous === active) return false;
-      return wm.moveToWorkspaceIndex(WORKSPACES.indexOf(previous) + 1, { follow: true });
-    },
-
-    /* workspace next / prev: i3 does not wrap around. */
-    stepWorkspace(step) {
-      const index = WORKSPACES.indexOf(active) + step;
-      if (index < 0 || index >= WORKSPACES.length) return false;
-      onWorkspaceRequest(index + 1);
-      return true;
-    },
-
-    /* border none | pixel [N] | normal | toggle, on the focused window. */
-    setBorder(style, width) {
-      const ws = activeWs();
-      const leaf = ws.focused ? tree.leafFor(ws, ws.focused) : null;
-      if (!leaf) return false;
-      const order = ["normal", "pixel", "none"];
-      const next = style === "toggle" ? order[(order.indexOf(leaf.border ?? "normal") + 1) % order.length] : style;
-      if (!tree.BORDERS.has(next)) return false;
-      if (next === "normal") delete leaf.border;
-      else leaf.border = next;
-      const label = next === "pixel" ? `pixel ${width ?? 1}` : next;
-      paint({ announceText: `border ${label}`, toast: { text: `Border set to ${label}`, key: "border", timeout: dunst.appTimeout } });
-      return true;
-    },
-
-    /* gaps inner|outer current|all set|plus|minus N — global here: per-workspace
-       gaps are an i3-gaps extension the tree does not model. */
-    gaps(args) {
-      const [which, , verb, amount] = args.length === 4 ? args : [args[0], "all", args[1], args[2]];
-      if (!["inner", "outer"].includes(which) || !["set", "plus", "minus"].includes(verb)) return false;
-      const value = Number.parseInt(amount, 10);
-      if (!Number.isFinite(value)) return false;
-      const css = readGaps();
-      const current = state.gaps[which] ?? css[which];
-      const next = verb === "set" ? value : current + (verb === "plus" ? value : -value);
-      state.gaps[which] = Math.max(which === "inner" ? 0 : -20, Math.min(next, 80));
-      wm.applyGaps();
-      paint({ announceText: `${which} gaps ${state.gaps[which]}`, toast: { text: `gaps ${which} ${state.gaps[which]}`, key: "gaps" } });
-      return true;
-    },
-
-    applyGaps() {
-      for (const which of ["inner", "outer"]) {
-        if (state.gaps[which] === null) root.style.removeProperty(`--gaps-${which}`);
-        else root.style.setProperty(`--gaps-${which}`, `${state.gaps[which]}px`);
-      }
-      renderer.invalidate();
-      renderer.renderNow();
-    },
-
-    /* bar mode toggle | hide | dock. The bar stays in the DOM and the Tab
-       order; hidden means slid away until hovered, focused, or a mode is up. */
-    setBarMode(mode) {
-      const next = mode === "toggle" ? (state.bar === "hide" ? "dock" : "hide") : mode;
-      if (!["hide", "dock"].includes(next)) return false;
-      state.bar = next;
-      wm.applyBar();
-      save();
-      paint({ announceText: `bar ${next === "hide" ? "hidden" : "shown"}`, toast: { text: `bar mode ${next}`, key: "bar" } });
-      return true;
-    },
-
-    applyBar() {
-      root.dataset.bar = state.bar;
-      renderer.invalidate();
-      renderer.renderNow();
-    },
-
-    /* $mod+Shift+C: everything that is read from state rather than from the
-       tree — gaps, the bar, labels — is re-applied, as a config reload would. */
-    reload() {
-      wm.applyGaps();
-      wm.applyBar();
-      bar.setLabels?.(state.barLabels);
-      renderer.invalidate();
-      renderer.renderNow();
-      announce("configuration reloaded");
-      dunst.notify("i3: reloaded", { key: "reload" });
-      return true;
-    },
-
-    focusParent: () => false,
-    setSticky: () => false,
-    closeNotifications: () => (dunst.closeAll(), true),
+    /* Workspace navigation, borders, gaps, the bar modes, reload, container
+       focus, sticky, marks and the floating setters live in features.js. */
+    ...installFeatures({
+      wm: () => wm,
+      state: () => state,
+      active: () => active,
+      previous: () => previous,
+      workspaces: WORKSPACES,
+      onWorkspaceRequest,
+      windows,
+      paint,
+      focusedTitle,
+      dunst,
+      announce,
+      root,
+      renderer,
+      save,
+      bar,
+      bounds,
+      stickyIds,
+    }),
 
     /* Dragging a tiled window by its title bar floats it, so touch and mouse
        behave the same without a separate code path. The rect comes from the

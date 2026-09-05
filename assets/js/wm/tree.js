@@ -199,6 +199,7 @@ export const raiseFloating = (ws, id) => {
 
 export const LAYOUTS = new Set(["splith", "splitv", "tabbed", "stacked"]);
 export const BORDERS = new Set(["normal", "pixel", "none"]);
+const MARK = /^[a-z0-9_-]{1,32}$/;
 
 /* The leaf for an id, tiled or floating. */
 export const leafFor = (ws, id) => findLeaf(ws.root, id)?.node ?? floatingNode(ws, id) ?? null;
@@ -486,7 +487,16 @@ export const showScratchpad = (state, ws, bounds) => {
 /* Reconcile persisted state against the windows actually present in the document.
    Unknown ids are dropped, live ids missing from the tree are appended to their
    default workspace, and any duplicate id anywhere forces a full reset. */
+const seenMarks = new Set();
+const cleanMarks = (node) => {
+  const marks = Array.isArray(node.marks) ? node.marks.filter((mark) => typeof mark === "string" && MARK.test(mark) && !seenMarks.has(mark)) : [];
+  marks.forEach((mark) => seenMarks.add(mark));
+  if (marks.length) node.marks = marks;
+  else delete node.marks;
+};
+
 export const validate = (state, liveIds, defaults) => {
+  seenMarks.clear();
   if (!state || typeof state !== "object" || !state.workspaces) return defaults;
   const live = new Set(liveIds);
   const seen = new Set();
@@ -499,6 +509,7 @@ export const validate = (state, liveIds, defaults) => {
     ws.name = name;
     ws.floating = Array.isArray(ws.floating) ? ws.floating : [];
     ws.killed = [];
+    ws.conFocus = null;
     ws.scratchpad = undefined;
 
     /* Persisted numbers are coerced, not trusted: a NaN percent or a malformed
@@ -514,6 +525,7 @@ export const validate = (state, liveIds, defaults) => {
         seen.add(node.id);
         node.percent = finite(node.percent, 1);
         if (!BORDERS.has(node.border)) delete node.border;
+        cleanMarks(node);
         delete node.floating;
         delete node.floatRect;
         return node;
@@ -536,6 +548,7 @@ export const validate = (state, liveIds, defaults) => {
       seen.add(node.id);
       node.floating = true;
       if (!BORDERS.has(node.border)) delete node.border;
+      cleanMarks(node);
       const rect = node.floatRect;
       const valid = rect && ["x", "y", "w", "h"].every((key) => Number.isFinite(rect[key]));
       node.floatRect = valid ? { x: rect.x, y: rect.y, w: Math.max(rect.w, 1), h: Math.max(rect.h, 1) } : null;

@@ -244,9 +244,10 @@ test("the window manager stays small enough to keep the site dependency-free", a
   }
   let eagerBytes = 0;
   for (const file of eager) eagerBytes += (await fs.stat(file)).size;
-  /* Raised with the keymap's five binding modes, i3-gaps and the bar modes;
-     the ratchet is against drift, not a target. */
-  assert.ok(eagerBytes <= 168_000, `the eager window manager graph is ${eagerBytes} bytes, over its 168000 byte budget`);
+  /* Raised with the keymap's five binding modes, i3-gaps, the bar modes,
+     container focus, sticky and marks; the ratchet is against drift, not a
+     target. Everything else the config brought (power, greeter, apps) is lazy. */
+  assert.ok(eagerBytes <= 184_000, `the eager window manager graph is ${eagerBytes} bytes, over its 184000 byte budget`);
 });
 
 test("the cache token is bumped whenever a versioned asset changes", async () => {

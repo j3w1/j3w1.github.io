@@ -426,6 +426,22 @@ html.wm-active #power-menu-toggle[aria-expanded="true"] {
 .workspace-link.is-urgent { background: var(--xfg); color: var(--color0); }
 .workspace-link.is-urgent::after { margin-left: 4px; content: "!"; }
 
+/* focus parent: client.focused_inactive's color6 around the focused container. */
+.wm-confocus {
+  position: absolute;
+  z-index: var(--wm-z-deco);
+  box-sizing: border-box;
+  border: 2px solid var(--color6);
+  pointer-events: none;
+}
+
+/* i3 shows a window's marks in its title bar. */
+.window-titlebar > [data-wm-marks]::after {
+  margin-left: 6px;
+  color: var(--color2);
+  content: "[" attr(data-wm-marks) "]";
+}
+
 /* ------------------------------------------------------------------- dunst */
 
 /* dunstrc geometry "0x4-25+25": top right, 25px in — but 25px *below the

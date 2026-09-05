@@ -9,6 +9,7 @@ const stripNode = (node) => {
   if (node.type === "win") {
     const plain = { id: node.id, type: "win", percent: node.percent };
     if (node.border) plain.border = node.border;
+    if (node.marks?.length) plain.marks = [...node.marks];
     if (node.floating) {
       plain.floating = true;
       if (node.floatRect) plain.floatRect = { ...node.floatRect };

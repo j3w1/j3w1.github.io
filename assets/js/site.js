@@ -394,11 +394,21 @@ const closeLauncher = ({ restoreFocus = true } = {}) => {
   }
 };
 
+/* dmenu passes what you typed to the shell when nothing matches; here the
+   typed text goes to i3-msg, so `gaps inner set 20`, `resize set 600 400` or
+   `[con_mark=x] focus` work without a catalogue entry for every argument. */
 const executeCommand = (index = selectedCommandIndex) => {
   const command = filteredCommands[index];
-  if (!command) return;
+  const typed = commandInput?.value.trim() ?? "";
   closeLauncher();
-  command.run();
+  if (command) {
+    command.run();
+    return;
+  }
+  if (typed && wm) {
+    const result = wm.runCommand(typed);
+    if (result) announcer && (announcer.textContent = `i3-msg: ${result}`);
+  }
 };
 
 const openLauncher = (prefix) => {
