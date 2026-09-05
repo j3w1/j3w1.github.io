@@ -48,9 +48,12 @@ Add an entry to the `bindings` array in `wm/keys.js`:
 { keys: "g", description: "do the thing", test: (event) => event.key === "g", run: () => wm.doTheThing() }
 ```
 
-The help dialog and `docs/wm-usage.md`'s key table are generated from `wm.bindings()`, so they cannot
-drift. Add a matching launcher command in `boot.js`'s `commands()` so the action is reachable without
-a keyboard — see the gesture-parity rule in [wm-accessibility.md](wm-accessibility.md).
+The help dialog is generated from `wm.bindings()`; update the tables in `docs/wm-usage.md` and
+`wiki/index.html` by hand (the contract test checks the keys they document exist). Add a matching
+command in `wm/commands.js` — a handler in `HANDLERS` and an entry in `commandList` — so the action
+is reachable without a keyboard and from `i3-msg` in the terminal; see the gesture-parity rule in
+[wm-accessibility.md](wm-accessibility.md). Binding modes are tables in `keys.js` with their i3
+prompt in `MODE_PROMPTS`.
 
 Before choosing a key: bare letters are the primary scheme, `Alt`+letter is an accepted alias.
 `Alt`+arrow is browser history and must stay unbound. Bare `Space` must stay unbound or space-to-

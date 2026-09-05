@@ -2,12 +2,14 @@
    rect, returns where everything goes. No DOM, no measurement, no side effects
    beyond caching each node's rect for hit-testing. */
 
-import { isTabular, representativeLeaf } from "./tree.js?v=20260905g";
+import { isTabular, representativeLeaf } from "./tree.js?v=20260905h";
 
 export const GEOMETRY = Object.freeze({
   tabHeight: 23,
   stackRow: 23,
   gapInner: 3,
+  gapOuter: 0,
+  smartGaps: true,
   minPx: 120,
 });
 
@@ -139,7 +141,15 @@ export const computeWorkspace = (ws, bounds, geometry = GEOMETRY) => {
     return out;
   }
 
-  layoutCon(ws.root, bounds, out, geometry);
+  /* smart_gaps: a workspace whose root holds one container and nothing
+     floating draws no gaps at all (i3-gaps counts the workspace's children);
+     otherwise the outer gap (inner + outer, as i3-gaps adds them) deflates
+     the workspace before the tiles are laid out. */
+  const smart = geometry.smartGaps && ws.root.children.length <= 1 && ws.floating.length === 0;
+  const edge = smart ? 0 : Math.max(0, geometry.gapInner + geometry.gapOuter);
+  const inner = { x: bounds.x + edge, y: bounds.y + edge, w: Math.max(bounds.w - edge * 2, 1), h: Math.max(bounds.h - edge * 2, 1) };
+  out.smart = smart;
+  layoutCon(ws.root, inner, out, smart ? { ...geometry, gapInner: 0 } : geometry);
   ws.floating.forEach((node) => {
     const rect = clampFloating(node.floatRect ?? bounds, bounds);
     node.floatRect = rect;

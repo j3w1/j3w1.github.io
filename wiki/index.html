@@ -20,7 +20,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <link rel="preload" href="/assets/fonts/sauce-code-pro-text.woff2?v=db62d388" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/site.css?v=20260905g">
+  <link rel="stylesheet" href="/assets/css/site.css?v=20260905h">
   <style>
     /* A scrolling document, unlike the fixed-viewport desktop, so the shared
        stylesheet's full-height/no-scroll rules are released here. */
@@ -253,8 +253,11 @@
         <table>
           <thead><tr><th scope="col">Key</th><th scope="col">Action</th></tr></thead>
           <tbody>
-            <tr><td><kbd>1</kbd>–<kbd>7</kbd></td><td>Switch workspace</td></tr>
+            <tr><td><kbd>1</kbd>–<kbd>7</kbd></td><td>Switch workspace — the same number again goes back to the previous one</td></tr>
+            <tr><td><kbd>`</kbd></td><td>Workspace back and forth</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>←</kbd> / <kbd>→</kbd></td><td>Previous / next workspace</td></tr>
             <tr><td><kbd>h</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>l</kbd> or arrows</td><td>Focus the window left / down / up / right</td></tr>
+            <tr><td><kbd>a</kbd></td><td>Focus the parent container</td></tr>
             <tr><td><kbd>Tab</kbd></td><td>Ordinary browser focus — reaches every window</td></tr>
             <tr><td><kbd>Enter</kbd></td><td>Activate the selected row or link</td></tr>
             <tr><td><kbd>/</kbd> or <kbd>:</kbd></td><td>Open the launcher (dmenu)</td></tr>
@@ -273,9 +276,15 @@
             <tr><td><kbd>b</kbd> / <kbd>v</kbd></td><td>Split horizontally / vertically</td></tr>
             <tr><td><kbd>w</kbd> / <kbd>s</kbd> / <kbd>e</kbd></td><td>Tabbed layout / stacked layout / toggle split</td></tr>
             <tr><td><kbd>f</kbd></td><td>Fullscreen the focused window</td></tr>
-            <tr><td><kbd>q</kbd></td><td>Close the window — it can always come back</td></tr>
+            <tr><td><kbd>q</kbd> or <kbd>Shift</kbd>+<kbd>Q</kbd></td><td>Close the window — it can always come back</td></tr>
             <tr><td><kbd>r</kbd></td><td>Resize mode: then <kbd>h</kbd> <kbd>j</kbd> <kbd>k</kbd> <kbd>l</kbd>, <kbd>Shift</kbd> for bigger steps, <kbd>Escape</kbd> to leave</td></tr>
-            <tr><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>7</kbd></td><td>Move the window to another workspace</td></tr>
+            <tr><td><kbd>Shift</kbd>+<kbd>G</kbd></td><td>Gaps mode: <kbd>i</kbd> inner or <kbd>o</kbd> outer, then <kbd>+</kbd> / <kbd>-</kbd> / <kbd>0</kbd>, <kbd>Escape</kbd> to leave</td></tr>
+            <tr><td><kbd>u</kbd> / <kbd>y</kbd> / <kbd>n</kbd></td><td>Border none / a one-pixel border / a normal title bar, for the focused window</td></tr>
+            <tr><td><kbd>Shift</kbd>+<kbd>S</kbd></td><td>Sticky: keep a floating window on every workspace</td></tr>
+            <tr><td><kbd>m</kbd></td><td>Hide the bar (it returns on hover at the top edge, or when you Tab into it)</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd>–<kbd>7</kbd></td><td>Move the window to another workspace and follow it</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>7</kbd></td><td>Move the window to another workspace and stay</td></tr>
+            <tr><td><kbd>~</kbd></td><td>Move the window to the previous workspace and follow it</td></tr>
             <tr><td><kbd>Alt</kbd>+<kbd>Space</kbd></td><td>Switch focus between tiled and floating windows</td></tr>
             <tr><td><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd></td><td>Float or unfloat the focused window</td></tr>
             <tr><td><kbd>-</kbd> / <kbd>_</kbd></td><td>Show the scratchpad / send a window to it</td></tr>
@@ -290,7 +299,10 @@
           <thead><tr><th scope="col">Key</th><th scope="col">Action</th></tr></thead>
           <tbody>
             <tr><td><kbd>Shift</kbd>+<kbd>R</kbd></td><td>Restart in place — default layout, every window back</td></tr>
-            <tr><td><kbd>Shift</kbd>+<kbd>E</kbd></td><td>Session menu: lock screen, log out, restart i3</td></tr>
+            <tr><td><kbd>Shift</kbd>+<kbd>C</kbd></td><td>Reload the configuration — gaps, bar and labels re-applied</td></tr>
+            <tr><td><kbd>Shift</kbd>+<kbd>E</kbd></td><td>Session menu (i3-nagbar): lock screen, log out, restart i3, suspend, reboot, shut down</td></tr>
+            <tr><td><kbd>0</kbd></td><td>System mode, exactly as the original config bound it: <kbd>l</kbd>ock, <kbd>e</kbd>xit, switch <kbd>u</kbd>ser, <kbd>s</kbd>uspend, <kbd>h</kbd>ibernate, <kbd>r</kbd>eboot, <kbd>Shift</kbd>+<kbd>S</kbd> shutdown</td></tr>
+            <tr><td><kbd>Ctrl</kbd>+<kbd>Space</kbd></td><td>Close every notification</td></tr>
           </tbody>
         </table>
       </div>
@@ -421,7 +433,11 @@
             <tr><td><code>exec i3lock</code></td><td>Lock the screen immediately</td></tr>
             <tr><td><code>notify off</code> / <code>notify on</code></td><td>Silence the corner notifications</td></tr>
             <tr><td><code>wallpaper black</code> / <code>ember</code> / <code>ridge</code></td><td>Change the wallpaper (black is the default)</td></tr>
-            <tr><td><code>restart i3 inplace</code></td><td>Reset every window and layout to defaults</td></tr>
+            <tr><td><code>restart</code></td><td>Reset every window and layout to defaults</td></tr>
+            <tr><td><code>gaps inner set 14</code> / <code>gaps outer set -2</code></td><td>i3-gaps, as the original machine had them (14 / −2 are the defaults; a lone window gets no gaps)</td></tr>
+            <tr><td><code>bar mode hide</code> / <code>bar mode dock</code></td><td>Hide the bar until hovered or focused, or keep it docked</td></tr>
+            <tr><td><code>border none</code> / <code>border pixel 1</code> / <code>border normal</code></td><td>The focused window's border and title bar</td></tr>
+            <tr><td><code>i3-msg …</code> in the terminal</td><td>Every launcher entry is an i3 command; <code>workspace 2; layout tabbed</code> chains with semicolons</td></tr>
           </tbody>
         </table>
       </div>
@@ -451,6 +467,7 @@
             <tr><td>⌨️ Keys do nothing</td><td>Your focus is in a text field — press <kbd>Escape</kbd> or click elsewhere</td></tr>
             <tr><td>🤔 A shortcut does nothing in the terminal</td><td>Desktop keys are not shell commands. Press them outside the terminal, or type <code>keys</code></td></tr>
             <tr><td>🔐 Stuck on the login screen</td><td>Press <kbd>Enter</kbd></td></tr>
+            <tr><td>🫣 The bar vanished</td><td>Press <kbd>m</kbd>, or hover the top edge of the screen — it is in <em>hide</em> mode</td></tr>
             <tr><td>🕳️ Nothing loads at all</td><td>The site works without JavaScript: every workspace renders as one plain stacked document</td></tr>
           </tbody>
         </table>

@@ -26,30 +26,30 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <link rel="preload" href="/assets/fonts/sauce-code-pro-text.woff2?v=db62d388" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/site.css?v=20260905g">
-  <link rel="stylesheet" href="/assets/css/desktop.css?v=20260905g">
+  <link rel="stylesheet" href="/assets/css/site.css?v=20260905h">
+  <link rel="stylesheet" href="/assets/css/desktop.css?v=20260905h">
   <!-- @generated-preloads:start -->
-  <link rel="modulepreload" href="/assets/js/content-index.js?v=20260905g">
+  <link rel="modulepreload" href="/assets/js/content-index.js?v=20260905h">
   <link rel="modulepreload" href="/assets/js/content-renderer.js?v=20260824">
   <link rel="modulepreload" href="/assets/js/photo-viewer.js?v=20260825b">
-  <link rel="modulepreload" href="/assets/js/route.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/a11y.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/apps/index.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/apps/shell.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/bar.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/boot.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/chrome.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/commands.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/defaults.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/dom.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/keys.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/layout.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/notify.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/pointer.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/render.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/session.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/store.js?v=20260905g">
-  <link rel="modulepreload" href="/assets/js/wm/tree.js?v=20260905g">
+  <link rel="modulepreload" href="/assets/js/route.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/a11y.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/apps/index.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/apps/shell.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/bar.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/boot.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/chrome.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/commands.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/defaults.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/dom.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/keys.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/layout.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/notify.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/pointer.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/render.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/session.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/store.js?v=20260905h">
+  <link rel="modulepreload" href="/assets/js/wm/tree.js?v=20260905h">
   <!-- @generated-preloads:end -->
   <script>
   /* Runs before first paint so the greeter never delays content. Storage keys are
@@ -118,6 +118,7 @@
   <a class="skip-link" href="#home" data-skip-link>Skip to workspace content</a>
   <div id="wallpaper" class="wallpaper" aria-hidden="true"></div>
 
+  <div class="wm-bar-reveal" aria-hidden="true"></div>
   <header class="wm-bar" aria-label="i3 workspace and site status bar">
     <nav class="workspace-strip" aria-label="Primary workspaces">
       <a class="workspace-link is-active" href="#home" data-workspace-link="home" aria-current="page"><span aria-hidden="true">1:</span>home</a>
@@ -481,14 +482,14 @@
       </div>
       <dl id="help-bindings"><div><dt>1–7</dt><dd>switch workspace</dd></div><div><dt>h / j / k / l</dt><dd>focus left / down / up / right</dd></div><div><dt>/ or :</dt><dd>open the command launcher</dd></div><div><dt>?</dt><dd>show this help</dd></div></dl>
       <p id="help-privacy">Every status value in the bar is read from your own browser and never leaves this page.</p>
-      <p>Keyboard shortcuts pause while you type in a form control. Focus is never trapped outside an open dialog. Every window stays reachable with <kbd>Tab</kbd> alone, and <kbd>Shift</kbd>+<kbd>R</kbd> restores the default layout.</p>
+      <p>Keyboard shortcuts pause while you type in a form control. Focus is never trapped outside an open dialog. Every window stays reachable with <kbd>Tab</kbd> alone, <kbd>Shift</kbd>+<kbd>R</kbd> restores the default layout, and <kbd>0</kbd> opens the system mode.</p>
     </div>
   </dialog>
 
   <dialog id="photo-viewer" class="photo-viewer" aria-labelledby="photo-viewer-title"><header class="window-titlebar"><h2 id="photo-viewer-title">photograph — ristretto</h2><button type="button" class="window-close" data-close-photo aria-label="Close photograph">×</button></header><figure><img alt=""><figcaption></figcaption></figure></dialog>
   <div id="j3w1ctl-root"></div>
 
-  <script src="/assets/js/site.js?v=20260905g" type="module"></script>
-  <script src="/assets/js/public-content.js?v=20260905g" type="module"></script>
+  <script src="/assets/js/site.js?v=20260905h" type="module"></script>
+  <script src="/assets/js/public-content.js?v=20260905h" type="module"></script>
 </body>
 </html>

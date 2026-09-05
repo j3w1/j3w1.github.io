@@ -68,6 +68,26 @@
 
 :root {
   color-scheme: dark;
+  /* The workstation's Xresources palette, by number, so the i3bar and client
+     colours below can be read against the original config. */
+  --xbg: #0c0909;
+  --xfg: #e99499;
+  --color0: #0c0909;
+  --color1: #c81a1a;
+  --color2: #bd787d;
+  --color3: #d4868b;
+  --color4: #8c1212;
+  --color5: #f73f35;
+  --color6: #9e474a;
+  --color7: #ffa2a7;
+  --color8: #7d1310;
+  --color9: #ab1612;
+  --color10: #ad2721;
+  --color11: #b37175;
+  --color12: #871f19;
+  --color13: #e82132;
+  --color14: #e0292f;
+  --color15: #a3676b;
   --desktop: #000000;
   --terminal: #0c0909;
   --chrome: #100909;
@@ -93,6 +113,16 @@
   --title-height: 23px;
   --status-height: 23px;
   --gap: 3px;
+  /* Xresources: URxvt at pixelsize 13 with letterSpace -1; i3's bar and title
+     bars at 12pt, rendered here as 14px (16px breaks the 1280px bar). */
+  --font-size-term: 13px;
+  --font-size-i3: 14px;
+  --font-size-bar: 13px;
+  /* i3-gaps, as the original config set them: inner 14, outer -2, smart gaps
+     on. The window manager reads these; `gaps` at runtime overrides them
+     inline on :root so the stylesheet and the layout always agree. */
+  --gaps-inner: 14px;
+  --gaps-outer: -2px;
   --font: "SauceCodePro NFM", "SauceCodePro NFM fallback Cascadia Mono", "SauceCodePro NFM fallback Consolas", "SauceCodePro NFM fallback Liberation Mono", "SauceCodePro NFM fallback DejaVu Sans Mono", monospace;
 }
 
@@ -415,13 +445,32 @@ html.wm-active .window:not([hidden]) {
   outline-offset: -3px;
 }
 
+/* client.focused: border color14, child_border color4; the title bar's
+   underline is the color14 indicator. Text stays at the contrast floor. */
 .pane.is-focused {
-  border-color: var(--border-active);
+  border-color: var(--color4);
 }
 
 .pane.is-focused .window-titlebar {
-  border-bottom-color: var(--focus);
+  border-bottom-color: var(--color14);
   color: var(--foreground-bright);
+}
+
+/* border none | pixel 1 | normal, per window. The heading survives in the
+   window's accessible name, and the controls stay reachable from the keys
+   and the launcher, so hiding the bar hides only pixels. */
+.window.wm-border-pixel > .window-titlebar,
+.window.wm-border-none > .window-titlebar {
+  display: none;
+}
+
+html.wm-active .window.wm-border-none {
+  border-color: transparent;
+}
+
+/* smart_borders: the only window on a workspace draws no border. */
+html.wm-active .window.is-only:not(.is-floating) {
+  border-color: transparent;
 }
 
 .window-titlebar {
@@ -497,6 +546,25 @@ html.wm-active .window:not([hidden]) {
 }
 
 /* Terminal */
+
+.terminal-buffer,
+.vim-buffer {
+  font-size: var(--font-size-term);
+  letter-spacing: -0.5px;
+}
+
+.window-titlebar,
+.wm-tabbar,
+.nagbar,
+.command-launcher {
+  font-size: var(--font-size-i3);
+}
+
+/* The bar sits at 13px rather than 14: the extra pixel costs the mem reading
+   at 1440px, which the original bar always showed. */
+.wm-bar {
+  font-size: var(--font-size-bar);
+}
 
 .terminal-buffer {
   min-width: 0;
@@ -1404,9 +1472,10 @@ html.wm-active .window:not([hidden]) {
 }
 
 .command-results button:hover,
+/* dmenurc: selected background #630F0D with the same foreground. */
 .command-results button.is-selected {
-  background: var(--selection);
-  color: var(--prose);
+  background: var(--selection-dark);
+  color: var(--xfg);
 }
 
 /* Floating keyboard help */

@@ -2,9 +2,9 @@
    ?wm=selftest. Costs nothing when the flag is absent, adds no dependency, and
    mirrors the node test suite so the browser and the CI runner agree. */
 
-import * as tree from "./tree.js?v=20260905g";
-import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260905g";
-import { defaultState, defaultWindowIds, WORKSPACES } from "./defaults.js?v=20260905g";
+import * as tree from "./tree.js?v=20260905h";
+import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260905h";
+import { defaultState, defaultWindowIds, WORKSPACES } from "./defaults.js?v=20260905h";
 
 const BOUNDS = { x: 0, y: 0, w: 1200, h: 800 };
 
@@ -48,7 +48,8 @@ export const runSelfTest = () => {
         assert(rect.x === previous.x + previous.w + GEOMETRY.gapInner, `seam at ${index}`);
       });
       const last = rects[rects.length - 1];
-      assert(last.x + last.w === BOUNDS.w, "right edge inexact");
+      const edge = GEOMETRY.gapInner + GEOMETRY.gapOuter;
+      assert(last.x + last.w === BOUNDS.w - edge, "right edge inexact");
     }
   });
 

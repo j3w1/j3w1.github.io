@@ -14,7 +14,7 @@
    The log lines and the player live in console.js, shared with the power
    sequences; this module owns only the two greeter phases. */
 
-import { BOOT_BANNER, BOOT_LOG, playLines } from "./console.js?v=20260905g";
+import { BOOT_BANNER, BOOT_LOG, playLines } from "./console.js?v=20260905h";
 
 const HINT_AT = 900;
 const DOTS = 11;

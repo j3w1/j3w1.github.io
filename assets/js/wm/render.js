@@ -4,12 +4,13 @@
    their style, hidden, class and ARIA attributes are touched. Everything the
    window manager draws for itself lives in the per-workspace .wm-deco layer. */
 
-import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260905g";
-import { element, rafBatch, readPx, sameRect } from "./dom.js?v=20260905g";
+import { findLeaf, floatingNode } from "./tree.js?v=20260905h";
+import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260905h";
+import { element, rafBatch, readPx, sameRect } from "./dom.js?v=20260905h";
 
 const GRIPS = Object.freeze(["n", "s", "e", "w", "ne", "nw", "se", "sw"]);
 
-export const createRenderer = ({ windows, layers, decos, empties, getState, getActive, gap }) => {
+export const createRenderer = ({ windows, layers, decos, empties, getState, getActive, gaps }) => {
   const rects = new Map();
   const layouts = new Map();
   const tabbars = new Map();
@@ -154,6 +155,8 @@ export const createRenderer = ({ windows, layers, decos, empties, getState, getA
 
   let geometry = null;
 
+  const borderOf = (ws, id) => findLeaf(ws.root, id)?.node.border ?? floatingNode(ws, id)?.border ?? "normal";
+
   const renderNow = () => {
     const state = getState();
     const wsName = getActive();
@@ -169,7 +172,7 @@ export const createRenderer = ({ windows, layers, decos, empties, getState, getA
        breakpoint change already calls invalidate(). */
     geometry ??= {
       ...GEOMETRY,
-      gapInner: gap(),
+      ...gaps(),
       tabHeight: readPx("--wm-tab-height", GEOMETRY.tabHeight),
       stackRow: readPx("--wm-stack-row", GEOMETRY.stackRow),
     };
@@ -198,6 +201,10 @@ export const createRenderer = ({ windows, layers, decos, empties, getState, getA
     for (const [id, node] of windows) {
       node.classList.toggle("is-focused", id === ws.focused && !node.hidden);
       node.classList.toggle("is-floating", ws.floating.some((leaf) => leaf.id === id));
+      node.classList.toggle("is-only", result.smart && result.tiles.has(id));
+      const border = borderOf(ws, id);
+      node.classList.toggle("wm-border-pixel", border === "pixel");
+      node.classList.toggle("wm-border-none", border === "none");
     }
 
     if (deco) renderDeco(wsName, deco, result, state);
@@ -232,7 +239,7 @@ export const createRenderer = ({ windows, layers, decos, empties, getState, getA
       for (const [id, node] of windows) {
         node.removeAttribute("style");
         node.hidden = false;
-        node.classList.remove("is-focused", "is-floating");
+        node.classList.remove("is-focused", "is-floating", "is-only", "wm-border-pixel", "wm-border-none");
         clearTabSemantics(node);
         rects.delete(id);
       }

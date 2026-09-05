@@ -1,9 +1,9 @@
 /* Default desktop. The percents match the CSS grid fractions the static site
    uses, so the handoff from fallback layout to window manager is sub-pixel. */
 
-import { makeCon, makeLeaf, normalize } from "./tree.js?v=20260905g";
+import { makeCon, makeLeaf, normalize } from "./tree.js?v=20260905h";
 
-export const STATE_VERSION = 2;
+export const STATE_VERSION = 3;
 
 export const WORKSPACES = Object.freeze([
   "home",
@@ -60,6 +60,10 @@ export const defaultState = ({ mobile = false } = {}) => ({
   ),
   scratchpad: [],
   scratchpadShown: null,
+  /* null means "whatever the stylesheet says"; a number is a runtime override. */
+  gaps: { inner: null, outer: null },
+  bar: "dock",
+  barLabels: "zh",
   wallpaper: WALLPAPERS[0],
 });
 

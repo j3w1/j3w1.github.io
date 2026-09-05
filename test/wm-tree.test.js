@@ -63,6 +63,10 @@ test("normalize renormalizes percents, collapses single-child containers, drops 
   assert.ok(Math.abs(sumPercents(root) - 1) < 1e-9);
 });
 
+/* i3-gaps: with more than one tile the workspace is inset by the outer gap
+   (inner + outer) before the tiles are laid out. */
+const EDGE = GEOMETRY.gapInner + GEOMETRY.gapOuter;
+
 test("tiles exactly cover their parent with no seams or overlaps", () => {
   for (const count of [2, 3, 5, 7]) {
     const entries = Array.from({ length: count }, (_, index) => [`w${index}`, 1 / count]);
@@ -75,8 +79,9 @@ test("tiles exactly cover their parent with no seams or overlaps", () => {
       const previous = rects[index - 1];
       assert.equal(rect.x, previous.x + previous.w + GEOMETRY.gapInner, "abuts across the gap");
     });
+    assert.equal(rects[0].x, BOUNDS.x + EDGE, "left edge is the outer gap");
     const last = rects[rects.length - 1];
-    assert.equal(last.x + last.w, BOUNDS.x + BOUNDS.w, "right edge is exact");
+    assert.equal(last.x + last.w, BOUNDS.x + BOUNDS.w - EDGE, "right edge is exact");
     assert.equal(result.gutters.length, count - 1);
   }
 });
@@ -86,9 +91,25 @@ test("vertical splits tile exactly too", () => {
   const result = computeWorkspace(ws, BOUNDS);
   const a = result.tiles.get("a");
   const b = result.tiles.get("b");
-  assert.equal(a.y, 0);
+  assert.equal(a.y, EDGE);
   assert.equal(b.y, a.y + a.h + GEOMETRY.gapInner);
-  assert.equal(b.y + b.h, BOUNDS.h);
+  assert.equal(b.y + b.h, BOUNDS.h - EDGE);
+});
+
+test("smart_gaps: a lone tile fills the workspace with no gap at all", () => {
+  const ws = workspace("splith", [["only", 1]]);
+  const result = computeWorkspace(ws, BOUNDS, { ...GEOMETRY, gapInner: 14, gapOuter: -2 });
+  assert.deepEqual(result.tiles.get("only"), { ...BOUNDS });
+  assert.equal(result.smart, true);
+  /* A single nested container is still one child of the workspace. */
+  const nested = workspace("splith", [["a", 0.5], ["b", 0.5]]);
+  split(nested, "a", "v");
+  const nestedResult = computeWorkspace(nested, BOUNDS, { ...GEOMETRY, gapInner: 14, gapOuter: -2 });
+  assert.equal(nestedResult.smart, nested.root.children.length <= 1);
+  const two = computeWorkspace(workspace("splith", [["a", 0.5], ["b", 0.5]]), BOUNDS, { ...GEOMETRY, gapInner: 14, gapOuter: -2 });
+  assert.equal(two.tiles.get("a").x, BOUNDS.x + 12, "inner 14 + outer -2 = 12 at the edge");
+  assert.equal(two.tiles.get("b").x - (two.tiles.get("a").x + two.tiles.get("a").w), 14, "14 between tiles");
+  assert.equal(two.smart, false);
 });
 
 test("tabbed containers show only the focused child and emit one tab per child", () => {
@@ -100,17 +121,17 @@ test("tabbed containers show only the focused child and emit one tab per child",
   assert.equal(result.decos[0].kind, "tabbed");
   assert.equal(result.decos[0].tabs.length, 2);
   assert.equal(result.decos[0].tabs[0].active, true);
-  assert.equal(result.tiles.get("a").h, BOUNDS.h - GEOMETRY.tabHeight);
+  assert.equal(result.tiles.get("a").h, BOUNDS.h - GEOMETRY.tabHeight - EDGE * 2);
   const [first, second] = result.decos[0].tabs;
   assert.equal(first.rect.x + first.rect.w, second.rect.x, "tabs abut");
-  assert.equal(second.rect.x + second.rect.w, BOUNDS.w, "tab strip spans the width");
+  assert.equal(second.rect.x + second.rect.w, BOUNDS.w - EDGE, "tab strip spans the width inside the outer gap");
 });
 
 test("stacked containers reserve one row per child", () => {
   const ws = workspace("stacked", [["a", 0.5], ["b", 0.5], ["c", 0.5]]);
   const result = computeWorkspace(ws, BOUNDS);
   assert.equal(result.decos[0].kind, "stacked");
-  assert.equal(result.tiles.get("a").h, BOUNDS.h - GEOMETRY.stackRow * 3);
+  assert.equal(result.tiles.get("a").h, BOUNDS.h - GEOMETRY.stackRow * 3 - EDGE * 2);
   assert.ok(result.hidden.has("b") && result.hidden.has("c"));
 });
 

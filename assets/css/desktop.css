@@ -333,12 +333,53 @@ html.wm-active .window.is-floating {
 }
 
 
+/* binding_mode: the config wanted fg on color1, which is 2.5:1 — so color7
+   with color0 text, the same shape at a readable contrast. */
 .wm-mode {
   display: inline-flex;
   align-items: center;
   padding: 0 9px;
-  background: var(--focus);
-  color: var(--desktop);
+  border-bottom: 2px solid var(--color1);
+  background: var(--color7);
+  color: var(--color0);
+  white-space: nowrap;
+}
+
+/* bar mode hide: the bar slides away and the desktop takes the full height.
+   It comes back on hover at the top edge, while a binding mode is active, and
+   whenever anything inside it has focus — it never leaves the Tab order. */
+html[data-bar="hide"] .wm-bar {
+  position: fixed;
+  z-index: var(--wm-z-dunst);
+  top: 0;
+  right: 0;
+  left: 0;
+  transform: translateY(-100%);
+  transition: transform 120ms ease-out;
+}
+
+html[data-bar="hide"] .wm-bar:hover,
+html[data-bar="hide"] .wm-bar:focus-within,
+html[data-bar="hide"].wm-mode-active .wm-bar,
+html[data-bar="hide"] .wm-bar-reveal:hover + .wm-bar {
+  transform: translateY(0);
+}
+
+html[data-bar="hide"] .wm-bar-reveal {
+  position: fixed;
+  z-index: var(--wm-z-dunst);
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 6px;
+}
+
+html[data-bar="hide"] .desktop-shell {
+  height: 100dvh;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-bar="hide"] .wm-bar { transition: none; }
 }
 
 .i3tray { display: flex; align-items: center; }
@@ -381,41 +422,56 @@ html.wm-active #power-menu-toggle[aria-expanded="true"] {
   color: var(--prose);
 }
 
-.workspace-link.is-urgent { background: var(--selection); color: var(--prose); }
+/* urgent_workspace from the config: border color0, background fg, text color0. */
+.workspace-link.is-urgent { background: var(--xfg); color: var(--color0); }
 .workspace-link.is-urgent::after { margin-left: 4px; content: "!"; }
 
 /* ------------------------------------------------------------------- dunst */
 
-/* Bottom right, not top right: the top right corner belongs to the focused
-   window's minimize / maximize / close buttons, and a toast landing there after
-   every action blocked exactly the controls the action was aimed at. */
+/* dunstrc geometry "0x4-25+25": top right, 25px in — but 25px *below the
+   title-bar row* of a window touching the top edge, so a toast lands in that
+   window's body and never on its minimize / maximize / close buttons (the
+   reason toasts once lived bottom right). Frame 1px #AE1914, separator fg,
+   padding 8/10, transparency 15. */
 .dunst {
   position: fixed;
   z-index: var(--wm-z-dunst);
-  right: 8px;
-  bottom: 8px;
+  top: calc(var(--bar-height) + var(--gap) + var(--title-height) + 25px);
+  right: 25px;
   display: flex;
-  max-width: min(320px, 45vw);
+  max-width: min(360px, 45vw);
   flex-direction: column;
   align-items: flex-end;
-  gap: 4px;
+  gap: 0;
   pointer-events: none;
 }
 
 .dunst-toast {
+  display: flex;
   max-width: 100%;
-  padding: 5px 9px;
-  border: 1px solid var(--border-strong);
-  background: var(--surface-raised);
-  color: var(--foreground-bright);
-  opacity: 0.94;
+  flex-direction: column;
+  padding: 8px 10px;
+  border: 1px solid #ae1914;
+  background: var(--color0);
+  color: var(--xfg);
+  opacity: 0.85;
   overflow: hidden;
   pointer-events: auto;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 13px;
+  line-height: 1.35;
 }
 
-.dunst-toast.is-critical { border-color: var(--focus); background: var(--selection-dark); color: var(--prose); }
+.dunst-toast + .dunst-toast { border-top: 1px solid var(--xfg); }
+.dunst-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dunst-body { color: var(--color2); white-space: pre-line; }
+.dunst-body[hidden] { display: none; }
+
+/* urgency_low: bg color15, black text (the config's color0 on color15 sits
+   just under the contrast floor). urgency_critical: #DC282E / #F9FAF9, no timeout. */
+.dunst-toast.is-low { background: var(--color15); color: #000; opacity: 0.95; }
+.dunst-toast.is-low .dunst-body { color: #1a0505; }
+.dunst-toast.is-critical { border-color: #f9faf9; background: #dc282e; color: #f9faf9; opacity: 1; }
+.dunst-toast.is-critical .dunst-body { color: #f9faf9; }
 
 /* ----------------------------------------------------------------- greeter */
 
@@ -649,7 +705,8 @@ html.wm-locked .desktop-shell { pointer-events: none; }
 
 html:not(.wm-active) .workspace-layer {
   display: grid;
-  gap: var(--gap);
+  gap: var(--gaps-inner);
+  padding: max(0px, calc(var(--gaps-inner) + var(--gaps-outer)));
 }
 
 html:not(.wm-active) .writing-grid,
@@ -773,14 +830,15 @@ html[data-wm="off"] .project-detail,
 
 /* The bar clips rather than squeezing the workspace names, so blocks are shed
    in ascending order of usefulness before they ever reach that point. */
-@media (max-width: 1749px) { .i3block-lang { display: none; } }
-@media (max-width: 1679px) { .i3block-heap { display: none; } }
-@media (max-width: 1599px) { .i3block-tz { display: none; } }
-@media (max-width: 1479px) { .i3block-up { display: none; } }
-@media (max-width: 1419px) { .i3block-res { display: none; } }
-@media (max-width: 1339px) { .i3block-mem { display: none; } }
-@media (max-width: 1249px) { .i3block-net { display: none; } }
-@media (max-width: 1023px) { .i3block-cpu, .i3block-bat { display: none; } }
+/* Shedding order, re-tuned for the 13px bar: least useful readings go first. */
+@media (max-width: 1919px) { .i3block-lang { display: none; } }
+@media (max-width: 1839px) { .i3block-heap { display: none; } }
+@media (max-width: 1749px) { .i3block-tz { display: none; } }
+@media (max-width: 1619px) { .i3block-up { display: none; } }
+@media (max-width: 1549px) { .i3block-res { display: none; } }
+@media (max-width: 1399px) { .i3block-mem { display: none; } }
+@media (max-width: 1319px) { .i3block-net { display: none; } }
+@media (max-width: 1079px) { .i3block-cpu, .i3block-bat { display: none; } }
 
 @media (max-width: 1199px) {
   html.wm-active .photography-body,
@@ -791,7 +849,7 @@ html[data-wm="off"] .project-detail,
   :root { --wm-tab-height: 44px; --wm-stack-row: 44px; }
 
   .i3status { display: none; }
-  .dunst { right: 6px; bottom: 6px; left: 6px; max-width: none; }
+  .dunst { top: calc(var(--bar-height) + var(--title-height) + 8px); right: 6px; left: 6px; max-width: none; }
   .wm-tab { min-width: 88px; padding: 0 10px; }
   .window-mark { width: 30px; height: 30px; }
 

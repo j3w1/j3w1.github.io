@@ -71,7 +71,10 @@ WmNode = {
 }
 
 WmWorkspace = { name, root, floating[], killed[], focused, fullscreen, focusMode, userTouched }
-WmState     = { version, workspaces, scratchpad[], scratchpadShown, wallpaper }
+WmState     = { version, workspaces, scratchpad[], scratchpadShown, wallpaper,
+                gaps: { inner, outer },      // null = the stylesheet's tokens
+                bar: "dock" | "hide", barLabels: "zh" | "en" }
+// leaves may also carry border: "pixel" | "none" (normal when absent)
 ```
 
 `splith` and `tabbed` are the horizontal axis; `splitv` and `stacked` the vertical one — the same
@@ -118,6 +121,9 @@ instead — which is what makes tab children reachable from the keyboard.
 | `dom.js` | Shared helpers: `element`, `listen`, `readPx`, `rafBatch`, `throttle`, `isEditable`. |
 | `greeter.js`, `idle-lock.js`, `touch.js`, `selftest.js` | Loaded on demand: the session curtains, coarse-pointer gestures, and the console assertions. |
 | `apps/` | `shell`, `neofetch`, `htop`, `cmatrix`, `feh`. |
+| `commands.js` | The i3-msg command language: a pure parser with `;` chaining, the handlers, and the launcher catalogue generated from the same table. |
+| `chrome.js` | Title-bar buttons, the nagbar, the restore link, tablist keys, resize plumbing — every document-level handler, torn down as one. |
+| `console.js` | The boot, shutdown and resume logs, and the time-driven player the greeter, the power sequences and `journalctl -b` share. |
 | `boot.js` | The facade, and the only file that knows about all of the above. |
 
 Dependency direction is strictly one way: `site.js → wm/*`. The window manager never imports

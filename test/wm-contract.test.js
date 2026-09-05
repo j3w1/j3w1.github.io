@@ -155,13 +155,15 @@ test("the wiki exists and the site points at it in more than one place", async (
 
   /* Every hotkey the guide documents has to be a binding that really exists. */
   const bindings = await read("assets", "js", "wm", "keys.js");
-  for (const key of ["Shift + R", "Shift + E", "Alt + Shift + Space", "resize mode"]) {
+  for (const key of ["Shift + R", "Shift + E", "Shift + C", "Shift + G", "Shift + S", "Alt + Shift + Space", "resize mode", "system mode", "gaps mode", "Ctrl + ← / →"]) {
     assert.ok(bindings.includes(key), `keys.js no longer defines ${key}`);
   }
   const guide = wiki.toLowerCase();
-  for (const topic of ["shift</kbd>+<kbd>r", "shift</kbd>+<kbd>e", "resize mode", "scratchpad", "logout", "wallpaper"]) {
+  for (const topic of ["shift</kbd>+<kbd>r", "shift</kbd>+<kbd>e", "shift</kbd>+<kbd>c", "shift</kbd>+<kbd>g", "resize mode", "gaps mode", "system mode", "scratchpad", "logout", "wallpaper", "back and forth", "hide the bar", "border none"]) {
     assert.ok(guide.includes(topic), `the wiki should document ${topic}`);
   }
+  /* i3's own prompt for the system mode, verbatim from the original config. */
+  assert.ok(bindings.includes("(l)ock, (e)xit, switch_(u)ser, (s)uspend, (h)ibernate, (r)eboot, (Shift+s)hutdown"));
 
   /* Discoverable from the desktop, not only from a URL someone was told about.
      The wiki and j3w1ctl live in the file manager's sidebar rather than the
@@ -205,7 +207,7 @@ test("the window manager stays small enough to keep the site dependency-free", a
     ["assets/css/desktop.css", 26_000],
     /* boot.js is over its intended size and is split in the realism phase
        (commands.js, chrome.js, console.js); this cap is the interim ceiling. */
-    ["assets/js/wm/boot.js", 38_000],
+    ["assets/js/wm/boot.js", 40_000],
     ["assets/js/wm/tree.js", 24_000],
     ["assets/js/wm/layout.js", 10_000],
     ["assets/js/wm/render.js", 11_000],
@@ -242,7 +244,9 @@ test("the window manager stays small enough to keep the site dependency-free", a
   }
   let eagerBytes = 0;
   for (const file of eager) eagerBytes += (await fs.stat(file)).size;
-  assert.ok(eagerBytes <= 148_000, `the eager window manager graph is ${eagerBytes} bytes, over its 148000 byte budget`);
+  /* Raised with the keymap's five binding modes, i3-gaps and the bar modes;
+     the ratchet is against drift, not a target. */
+  assert.ok(eagerBytes <= 168_000, `the eager window manager graph is ${eagerBytes} bytes, over its 168000 byte budget`);
 });
 
 test("the cache token is bumped whenever a versioned asset changes", async () => {

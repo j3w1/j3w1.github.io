@@ -16,6 +16,16 @@ const open = async (page, path = "/#home") => {
   await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
 };
 
+/* i3-gaps: the inner gap between tiles and the edge inset (inner + outer),
+   read from the stylesheet's tokens so the tests follow the config. */
+const gaps = (page) =>
+  page.evaluate(() => {
+    const style = getComputedStyle(document.documentElement);
+    const inner = Number.parseFloat(style.getPropertyValue("--gaps-inner"));
+    const outer = Number.parseFloat(style.getPropertyValue("--gaps-outer"));
+    return { inner, edge: Math.max(0, inner + outer) };
+  });
+
 const rect = (page, id) =>
   page.evaluate((windowId) => {
     const node = document.querySelector(`[data-wm-window="${windowId}"]`);
@@ -35,11 +45,14 @@ test("the window manager boots and tiles the home workspace without seams", asyn
   expect(terminal).not.toBeNull();
   expect(files).not.toBeNull();
   expect(terminal.y).toBe(files.y);
-  /* The gap between tiles is exactly --gap; no overlap, no dead pixels. */
-  expect(files.x - (terminal.x + terminal.w)).toBe(3);
+  /* The gap between tiles is exactly the inner gap; no overlap, no dead pixels. */
+  const { inner, edge } = await gaps(page);
+  expect(inner).toBe(14);
+  expect(files.x - (terminal.x + terminal.w)).toBe(inner);
   const layer = await page.evaluate(() =>
     document.querySelector('[data-wm-layer="home"]').clientWidth);
-  expect(files.x + files.w).toBe(layer);
+  expect(files.x + files.w).toBe(layer - edge);
+  expect(terminal.x).toBe(edge);
 });
 
 test("the self test passes in the browser", async ({ page }) => {
@@ -160,7 +173,7 @@ test("dragging the gutter resizes neighbouring tiles", async ({ page }) => {
   const after = await rect(page, "home-terminal");
   expect(after.w).toBeGreaterThan(before.w + 100);
   const files = await rect(page, "home-files");
-  expect(files.x - (after.x + after.w)).toBe(3);
+  expect(files.x - (after.x + after.w)).toBe((await gaps(page)).inner);
 });
 
 test("Alt+dragging a title bar floats a window and keeps it on screen", async ({ page }) => {
@@ -700,8 +713,10 @@ test("the first paint under the greeter flag is a curtain, not the desktop", asy
 test("a window moved to another workspace is visible there and comes back with Shift+R", async ({ page }) => {
   await open(page);
   await page.locator('[data-wm-window="home-terminal"]').focus();
-  await page.keyboard.press("Alt+Shift+Digit2");
+  /* Ctrl+Alt+2 moves the window and stays; Alt+Shift+2 would follow it. */
+  await page.keyboard.press("Control+Alt+Digit2");
   await expect(page.locator('[data-wm-window="home-terminal"]')).toBeHidden();
+  await expect(page).toHaveURL(/#home$/);
   await page.keyboard.press("2");
   await expect(page).toHaveURL(/#writing$/);
   const terminal = page.locator('[data-wm-window="home-terminal"]');
@@ -844,4 +859,94 @@ test("photographs reserve their real box, load lazily, and are not cropped to 4:
   const style = await thumbs.nth(1).evaluate((node) => ({ fit: getComputedStyle(node).objectFit, ratio: getComputedStyle(node).aspectRatio }));
   expect(style.fit).not.toBe("cover");
   expect(style.ratio).not.toMatch(/^4 \/ 3$/);
+});
+
+test("workspace back and forth, stepping, and the same digit twice", async ({ page }) => {
+  await open(page);
+  await page.locator("body").press("3");
+  await expect(page).toHaveURL(/#projects$/);
+  await page.locator("body").press("`");
+  await expect(page).toHaveURL(/#home$/);
+  await page.locator("body").press("`");
+  await expect(page).toHaveURL(/#projects$/);
+  /* workspace_auto_back_and_forth: 3 again goes back. */
+  await page.locator("body").press("3");
+  await expect(page).toHaveURL(/#home$/);
+  await page.locator("body").press("Control+ArrowRight");
+  await expect(page).toHaveURL(/#writing$/);
+  await page.locator("body").press("Control+ArrowLeft");
+  await expect(page).toHaveURL(/#home$/);
+  await page.locator("body").press("Control+ArrowLeft");
+  await expect(page).toHaveURL(/#home$/);
+});
+
+test("m hides the bar, and it comes back for keyboard focus and a binding mode", async ({ page }) => {
+  await open(page);
+  const bar = page.locator(".wm-bar");
+  const shell = page.locator(".desktop-shell");
+  const before = await shell.boundingBox();
+  await page.locator("body").press("m");
+  await expect(page.locator("html")).toHaveAttribute("data-bar", "hide");
+  await expect(page.locator("#dunst")).toContainText("bar mode hide");
+  const after = await shell.boundingBox();
+  expect(after.height).toBeGreaterThan(before.height);
+  /* Slid away, but still in the DOM and still reachable. */
+  const transform = await bar.evaluate((node) => getComputedStyle(node).transform);
+  expect(transform).not.toBe("none");
+  await page.locator(".workspace-link").first().focus();
+  await page.waitForTimeout(200);
+  expect(await bar.evaluate((node) => getComputedStyle(node).transform)).toMatch(/matrix\(1, 0, 0, 1, 0, 0\)|none/);
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("r");
+  await expect(page.locator("html")).toHaveClass(/wm-mode-active/);
+  await page.keyboard.press("Escape");
+  await page.locator("body").press("m");
+  await expect(page.locator("html")).toHaveAttribute("data-bar", "dock");
+});
+
+test("the system mode shows i3's prompt in the bar and Escape leaves it", async ({ page }) => {
+  await open(page);
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("0");
+  await expect(page.locator("#wm-mode")).toHaveText("(l)ock, (e)xit, switch_(u)ser, (s)uspend, (h)ibernate, (r)eboot, (Shift+s)hutdown");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#wm-mode")).toBeHidden();
+  await page.keyboard.press("0");
+  await page.keyboard.press("l");
+  await expect(page.locator("#lockscreen")).toBeVisible();
+});
+
+test("gaps mode widens the gap and reload re-applies it; border keys change the chrome", async ({ page }) => {
+  await open(page);
+  const before = await rect(page, "home-terminal");
+  const base = (await gaps(page)).inner;
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("Shift+G");
+  await expect(page.locator("#wm-mode")).toContainText("Gaps: (o) outer, (i) inner");
+  await page.keyboard.press("i");
+  await expect(page.locator("#wm-mode")).toContainText("Inner Gaps");
+  await page.keyboard.press("+");
+  await page.keyboard.press("Escape");
+  const after = await rect(page, "home-terminal");
+  const files = await rect(page, "home-files");
+  expect(files.x - (after.x + after.w)).toBe(base + 5);
+  expect((await gaps(page)).inner).toBe(base + 5, "the runtime override is written back to the stylesheet token");
+  expect(after.w).toBeLessThan(before.w);
+  await page.waitForTimeout(400);
+  await page.keyboard.press("Shift+C");
+  await expect(page.locator("#workspace-announcer")).toContainText("configuration reloaded");
+  expect((await rect(page, "home-files")).x - (after.x + after.w)).toBe(base + 5);
+
+  await page.waitForTimeout(400);
+  await page.keyboard.press("y");
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toHaveClass(/wm-border-pixel/);
+  await expect(page.locator('[data-wm-window="home-terminal"] .window-titlebar')).toBeHidden();
+  await expect(page.locator("#dunst")).toContainText("Border set to pixel 1");
+  await page.keyboard.press("n");
+  await expect(page.locator('[data-wm-window="home-terminal"] .window-titlebar')).toBeVisible();
+  /* The border survives a reload of the page. */
+  await page.keyboard.press("u");
+  await page.reload();
+  await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toHaveClass(/wm-border-none/);
 });

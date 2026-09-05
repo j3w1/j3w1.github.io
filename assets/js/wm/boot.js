@@ -8,15 +8,15 @@
    added, and every fallback rule in the stylesheet renders the site exactly as
    the static version always did. */
 
-import * as tree from "./tree.js?v=20260905g";
-import { clampFloating, focusTarget, GEOMETRY } from "./layout.js?v=20260905g";
-import { createRenderer } from "./render.js?v=20260905g";
-import { installPointer } from "./pointer.js?v=20260905g";
-import { installKeys } from "./keys.js?v=20260905g";
-import { installBar } from "./bar.js?v=20260905g";
-import { installNotify } from "./notify.js?v=20260905g";
-import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260905g";
-import { element, readGap } from "./dom.js?v=20260905g";
+import * as tree from "./tree.js?v=20260905h";
+import { clampFloating, focusTarget, GEOMETRY } from "./layout.js?v=20260905h";
+import { createRenderer } from "./render.js?v=20260905h";
+import { installPointer } from "./pointer.js?v=20260905h";
+import { installKeys } from "./keys.js?v=20260905h";
+import { installBar } from "./bar.js?v=20260905h";
+import { installNotify } from "./notify.js?v=20260905h";
+import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260905h";
+import { element, readGaps } from "./dom.js?v=20260905h";
 import {
   clearGreetFlag,
   endSession,
@@ -26,17 +26,17 @@ import {
   shouldGreet,
   startSession,
   supported,
-} from "./session.js?v=20260905g";
-import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260905g";
+} from "./session.js?v=20260905h";
+import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260905h";
 import {
   defaultState,
   reapplyResponsiveDefaults,
   WALLPAPERS,
   WORKSPACES,
-} from "./defaults.js?v=20260905g";
-import { APP_NAMES, APPS, buildAppWindow } from "./apps/index.js?v=20260905g";
-import { commandList, runCommand } from "./commands.js?v=20260905g";
-import { installChrome } from "./chrome.js?v=20260905g";
+} from "./defaults.js?v=20260905h";
+import { APP_NAMES, APPS, buildAppWindow } from "./apps/index.js?v=20260905h";
+import { commandList, runCommand } from "./commands.js?v=20260905h";
+import { installChrome } from "./chrome.js?v=20260905h";
 
 const TITLE_BUTTONS = [
   ["minimize", "─", "Send to scratchpad"],
@@ -107,6 +107,8 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
      leave data-wallpaper pointing at a rule that no longer exists. */
   if (!WALLPAPERS.includes(state.wallpaper)) state.wallpaper = WALLPAPERS[0];
   let active = "home";
+  /* workspace back_and_forth: the workspace before this one. */
+  let previous = null;
   let spawnCounter = 0;
   let destroyed = false;
 
@@ -125,7 +127,11 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     empties,
     getState: () => state,
     getActive: () => active,
-    gap: readGap,
+    /* Runtime `gaps` overrides win over the stylesheet's tokens. */
+    gaps: () => {
+      const css = readGaps();
+      return { gapInner: state.gaps?.inner ?? css.inner, gapOuter: state.gaps?.outer ?? css.outer };
+    },
   });
 
   const bar = installBar({
@@ -147,7 +153,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     for (const name of touched) state.workspaces[name].userTouched = true;
     if (persist) save();
     if (announceText) announce(announceText);
-    if (toast) dunst.notify(toast.text, { key: toast.key ?? toast.text });
+    if (toast) dunst.notify(toast.text, { key: toast.key ?? toast.text, timeout: toast.timeout, urgency: toast.timeout ? "normal" : "low" });
   };
 
   const updateCounts = () => {
@@ -181,6 +187,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
 
     setActiveWorkspace(name) {
       if (!state.workspaces[name]) return;
+      if (name !== active) previous = active;
       active = name;
       bar.setUrgent(name, false);
       renderer.renderNow();
@@ -387,8 +394,8 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       apps.clear();
       state = fallback();
       clearStore();
-      renderer.invalidate();
-      renderer.renderNow();
+      wm.applyGaps();
+      wm.applyBar();
       updateCounts();
       attachHomeShell();
       announce("window manager restarted; every window restored");
@@ -434,22 +441,131 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       return true;
     },
 
-    moveToWorkspaceIndex(index) {
+    moveToWorkspaceIndex(index, { follow = false } = {}) {
       const target = WORKSPACES[index - 1];
       const ws = activeWs();
-      if (!target || !ws.focused) return false;
+      if (!target || !ws.focused || target === active) return false;
       const title = focusedTitle();
-      if (!tree.moveToWorkspace(state, ws.focused, active, target)) return false;
+      const id = ws.focused;
+      if (!tree.moveToWorkspace(state, id, active, target)) return false;
       paint({
         touched: [active, target],
         announceText: `${title} moved to ${target}`,
         toast: { text: `move to ${index}:${target}`, key: "moveto" },
       });
+      if (follow) {
+        /* $mod+Shift+N in the original config: move the container and go with it. */
+        tree.setFocus(state.workspaces[target], id);
+        onWorkspaceRequest(index);
+        return true;
+      }
       bar.setUrgent(target, true);
       renderer.renderNow();
       restoreFocus(null);
       return true;
     },
+
+    /* workspace_auto_back_and_forth: the active workspace's own number goes
+       back to the previous one, as the original config had it. */
+    requestWorkspace(index) {
+      if (WORKSPACES[index - 1] === active) return wm.workspaceBackAndForth();
+      onWorkspaceRequest(index);
+      return true;
+    },
+
+    workspaceBackAndForth() {
+      if (!previous || previous === active) return false;
+      onWorkspaceRequest(WORKSPACES.indexOf(previous) + 1);
+      return true;
+    },
+
+    moveToWorkspaceBackAndForth() {
+      if (!previous || previous === active) return false;
+      return wm.moveToWorkspaceIndex(WORKSPACES.indexOf(previous) + 1, { follow: true });
+    },
+
+    /* workspace next / prev: i3 does not wrap around. */
+    stepWorkspace(step) {
+      const index = WORKSPACES.indexOf(active) + step;
+      if (index < 0 || index >= WORKSPACES.length) return false;
+      onWorkspaceRequest(index + 1);
+      return true;
+    },
+
+    /* border none | pixel [N] | normal | toggle, on the focused window. */
+    setBorder(style, width) {
+      const ws = activeWs();
+      const leaf = ws.focused ? tree.leafFor(ws, ws.focused) : null;
+      if (!leaf) return false;
+      const order = ["normal", "pixel", "none"];
+      const next = style === "toggle" ? order[(order.indexOf(leaf.border ?? "normal") + 1) % order.length] : style;
+      if (!tree.BORDERS.has(next)) return false;
+      if (next === "normal") delete leaf.border;
+      else leaf.border = next;
+      const label = next === "pixel" ? `pixel ${width ?? 1}` : next;
+      paint({ announceText: `border ${label}`, toast: { text: `Border set to ${label}`, key: "border", timeout: dunst.appTimeout } });
+      return true;
+    },
+
+    /* gaps inner|outer current|all set|plus|minus N — global here: per-workspace
+       gaps are an i3-gaps extension the tree does not model. */
+    gaps(args) {
+      const [which, , verb, amount] = args.length === 4 ? args : [args[0], "all", args[1], args[2]];
+      if (!["inner", "outer"].includes(which) || !["set", "plus", "minus"].includes(verb)) return false;
+      const value = Number.parseInt(amount, 10);
+      if (!Number.isFinite(value)) return false;
+      const css = readGaps();
+      const current = state.gaps[which] ?? css[which];
+      const next = verb === "set" ? value : current + (verb === "plus" ? value : -value);
+      state.gaps[which] = Math.max(which === "inner" ? 0 : -20, Math.min(next, 80));
+      wm.applyGaps();
+      paint({ announceText: `${which} gaps ${state.gaps[which]}`, toast: { text: `gaps ${which} ${state.gaps[which]}`, key: "gaps" } });
+      return true;
+    },
+
+    applyGaps() {
+      for (const which of ["inner", "outer"]) {
+        if (state.gaps[which] === null) root.style.removeProperty(`--gaps-${which}`);
+        else root.style.setProperty(`--gaps-${which}`, `${state.gaps[which]}px`);
+      }
+      renderer.invalidate();
+      renderer.renderNow();
+    },
+
+    /* bar mode toggle | hide | dock. The bar stays in the DOM and the Tab
+       order; hidden means slid away until hovered, focused, or a mode is up. */
+    setBarMode(mode) {
+      const next = mode === "toggle" ? (state.bar === "hide" ? "dock" : "hide") : mode;
+      if (!["hide", "dock"].includes(next)) return false;
+      state.bar = next;
+      wm.applyBar();
+      save();
+      paint({ announceText: `bar ${next === "hide" ? "hidden" : "shown"}`, toast: { text: `bar mode ${next}`, key: "bar" } });
+      return true;
+    },
+
+    applyBar() {
+      root.dataset.bar = state.bar;
+      renderer.invalidate();
+      renderer.renderNow();
+    },
+
+    /* $mod+Shift+C: everything that is read from state rather than from the
+       tree — gaps, the bar, labels — is re-applied, as a config reload would. */
+    reload() {
+      wm.applyGaps();
+      wm.applyBar();
+      bar.setLabels?.(state.barLabels);
+      renderer.invalidate();
+      renderer.renderNow();
+      announce("configuration reloaded");
+      dunst.notify("i3: reloaded", { key: "reload" });
+      return true;
+    },
+
+    focusParent: () => false,
+    setSticky: () => false,
+    closeNotifications: () => (dunst.closeAll(), true),
 
     /* Dragging a tiled window by its title bar floats it, so touch and mouse
        behave the same without a separate code path. The rect comes from the
@@ -647,8 +763,8 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
 
     runCommand: (text) => runCommand(wm, commandContext, text),
 
-    onModeChange: (mode) => {
-      bar.setMode(mode);
+    onModeChange: (mode, prompt) => {
+      bar.setMode(mode, prompt);
       if (mode !== "default") dunst.notify(`mode ${mode}`, { key: "mode" });
     },
 
@@ -716,7 +832,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     greeterInstance?.destroy();
     greeterInstance = null;
     if (greeterLoading) return greeterLoading;
-    greeterLoading = import("./greeter.js?v=20260905g").then(({ runGreeter }) => {
+    greeterLoading = import("./greeter.js?v=20260905h").then(({ runGreeter }) => {
       greeterLoading = null;
       greeterInstance = runGreeter({
         node: document.querySelector("#greeter"),
@@ -758,6 +874,10 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   });
 
   root.dataset.wallpaper = state.wallpaper;
+  for (const which of ["inner", "outer"]) {
+    if (state.gaps[which] !== null) root.style.setProperty(`--gaps-${which}`, `${state.gaps[which]}px`);
+  }
+  root.dataset.bar = state.bar;
   root.dataset.wm = "on";
   root.classList.add("wm-active");
   renderer.renderNow();
@@ -780,14 +900,14 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   attachHomeShell();
 
   if (media.coarse.matches) {
-    import("./touch.js?v=20260905g")
+    import("./touch.js?v=20260905h")
       .then(({ installTouch }) => {
         touch = installTouch({ shell, wm, isBlocked: blocked });
       })
       .catch(() => {});
   }
 
-  import("./idle-lock.js?v=20260905g")
+  import("./idle-lock.js?v=20260905h")
     .then(({ installIdleLock }) => {
       lock = installIdleLock({
         node: document.querySelector("#lockscreen"),
@@ -801,7 +921,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   else startSession();
 
   if (isSelfTest()) {
-    import("./selftest.js?v=20260905g")
+    import("./selftest.js?v=20260905h")
       .then(({ runSelfTest }) => runSelfTest())
       .catch((error) => console.error("[wm] selftest failed to load", error));
   }

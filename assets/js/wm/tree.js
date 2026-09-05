@@ -198,6 +198,10 @@ export const raiseFloating = (ws, id) => {
 };
 
 export const LAYOUTS = new Set(["splith", "splitv", "tabbed", "stacked"]);
+export const BORDERS = new Set(["normal", "pixel", "none"]);
+
+/* The leaf for an id, tiled or floating. */
+export const leafFor = (ws, id) => findLeaf(ws.root, id)?.node ?? floatingNode(ws, id) ?? null;
 
 export const setLayout = (ws, id, layout) => {
   if (!LAYOUTS.has(layout)) return false;
@@ -509,6 +513,7 @@ export const validate = (state, liveIds, defaults) => {
         }
         seen.add(node.id);
         node.percent = finite(node.percent, 1);
+        if (!BORDERS.has(node.border)) delete node.border;
         delete node.floating;
         delete node.floatRect;
         return node;
@@ -530,6 +535,7 @@ export const validate = (state, liveIds, defaults) => {
       }
       seen.add(node.id);
       node.floating = true;
+      if (!BORDERS.has(node.border)) delete node.border;
       const rect = node.floatRect;
       const valid = rect && ["x", "y", "w", "h"].every((key) => Number.isFinite(rect[key]));
       node.floatRect = valid ? { x: rect.x, y: rect.y, w: Math.max(rect.w, 1), h: Math.max(rect.h, 1) } : null;
@@ -570,6 +576,12 @@ export const validate = (state, liveIds, defaults) => {
   }
 
   state.version = defaults.version;
+  const gapValue = (value) => (Number.isFinite(value) && value >= -20 && value <= 80 ? Math.round(value) : null);
+  state.gaps = state.gaps && typeof state.gaps === "object"
+    ? { inner: gapValue(state.gaps.inner), outer: gapValue(state.gaps.outer) }
+    : { inner: null, outer: null };
+  state.bar = state.bar === "hide" ? "hide" : "dock";
+  state.barLabels = state.barLabels === "en" ? "en" : "zh";
   state.wallpaper = typeof state.wallpaper === "string" ? state.wallpaper : defaults.wallpaper;
   return state;
 };

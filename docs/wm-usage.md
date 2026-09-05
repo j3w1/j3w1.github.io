@@ -60,8 +60,11 @@ pause automatically while you are typing in a text field.
 
 | Key | Action |
 | --- | --- |
-| `1`–`7` | Switch workspace |
+| `1`–`7` | Switch workspace — the same number again goes back to the previous one |
+| `` ` `` | Workspace back and forth |
+| `Ctrl`+`←` / `→` | Previous / next workspace |
 | `h` `j` `k` `l` or arrows | Focus the window left / down / up / right |
+| `a` | Focus the parent container |
 | `Tab` | Ordinary browser focus — every window is reachable this way |
 | `Enter` | Activate the selected row or link |
 | `/` or `:` | Open the launcher (dmenu) |
@@ -76,15 +79,24 @@ pause automatically while you are typing in a text field.
 | `b` / `v` | Split horizontally / vertically |
 | `w` / `s` / `e` | Tabbed layout / stacked layout / toggle split |
 | `f` | Fullscreen |
-| `q` | Close the window (it can always come back) |
+| `q` or `Shift`+`Q` | Close the window (it can always come back) |
 | `r` | Resize mode — then `h j k l`, `Shift` for bigger steps, `Escape` to leave |
-| `Alt`+`Shift`+`1`–`7` | Move the window to another workspace |
+| `Shift`+`G` | Gaps mode — `i` inner or `o` outer, then `+` / `-` / `0`, `Escape` to leave |
+| `u` / `y` / `n` | Border none / one pixel / normal title bar, for the focused window |
+| `Shift`+`S` | Sticky: keep a floating window on every workspace |
+| `m` | Hide the bar; it returns on hover at the top edge or when focus enters it |
+| `Alt`+`Shift`+`1`–`7` | Move the window to another workspace and follow it |
+| `Ctrl`+`Alt`+`1`–`7` | Move the window to another workspace and stay |
+| `~` | Move the window to the previous workspace and follow it |
 | `Alt`+`Space` | Switch focus between tiled and floating windows |
 | `Alt`+`Shift`+`Space` | Float or unfloat the focused window |
 | `-` / `_` | Show the scratchpad / send a window to it |
 | `Alt`+`Enter` | Open a new terminal |
 | `Shift`+`R` | Restart in place: default layout, every window back |
-| `Shift`+`E` | Session menu: lock, log out, restart i3 |
+| `Shift`+`C` | Reload the configuration: gaps, bar and labels re-applied |
+| `Shift`+`E` | Session menu (i3-nagbar): lock, log out, restart i3, suspend, reboot, shut down |
+| `0` | System mode, as the original config bound it: `l`ock, `e`xit, switch `u`ser, `s`uspend, `h`ibernate, `r`eboot, `Shift`+`S` shutdown |
+| `Ctrl`+`Space` | Close every notification |
 
 `Space` is only bound with `Alt` on purpose — binding it bare would break using the space bar to
 scroll.
@@ -172,7 +184,11 @@ All of these are launcher commands, and all are remembered in your browser only:
 | `exec i3lock` | Lock the screen immediately |
 | `notify off` / `notify on` | Silence the corner toasts |
 | `wallpaper black` / `ember` / `ridge` | Change the wallpaper (black is the default) |
-| `restart i3 inplace` | Reset the layout to defaults |
+| `restart` | Reset the layout to defaults |
+| `gaps inner set 14` / `gaps outer set -2` | i3-gaps — 14 / −2 are the defaults, and a lone window gets none (smart gaps) |
+| `bar mode hide` / `bar mode dock` | Hide the bar until hovered or focused, or keep it docked |
+| `border none` / `border pixel 1` / `border normal` | The focused window's border and title bar |
+| `i3-msg …` | Every launcher entry is an i3 command; `workspace 2; layout tabbed` chains with `;` |
 
 ### Booting and logging in
 

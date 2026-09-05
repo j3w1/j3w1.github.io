@@ -9,7 +9,7 @@
    disk usage, CPU load, temperature, network SSID, and system uptime.
    (navigator.storage.estimate() reports an origin quota, not a disk.) */
 
-import { element } from "./dom.js?v=20260905g";
+import { element } from "./dom.js?v=20260905h";
 
 const FAST_MS = 1000;
 const SLOW_MS = 10000;
@@ -157,11 +157,12 @@ export const installBar = ({ container, modeNode, clockNode, workspaceLinks }) =
   });
 
   return {
-    setMode(mode) {
+    setMode(mode, prompt = mode) {
       if (!modeNode) return;
       const isDefault = mode === "default";
       modeNode.hidden = isDefault;
-      modeNode.textContent = isDefault ? "" : `-- ${mode} --`;
+      modeNode.textContent = isDefault ? "" : prompt;
+      document.documentElement.classList.toggle("wm-mode-active", !isDefault);
     },
     setUrgent(name, urgent) {
       const link = workspaceLinks.find((node) => node.dataset.workspaceLink === name);

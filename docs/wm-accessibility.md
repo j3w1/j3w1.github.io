@@ -64,9 +64,10 @@ and the plain-mode toggle. `a11y.js` implements the chain; the browser suite ass
 
 `#i3status` is deliberately **not** a live region: it would announce the clock every second.
 
-Toasts render at the **bottom right**, deliberately: the top right belongs to the focused window's
-minimize, maximize and close buttons, and a toast landing there after every action blocked exactly
-the controls that action was aimed at.
+Toasts render at the **top right, 25px below the title-bar row** — dunstrc's `geometry "0x4-25+25"`,
+shifted down by one title bar. The top-right corner itself belongs to the focused window's minimize,
+maximize and close buttons, and a toast landing there after every action blocked exactly the
+controls that action was aimed at; the browser suite asserts the stack starts below them.
 
 Toasts and announcements are complements, not duplicates, and are written for different audiences:
 
@@ -117,6 +118,22 @@ Measured against `--terminal: #0c0909`:
 Known outstanding issue: `--inactive` is used by the pre-existing `.content-number` and
 `.prose-line::before` rules. Raising it toward `#a8403a` would fix that, but it is a palette change
 and out of scope for this work.
+
+### The Xresources palette, and where it is not followed
+
+`site.css` carries the original machine's sixteen colours as `--color0`…`--color15`. The i3bar and
+client colours follow the original config **except** where the config's text colour fails the floor
+against its own background — computed against `#0C0909`, `color1` is 3.42:1, `color4` 2.09:1,
+`color8` 1.86:1, `color12` 2.12:1:
+
+| i3 class | Config | Applied | Why |
+| --- | --- | --- | --- |
+| `binding_mode` | text fg on `color1` (2.5:1) | text `color0` on `color7`, `color1` underline | text floor |
+| `focused_workspace` | text bg on `color1` (3.4:1) | `--selection` with `--prose` (unchanged) | text floor |
+| `client.focused` | border `color14`, child border `color4` | border `color4`, title underline `color14` | borders, no text |
+| `urgent_workspace` | `color0` on fg | as configured | 8.65:1 |
+| dunst `urgency_low` | `color0` on `color15` (4.45:1) | `#000` on `color15` | just under the floor |
+| dunst `urgency_critical` | `#F9FAF9` on `#DC282E` | as configured | 4.58:1 |
 
 ## 10. Banned outright — **enforced**
 

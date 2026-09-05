@@ -2,12 +2,13 @@
    written: a reload always restores a complete desktop, which bounds the worst
    case of any layout experiment to "press F5". */
 
-import { KEYS } from "./session.js?v=20260905g";
-import { STATE_VERSION } from "./defaults.js?v=20260905g";
+import { KEYS } from "./session.js?v=20260905h";
+import { STATE_VERSION } from "./defaults.js?v=20260905h";
 
 const stripNode = (node) => {
   if (node.type === "win") {
     const plain = { id: node.id, type: "win", percent: node.percent };
+    if (node.border) plain.border = node.border;
     if (node.floating) {
       plain.floating = true;
       if (node.floatRect) plain.floatRect = { ...node.floatRect };
@@ -28,6 +29,9 @@ const stripNode = (node) => {
 export const serialize = (state) => ({
   version: STATE_VERSION,
   wallpaper: state.wallpaper,
+  gaps: state.gaps,
+  bar: state.bar,
+  barLabels: state.barLabels,
   scratchpad: state.scratchpad.map(stripNode),
   scratchpadShown: state.scratchpadShown ?? null,
   workspaces: Object.fromEntries(
