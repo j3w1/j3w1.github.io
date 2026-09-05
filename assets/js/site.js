@@ -3,8 +3,9 @@
    would resolve after first paint and guarantee a visible reflow from the
    fallback grid to the window manager's layout. */
 
-import { createWm } from "./wm/boot.js?v=20260905e";
-import { isEditable } from "./wm/dom.js?v=20260905e";
+import { createWm } from "./wm/boot.js?v=20260905f";
+import { isEditable } from "./wm/dom.js?v=20260905f";
+import { parseRoute } from "./route.js?v=20260905f";
 
 const workspaceNames = [
   "home",
@@ -50,10 +51,7 @@ let selectedCommandIndex = 0;
 let projectVisibility = "all";
 let wm = null;
 
-const workspaceFromHash = () => {
-  const candidate = decodeURIComponent(window.location.hash.slice(1)).toLowerCase().split("/")[0];
-  return workspaceNames.includes(candidate) ? candidate : null;
-};
+const workspaceFromHash = () => parseRoute(window.location.hash).workspace;
 
 const activateWorkspace = (
   name,

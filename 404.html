@@ -9,6 +9,26 @@
   <meta name="theme-color" content="#0c0909">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/css/site.css">
+  <style>
+    /* A scrolling document, unlike the fixed-viewport desktop. */
+    html, body { height: auto; overflow: visible; }
+    .terminal-output a { color: var(--foreground-bright); }
+  </style>
+  <script>
+  /* GitHub Pages serves this for every unknown path. A path that looks like a
+     workspace or an entry — /writing/foo, /Photography/Slug.html, the old
+     /about/ and /projects/ stubs — is a deep link into the desktop, so it is
+     forwarded to the hash route instead of dead-ending here. Real entries have
+     real pages at /<collection>/<slug>/ and never reach this. */
+  (() => {
+    const workspaces = ["home", "writing", "projects", "photography", "books", "elsewhere", "about"];
+    const parts = location.pathname.toLowerCase().replace(/\.html?$/, "").split("/").filter(Boolean);
+    const [workspace, slug, extra] = parts;
+    if (!workspace || extra !== undefined || !workspaces.includes(workspace)) return;
+    if (slug !== undefined && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return;
+    location.replace(`/${location.search}#${slug ? `${workspace}/${slug}` : workspace}`);
+  })();
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#error-content">Skip to error</a>
@@ -25,7 +45,7 @@
           <div class="terminal-output readable-output">
             <h1 id="error-title">404: no such file or workspace</h1>
             <p>The address may be incorrect or the content may have moved into the single-page workstation.</p>
-            <p><a href="/#home">Return to 1:home</a></p>
+            <p><a href="/#home">Return to 1:home</a> · <a href="/writing/">writing</a> · <a href="/photography/">photography</a> · <a href="/books/">books</a> · <a href="/wiki/">wiki</a></p>
           </div>
         </div>
         <footer class="terminal-statusline"><span>ERROR</span><span class="status-fill">exit 404</span></footer>

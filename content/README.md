@@ -27,9 +27,14 @@ assets/photography/<entry-slug>/<image-id>-thumb.webp
 
 The full WebP is the bounded public photograph used by the viewer. The thumbnail WebP is the smaller list/grid image. When maintaining content without j3w1ctl, both normalized files must already exist before rebuilding the index.
 
-Run `content:check` before committing. It validates schemas, media paths and
-sizes, and confirms that `assets/data/content-index.json` matches the
-authoritative Markdown.
+`content:rebuild` writes every generated file: `assets/data/content-index.json`, the prerendered
+entry and collection pages (`writing/<slug>/index.html`, `writing/index.html`, …), `sitemap.xml`
+and `feed.xml`. From the repository root, `npm run generate` does the same (plus fonts and the
+module preload list) and `npm run check` verifies it all.
+
+Run `content:check` (or `npm run check`) before committing. It validates schemas, media paths and
+sizes, and confirms that every generated file matches the authoritative Markdown — a stale page,
+a missing one, or a page whose entry was deleted all fail it. Never edit generated files by hand.
 
 ## Publication rules
 

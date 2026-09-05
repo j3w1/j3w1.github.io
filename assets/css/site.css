@@ -1312,6 +1312,8 @@ html.wm-active .window:not([hidden]) {
 .content-detail-header { margin-bottom: 15px; padding: 8px 10px; border-left: 3px solid var(--focus); background: var(--surface-raised); }
 .content-detail-header h3, .content-detail-header p { margin: 0; }
 .content-detail-header p { margin-top: 3px; color: var(--muted); }
+.content-permalink { display: inline-block; margin-top: 4px; color: var(--quiet); font-size: 12px; }
+.content-permalink:hover { color: var(--foreground-bright); }
 .rendered-content { max-width: 84ch; line-height: 1.65; }
 .rendered-content pre { padding: 10px; overflow: auto; border: 1px solid var(--border); background: var(--terminal); }
 .rendered-content blockquote { margin-inline: 0; padding-left: 12px; border-left: 2px solid var(--border-strong); color: var(--muted); }

@@ -13,6 +13,7 @@ import {
   validateWebp,
 } from "./content.js";
 import { AppError, badRequest, conflict, notFound, preconditionRequired, publicationUnknown } from "./errors.js";
+import { GENERATED_PAGE_PATTERN, generateSitePages } from "./site-pages.js";
 
 const INDEX_PATH = "assets/data/content-index.json";
 
@@ -181,6 +182,19 @@ export const createRepositoryService = (github) => {
 
       const index = buildIndex(sources);
       additions.push({ path: INDEX_PATH, content: Buffer.from(stringifyIndex(index), "utf8") });
+
+      /* The prerendered pages, sitemap and feed land in the same commit as
+         the index, so a browser publish can never leave them behind. Only
+         files whose bytes change are sent; generated entry pages that no
+         longer have an entry are removed. */
+      const generated = generateSitePages(index);
+      for (const [filePath, content] of generated) {
+        const buffer = Buffer.from(content, "utf8");
+        if (snapshot.files.get(filePath)?.sha !== gitBlobSha(buffer)) additions.push({ path: filePath, content: buffer });
+      }
+      for (const filePath of snapshot.files.keys()) {
+        if (GENERATED_PAGE_PATTERN.test(filePath) && !generated.has(filePath)) deletions.push(filePath);
+      }
       const uniqueDeletions = [...new Set(deletions)];
       let result;
       try {

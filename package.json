@@ -13,7 +13,8 @@
     "test:all": "npm test && npm --prefix services/j3w1ctl-auth test && npm run test:browser && npm --prefix services/j3w1ctl-auth run test:browser",
     "generate": "node scripts/generate.mjs",
     "check": "node scripts/generate.mjs --check && npm --prefix services/j3w1ctl-auth run client:check",
-    "bump-cache-token": "node scripts/bump-cache-token.mjs"
+    "bump-cache-token": "node scripts/bump-cache-token.mjs",
+    "icons": "node scripts/icons.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

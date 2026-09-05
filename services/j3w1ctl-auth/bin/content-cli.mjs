@@ -2,7 +2,8 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { buildLocalIndex, COLLECTIONS, SLUG_PATTERN, stringifyIndex } from "../src/content.js";
+import { buildLocalIndex, COLLECTIONS, SLUG_PATTERN } from "../src/content.js";
+import { checkGenerated, writeGenerated } from "../src/generate.js";
 
 const [command, ...argumentsList] = process.argv.slice(2);
 
@@ -12,26 +13,25 @@ const option = (name, fallback) => {
 };
 
 const repoRoot = path.resolve(process.cwd(), option("repo-root", "../.."));
-const indexPath = path.join(repoRoot, "assets", "data", "content-index.json");
 
+/* The index, the prerendered pages, the sitemap and the feed are one unit:
+   they are all derived from content/ and all committed. */
 const rebuild = async ({ check = false } = {}) => {
-  const content = stringifyIndex(await buildLocalIndex(repoRoot));
   if (check) {
-    let current = "";
-    try {
-      current = await fs.readFile(indexPath, "utf8");
-    } catch {
-      // The comparison below provides the actionable error.
+    const result = await checkGenerated(repoRoot);
+    if (!result.ok) {
+      const problems = [
+        ...result.stale.map((file) => `${file} is stale or missing`),
+        ...result.orphans.map((file) => `${file} no longer has an entry`),
+      ];
+      throw new Error(`${problems.join("\n")}\nRun content:rebuild (or npm run generate at the repository root).`);
     }
-    if (current.replaceAll("\r\n", "\n") !== content) {
-      throw new Error("assets/data/content-index.json is stale; run content:rebuild.");
-    }
-    process.stdout.write("Content index is valid and current.\n");
+    process.stdout.write("Content index and generated pages are valid and current.\n");
     return;
   }
-  await fs.mkdir(path.dirname(indexPath), { recursive: true });
-  await fs.writeFile(indexPath, content, "utf8");
-  process.stdout.write(`Rebuilt ${path.relative(repoRoot, indexPath)}.\n`);
+  const { written, removed } = await writeGenerated(repoRoot);
+  process.stdout.write(`Rebuilt ${written.length} generated file(s)${removed.length ? `, removed ${removed.length}` : ""}.\n`);
+  for (const file of [...written, ...removed]) process.stdout.write(`  ${file}\n`);
 };
 
 const createEntry = async () => {

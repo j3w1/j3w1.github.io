@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { generateSitePages } from "../services/j3w1ctl-auth/src/site-pages.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const frontendOrigin = "http://127.0.0.1:8010";
@@ -13,6 +14,9 @@ const collections = {
   photography: [{ title: "Fixture Photographs", slug: "fixture-photographs", date: "2026-08-24", caption: "Browser-only fixture.", location: "Local test", camera: "Fixture camera", images: [{ id: "image-01", file: "image-01.webp", thumbnail: "image-01-thumb.webp", alt: "First browser test image", caption: "First fixture photograph", width: 1448, height: 1086, thumbnailWidth: 640, thumbnailHeight: 480, src: "/fixture.webp", thumbnailSrc: "/fixture.webp" }, { id: "image-02", file: "image-02.webp", thumbnail: "image-02-thumb.webp", alt: "Second browser test image", caption: "Second fixture photograph", width: 1122, height: 1402, thumbnailWidth: 512, thumbnailHeight: 640, src: "/fixture.webp", thumbnailSrc: "/fixture.webp" }], contentDigest: "fixture" }],
 };
 const index = { schemaVersion: 1, collections };
+/* The prerendered pages for the fixture entries, exactly as the generator
+   would commit them for a real index. */
+const generatedPages = generateSitePages(index);
 const fixtureState = {
   post: 0,
   put: 0,
@@ -49,6 +53,11 @@ const frontendServer = createServer(async (request, response) => {
     return response.end(`window.J3W1CTL_CONFIG=Object.freeze({apiBaseUrl:${JSON.stringify(authOrigin)}});`);
   }
   if (url.pathname === "/assets/data/content-index.json") return json(response, 200, index);
+  const generatedPath = url.pathname.replace(/^\//, "").replace(/\/$/, "/index.html");
+  if (generatedPages.has(generatedPath)) {
+    response.writeHead(200, { "Content-Type": generatedPath.endsWith(".xml") ? "application/xml" : "text/html; charset=utf-8", "Cache-Control": "no-store" });
+    return response.end(generatedPages.get(generatedPath));
+  }
   if (url.pathname === "/fixture.webp") { response.writeHead(200, { "Content-Type": "image/webp", "Cache-Control": "no-store" }); return response.end(webp); }
   let pathname = decodeURIComponent(url.pathname);
   if (pathname.endsWith("/")) pathname += "index.html";
@@ -58,7 +67,14 @@ const frontendServer = createServer(async (request, response) => {
     const content = await fs.readFile(resolved);
     response.writeHead(200, { "Content-Type": mime[path.extname(resolved)] ?? "application/octet-stream", "Cache-Control": "no-store" });
     response.end(content);
-  } catch { json(response, 404, { error: { code: "not_found", message: "Not found.", requestId: "fixture" } }); }
+  } catch {
+    /* GitHub Pages answers every unknown path with 404.html; so does the fixture. */
+    if (!path.extname(pathname) || pathname.endsWith(".html")) {
+      response.writeHead(404, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+      return response.end(await fs.readFile(path.join(root, "404.html")));
+    }
+    json(response, 404, { error: { code: "not_found", message: "Not found.", requestId: "fixture" } });
+  }
 });
 
 const authServer = createServer(async (request, response) => {

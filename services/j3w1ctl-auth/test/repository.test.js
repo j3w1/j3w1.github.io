@@ -16,9 +16,31 @@ test("create regenerates the full index and performs one expected-head commit", 
   await service.publish({ action: "create", collection: "writing", slug: "new", metadata: { title: "New", slug: "new", date: "2026-08-24", summary: "New summary", tags: [] }, body: "New body", ifNoneMatch: "*" });
   assert.equal(calls.length, 1);
   assert.equal(calls[0].expectedHeadOid, head);
-  assert.deepEqual(calls[0].additions.map(({ path }) => path), ["content/writing/new.md", "assets/data/content-index.json"]);
+  const paths = calls[0].additions.map(({ path }) => path);
+  assert.deepEqual(paths.slice(0, 2), ["content/writing/new.md", "assets/data/content-index.json"]);
   const index = JSON.parse(calls[0].additions[1].content.toString());
   assert.deepEqual(index.collections.writing.map(({ slug }) => slug), ["new", "old"]);
+  /* The prerendered pages, sitemap and feed ride in the same commit. */
+  for (const expected of ["writing/new/index.html", "writing/old/index.html", "writing/index.html", "sitemap.xml", "feed.xml"]) {
+    assert.ok(paths.includes(expected), `${expected} must be committed with the index`);
+  }
+  assert.match(calls[0].additions.find(({ path }) => path === "writing/new/index.html").content.toString(), /<h1>New<\/h1>[\s\S]*New body/);
+  assert.deepEqual(calls[0].deletions, []);
+});
+
+test("publishing sends only generated files whose bytes changed, and prunes orphaned pages", async () => {
+  const calls = [];
+  const current = snapshot();
+  const { generateSitePages } = await import("../src/site-pages.js");
+  const { buildIndex } = await import("../src/content.js");
+  const unchangedPages = generateSitePages(buildIndex({ writing: [{ path: "content/writing/old.md", source }], books: [], photography: [] }));
+  for (const [path, content] of unchangedPages) current.files.set(path, { sha: gitBlobSha(content), size: content.length });
+  current.files.set("writing/gone/index.html", { sha: "9".repeat(40), size: 10 });
+  const service = createRepositoryService({ getSnapshot: async () => current, createCommit: async (value) => { calls.push(value); return { commitSha: "5".repeat(40) }; } });
+  await service.publish({ action: "update", collection: "writing", slug: "old", metadata: { title: "Old", slug: "old", date: "2026-08-20", summary: "Old summary", tags: [] }, body: "Old body", ifMatch: `"${blob}"` });
+  const paths = calls[0].additions.map(({ path }) => path);
+  assert.ok(!paths.includes("books/index.html"), "an unchanged generated page is not re-sent");
+  assert.ok(calls[0].deletions.includes("writing/gone/index.html"), "a page with no entry is removed");
 });
 
 test("stale blobs and missing create preconditions fail before mutation", async () => {
@@ -36,7 +58,9 @@ test("photography delete scope contains only derived entry media and the index",
   const service = createRepositoryService({ getSnapshot: async () => ({ headSha: head, files }), createCommit: async (value) => { calls.push(value); return { commitSha: "4".repeat(40) }; } });
   await service.publish({ action: "delete", collection: "photography", slug: "set", ifMatch: `"${blob}"` });
   assert.deepEqual(calls[0].deletions.sort(), ["assets/photography/set/one-thumb.webp", "assets/photography/set/one.webp", "content/photography/set.md"].sort());
-  assert.deepEqual(calls[0].additions.map(({ path }) => path), ["assets/data/content-index.json"]);
+  const paths = calls[0].additions.map(({ path }) => path);
+  assert.equal(paths[0], "assets/data/content-index.json");
+  assert.ok(paths.every((path) => path === "assets/data/content-index.json" || /^(writing|books|photography)\/index\.html$|^(sitemap|feed)\.xml$/.test(path)), "only the index and site-level generated files are rewritten on delete");
 });
 
 const gitBlobSha = (content) => {

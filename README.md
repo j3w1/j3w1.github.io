@@ -13,10 +13,18 @@ and no runtime build step. Its seven workspaces are deep-linked at `#home`, `#wr
 `#photography`, `#books`, `#elsewhere`, and `#about`; published entries add `#writing/<slug>`,
 `#photography/<slug>`, and `#books/<slug>`.
 
+Every published entry also has a real, crawlable page — `/writing/<slug>/`, `/photography/<slug>/`,
+`/books/<slug>/`, plus `/writing/`, `/photography/`, `/books/` — with its content as HTML, social
+cards, and a link back into the desktop. Those paths are the canonical, shareable URLs; the hash
+routes are how the desktop shows the same entries. `sitemap.xml` and the Atom `feed.xml` are
+generated with them, and a path-shaped link that has no page (`/about/`, a mistyped slug) is
+forwarded by `404.html` into the desktop.
+
 Writing, reading notes, and photography are Git-managed. Authoritative Markdown lives in
-[`content/`](content/README.md), the deterministic restricted-AST artifact is
-`assets/data/content-index.json`, and the safe DOM renderer is shared by the public workspaces and
-j3w1ctl preview.
+[`content/`](content/README.md); `assets/data/content-index.json`, the entry pages, the sitemap and
+the feed are deterministic generated output, committed and checked by `npm run check`; the safe DOM
+renderer is shared by the public workspaces and j3w1ctl preview, and the page generator mirrors it
+(a browser test holds the two to byte-for-byte parity).
 
 ## Using the site
 

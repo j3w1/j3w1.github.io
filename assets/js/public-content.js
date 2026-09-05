@@ -1,6 +1,7 @@
 import { renderAst } from "./content-renderer.js?v=20260824";
 import { closePhotoViewer, isPhotoViewerBackdropClick } from "./photo-viewer.js?v=20260825b";
-import { loadContentIndex } from "./content-index.js?v=20260905e";
+import { loadContentIndex } from "./content-index.js?v=20260905f";
+import { parseRoute } from "./route.js?v=20260905f";
 
 const collections = ["writing", "books", "photography"];
 let index;
@@ -25,9 +26,8 @@ const setState = (collection, message, unavailable = false) => {
 };
 
 const hashRoute = () => {
-  const value = decodeURIComponent(location.hash.slice(1));
-  const [collection, slug] = value.split("/");
-  return { collection, slug };
+  const { workspace, slug } = parseRoute(location.hash);
+  return { collection: workspace, slug };
 };
 
 /* Ask the window manager to surface the reader without depending on it: with no
@@ -58,6 +58,11 @@ const selectRoute = () => {
   detail.replaceChildren();
   const header = element("header", "content-detail-header");
   header.append(element("h3", "", target.title));
+  /* Every entry has a real page at /<collection>/<slug>/ — the address to
+     share: crawlers and link previews can read that one. */
+  const permalink = element("a", "content-permalink", "permalink");
+  permalink.href = `/${collection}/${target.slug}/`;
+  header.append(permalink);
   if (collection === "writing") header.append(element("p", "", `${target.date} · ${target.summary}`));
   if (collection === "books") header.append(element("p", "", `${target.author} · ${target.year} · ${target.status}`));
   if (collection === "photography") header.append(element("p", "", [target.date, target.location, target.camera].filter(Boolean).join(" · ")));

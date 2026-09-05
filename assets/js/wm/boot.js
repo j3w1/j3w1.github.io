@@ -8,15 +8,15 @@
    added, and every fallback rule in the stylesheet renders the site exactly as
    the static version always did. */
 
-import * as tree from "./tree.js?v=20260905e";
-import { clampFloating, GEOMETRY } from "./layout.js?v=20260905e";
-import { createRenderer } from "./render.js?v=20260905e";
-import { installPointer } from "./pointer.js?v=20260905e";
-import { installKeys } from "./keys.js?v=20260905e";
-import { installBar } from "./bar.js?v=20260905e";
-import { installNotify } from "./notify.js?v=20260905e";
-import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260905e";
-import { element, listen, rafBatch, readGap } from "./dom.js?v=20260905e";
+import * as tree from "./tree.js?v=20260905f";
+import { clampFloating, GEOMETRY } from "./layout.js?v=20260905f";
+import { createRenderer } from "./render.js?v=20260905f";
+import { installPointer } from "./pointer.js?v=20260905f";
+import { installKeys } from "./keys.js?v=20260905f";
+import { installBar } from "./bar.js?v=20260905f";
+import { installNotify } from "./notify.js?v=20260905f";
+import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260905f";
+import { element, listen, rafBatch, readGap } from "./dom.js?v=20260905f";
 import {
   clearGreetFlag,
   endSession,
@@ -26,8 +26,8 @@ import {
   shouldGreet,
   startSession,
   supported,
-} from "./session.js?v=20260905e";
-import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260905e";
+} from "./session.js?v=20260905f";
+import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260905f";
 import {
   defaultState,
   defaultWindowIds,
@@ -35,8 +35,8 @@ import {
   reapplyResponsiveDefaults,
   WALLPAPERS,
   WORKSPACES,
-} from "./defaults.js?v=20260905e";
-import { APP_NAMES, APPS } from "./apps/index.js?v=20260905e";
+} from "./defaults.js?v=20260905f";
+import { APP_NAMES, APPS } from "./apps/index.js?v=20260905f";
 
 const TITLE_BUTTONS = [
   ["minimize", "─", "Send to scratchpad"],
@@ -801,7 +801,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     greeterInstance?.destroy();
     greeterInstance = null;
     if (greeterLoading) return greeterLoading;
-    greeterLoading = import("./greeter.js?v=20260905e").then(({ runGreeter }) => {
+    greeterLoading = import("./greeter.js?v=20260905f").then(({ runGreeter }) => {
       greeterLoading = null;
       greeterInstance = runGreeter({
         node: document.querySelector("#greeter"),
@@ -936,14 +936,14 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   attachHomeShell();
 
   if (media.coarse.matches) {
-    import("./touch.js?v=20260905e")
+    import("./touch.js?v=20260905f")
       .then(({ installTouch }) => {
         touch = installTouch({ shell, wm, isBlocked: blocked });
       })
       .catch(() => {});
   }
 
-  import("./idle-lock.js?v=20260905e")
+  import("./idle-lock.js?v=20260905f")
     .then(({ installIdleLock }) => {
       lock = installIdleLock({
         node: document.querySelector("#lockscreen"),
@@ -957,7 +957,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   else startSession();
 
   if (isSelfTest()) {
-    import("./selftest.js?v=20260905e")
+    import("./selftest.js?v=20260905f")
       .then(({ runSelfTest }) => runSelfTest())
       .catch((error) => console.error("[wm] selftest failed to load", error));
   }

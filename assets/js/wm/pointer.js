@@ -7,9 +7,9 @@
    so link clicks, table row selection, form fields and text selection inside the
    terminal buffers all behave exactly as they did before. */
 
-import { gutterAt, tabAt } from "./layout.js?v=20260905e";
-import { element } from "./dom.js?v=20260905e";
-import { media } from "./session.js?v=20260905e";
+import { gutterAt, tabAt } from "./layout.js?v=20260905f";
+import { element } from "./dom.js?v=20260905f";
+import { media } from "./session.js?v=20260905f";
 
 const THRESHOLD = 4;
 const PROXY_FRACTION = 0.5;

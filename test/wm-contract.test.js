@@ -283,9 +283,7 @@ test("a boot failure always reaches the stacked fallback", async () => {
   const html = await read("index.html");
   assert.match(html, /window\.addEventListener\("error", fail, true\)/, "the inline script must catch module load failures");
   assert.match(html, /window\.setTimeout\(fail, \d{4,5}\)/, "the inline script must arm a boot deadline");
-  for (const stub of ["404.html", "about/index.html", "projects/index.html"]) {
-    assert.match(await read(stub), /<html[^>]*class="no-js"/, `${stub} must opt into the scrolling fallback rules`);
-  }
+  assert.match(await read("404.html"), /<html[^>]*class="no-js"/, "404.html must opt into the scrolling fallback rules");
 });
 
 test("nothing in the window manager still refers to removed features", async () => {
@@ -351,4 +349,51 @@ test("index.html preloads exactly the static module graph, and the applications 
   }
   const admin = await read("admin", "j3w1ctl.js");
   assert.doesNotMatch(admin, /^import .* from "\/admin\/j3w1ctl-blob-client\.js/m, "the blob client is fetched on first upload only");
+});
+
+test("the site is discoverable: social tags, feed, icons, manifest, robots, and no redirect stubs", async () => {
+  const html = await read("index.html");
+  for (const tag of ['property="og:image"', 'property="og:site_name"', 'name="twitter:card"', 'rel="alternate" type="application/atom+xml"', 'rel="manifest"', 'rel="apple-touch-icon"', 'href="/favicon.ico"']) {
+    assert.ok(html.includes(tag), `index.html must carry ${tag}`);
+  }
+  assert.match(html, /<span lang="zh">申杰<\/span>/, "the Chinese name is marked with its language");
+  assert.match(html, /"@type": "WebSite"/);
+  const robots = await read("robots.txt");
+  assert.match(robots, /Disallow: \/admin\//);
+  assert.match(robots, /Sitemap: https:\/\/j3w1\.github\.io\/sitemap\.xml/);
+  for (const gone of ["about/index.html", "projects/index.html", "themes"]) {
+    await assert.rejects(fs.access(path.join(repoRoot, gone)), `${gone} must not exist: the 404 rescue covers it`);
+  }
+  const notFound = await read("404.html");
+  assert.match(notFound, /location\.replace\(/, "404.html must forward path-shaped links into the desktop's routes");
+  const manifest = JSON.parse(await read("site.webmanifest"));
+  assert.equal(manifest.start_url, "/#home");
+  for (const icon of manifest.icons) {
+    await fs.access(path.join(repoRoot, icon.src.replace(/^\//, "")));
+  }
+});
+
+const pngSize = (buffer) => ({ width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) });
+
+test("the raster icons and the social card exist at the sizes their consumers expect", async () => {
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+  for (const [file, width, height] of [["apple-touch-icon.png", 180, 180], ["assets/icons/icon-192.png", 192, 192], ["assets/icons/icon-512.png", 512, 512], ["assets/social/default.png", 1200, 630]]) {
+    const buffer = await fs.readFile(path.join(repoRoot, file));
+    assert.ok(buffer.subarray(0, 4).equals(png), `${file} must be a PNG`);
+    assert.deepEqual(pngSize(buffer), { width, height }, `${file} must be ${width}×${height}`);
+  }
+  const ico = await fs.readFile(path.join(repoRoot, "favicon.ico"));
+  assert.equal(ico.readUInt16LE(2), 1, "favicon.ico must be an icon resource");
+  assert.ok(ico.subarray(22, 26).equals(png), "favicon.ico wraps a PNG");
+});
+
+test("the generated pages, sitemap and feed are committed and current", async () => {
+  const { checkGenerated } = await import("../services/j3w1ctl-auth/src/generate.js");
+  const result = await checkGenerated(repoRoot);
+  assert.deepEqual({ stale: result.stale, orphans: result.orphans }, { stale: [], orphans: [] }, "run npm run generate");
+  const sitemap = await read("sitemap.xml");
+  assert.match(sitemap, /<loc>https:\/\/j3w1\.github\.io\/photography\/we-were-werewolves\/<\/loc>/, "every entry has a crawlable URL");
+  const page = await read("photography", "we-were-werewolves", "index.html");
+  assert.match(page, /<link rel="canonical" href="https:\/\/j3w1\.github\.io\/photography\/we-were-werewolves\/">/);
+  assert.match(page, /data-desktop-link href="\/#photography\/we-were-werewolves"/);
 });

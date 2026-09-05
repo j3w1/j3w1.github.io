@@ -1,1 +1,0 @@
-codex-theme-v1:{"codeThemeId":"raycast","theme":{"accent":"#e53935","contrast":72,"fonts":{"code":"\"JetBrains Mono\", \"Cascadia Mono\", Consolas, \"Liberation Mono\", monospace","ui":"Inter"},"ink":"#f4eeee","opaqueWindows":true,"semanticColors":{"diffAdded":"#8fbf8a","diffRemoved":"#ffa2a7","skill":"#e99499"},"surface":"#000000"},"variant":"dark"}
