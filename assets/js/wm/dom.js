@@ -33,10 +33,6 @@ export const readPx = (name, fallback) => {
 
 export const readGap = () => readPx("--gap", 3);
 
-export const containsPoint = (rect, point) =>
-  point.x >= rect.x && point.x <= rect.x + rect.w &&
-  point.y >= rect.y && point.y <= rect.y + rect.h;
-
 /* One frame in flight at a time: many mutations in a turn produce one paint. */
 export const rafBatch = (run) => {
   let frame = 0;

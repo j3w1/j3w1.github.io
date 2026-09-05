@@ -2,14 +2,13 @@
    rect, returns where everything goes. No DOM, no measurement, no side effects
    beyond caching each node's rect for hit-testing. */
 
-import { isTabular, representativeLeaf } from "./tree.js?v=20260905f";
+import { isTabular, representativeLeaf } from "./tree.js?v=20260905g";
 
 export const GEOMETRY = Object.freeze({
   tabHeight: 23,
   stackRow: 23,
   gapInner: 3,
   minPx: 120,
-  gutterGrab: 6,
 });
 
 /* Cumulative rounded offsets, so children tile their parent exactly: rounding
@@ -164,15 +163,33 @@ export const gutterAt = (layoutResult, point, grab) => {
   return null;
 };
 
-export const tabAt = (layoutResult, point) => {
-  for (const deco of layoutResult.decos) {
-    for (const tab of deco.tabs) {
-      const { rect } = tab;
-      if (
-        point.x >= rect.x && point.x <= rect.x + rect.w &&
-        point.y >= rect.y && point.y <= rect.y + rect.h
-      ) return { deco, tab };
-    }
-  }
-  return null;
+/* Geometric focus, like i3: among the windows that lie in the requested
+   direction, prefer one whose extent overlaps the focused window on the
+   perpendicular axis (the window directly below, not a nearer one off to the
+   side), then the nearest centre, ties broken on the perpendicular axis.
+   Returns the id to focus, or null when nothing visible lies that way. */
+export const focusTarget = (layoutResult, focusedId, direction) => {
+  const current = layoutResult.tiles.get(focusedId) ?? layoutResult.floats.get(focusedId);
+  if (!current) return null;
+  const centre = { x: current.x + current.w / 2, y: current.y + current.h / 2 };
+  const horizontal = direction === "left" || direction === "right";
+  const candidates = [...layoutResult.tiles, ...layoutResult.floats]
+    .filter(([id]) => id !== focusedId)
+    .map(([id, rect]) => {
+      const dx = rect.x + rect.w / 2 - centre.x;
+      const dy = rect.y + rect.h / 2 - centre.y;
+      const valid =
+        (direction === "left" && dx < -2) ||
+        (direction === "right" && dx > 2) ||
+        (direction === "up" && dy < -2) ||
+        (direction === "down" && dy > 2);
+      if (!valid) return null;
+      const overlaps = horizontal
+        ? rect.y < current.y + current.h && rect.y + rect.h > current.y
+        : rect.x < current.x + current.w && rect.x + rect.w > current.x;
+      return { id, overlaps, score: (horizontal ? Math.abs(dx) : Math.abs(dy)) * 10 + (horizontal ? Math.abs(dy) : Math.abs(dx)) };
+    })
+    .filter(Boolean);
+  const pool = candidates.some((candidate) => candidate.overlaps) ? candidates.filter((candidate) => candidate.overlaps) : candidates;
+  return pool.sort((a, b) => a.score - b.score)[0]?.id ?? null;
 };

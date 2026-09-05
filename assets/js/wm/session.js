@@ -64,7 +64,6 @@ export const prefs = {
 
 export const media = Object.freeze({
   mobile: matchMedia("(max-width: 767px)"),
-  narrow: matchMedia("(max-width: 420px)"),
   coarse: matchMedia("(pointer: coarse)"),
   reducedMotion: matchMedia("(prefers-reduced-motion: reduce)"),
 });
@@ -75,7 +74,6 @@ export const isSelfTest = () => params.get("wm") === "selftest";
 
 /* The login is a stored session, not a per-visit animation: once someone has
    logged in, the desktop comes up directly until they log out again. */
-export const hasSession = () => readLocal(KEYS.session, "") === "1";
 
 export const startSession = () => writeLocal(KEYS.session, "1");
 

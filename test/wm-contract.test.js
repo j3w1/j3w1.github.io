@@ -120,7 +120,7 @@ test("the pre-paint decision script and session.js agree on storage keys", async
      real step now — so it skips straight to the login panel with no animation. */
   const greeter = await read("assets", "js", "wm", "greeter.js");
   assert.match(greeter, /reducedMotion/, "the greeter must honour reduced motion");
-  assert.match(greeter, /if \(reducedMotion\) \{?\s*skipBoot\(\)/, "reduced motion must skip the boot animation");
+  assert.match(greeter, /instant: Boolean\(reducedMotion\)/, "reduced motion must skip the boot animation, not the login");
 });
 
 test("the fallback path covers no-JS and a failed boot", async () => {
@@ -173,10 +173,11 @@ test("the wiki exists and the site points at it in more than one place", async (
   assert.doesNotMatch(tray, /wiki-link|j3w1ctl-launch/, "neither belongs in the status tray");
   assert.match(html, /help-intro-title[^<]*<a href="\/wiki\/"|<a href="\/wiki\/">full guide/, "the help dialog should link the wiki");
   assert.ok(shell.includes('"wiki"') || shell.includes("wiki:"), "the shell needs a wiki command");
-  assert.match(boot, /open wiki/, "the launcher needs a wiki command");
+  const commands = await read("assets", "js", "wm", "commands.js");
+  assert.match(commands, /open wiki/, "the launcher needs a wiki command");
   /* Both now sit inside a window that can be closed, so the launcher has to be
      able to reach them regardless. */
-  assert.match(boot, /exec j3w1ctl/, "the launcher needs a j3w1ctl command");
+  assert.match(commands, /exec j3w1ctl/, "the launcher needs a j3w1ctl command");
 
   const sitemap = await read("sitemap.xml");
   assert.match(sitemap, /https:\/\/j3w1\.github\.io\/wiki\//, "the wiki must be in the sitemap");
@@ -223,7 +224,25 @@ test("the window manager stays small enough to keep the site dependency-free", a
     return total;
   };
   const total = await walk(dir);
-  assert.ok(total <= 176_000, `assets/js/wm is ${total} bytes, over its 176000 byte budget`);
+  assert.ok(total <= 196_000, `assets/js/wm is ${total} bytes, over its 196000 byte budget`);
+
+  /* The ratchet that matters for first paint is the eager graph — modules a
+     static import chain reaches from boot.js. Lazy curtains, apps and the
+     power sequences do not compete with it. */
+  const eager = new Set();
+  const queue = [path.join(dir, "boot.js")];
+  while (queue.length) {
+    const file = queue.shift();
+    if (eager.has(file)) continue;
+    eager.add(file);
+    const source = await fs.readFile(file, "utf8");
+    for (const match of source.matchAll(/^import[^;]*?from "([^"?]+)/gm)) {
+      queue.push(path.resolve(path.dirname(file), match[1]));
+    }
+  }
+  let eagerBytes = 0;
+  for (const file of eager) eagerBytes += (await fs.stat(file)).size;
+  assert.ok(eagerBytes <= 148_000, `the eager window manager graph is ${eagerBytes} bytes, over its 148000 byte budget`);
 });
 
 test("the cache token is bumped whenever a versioned asset changes", async () => {

@@ -84,6 +84,22 @@ export const pathTo = (root, id) => {
 };
 
 /* The leaf a container's tab or stack row stands for: follow the focus chain down. */
+/* When nothing is visible in a direction, focus steps through the nearest
+   tabbed or stacked ancestor instead — what makes hidden tab children
+   reachable from the keyboard. Returns true when the focus moved. */
+export const stepTabular = (ws, direction) => {
+  const path = pathTo(ws.root, ws.focused);
+  const container = path ? [...path].reverse().find(({ con }) => isTabular(con.layout)) : null;
+  if (!container) return false;
+  const step = direction === "right" || direction === "down" ? 1 : -1;
+  const next = container.con.focus + step;
+  if (next < 0 || next >= container.con.children.length) return false;
+  container.con.focus = next;
+  const leaf = representativeLeaf(container.con.children[next]);
+  if (leaf) setFocus(ws, leaf.id);
+  return true;
+};
+
 export const representativeLeaf = (node) => {
   let current = node;
   while (current.type === "con") {

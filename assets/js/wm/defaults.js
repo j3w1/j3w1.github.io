@@ -1,7 +1,7 @@
 /* Default desktop. The percents match the CSS grid fractions the static site
    uses, so the handoff from fallback layout to window manager is sub-pixel. */
 
-import { makeCon, makeLeaf, normalize } from "./tree.js?v=20260905f";
+import { makeCon, makeLeaf, normalize } from "./tree.js?v=20260905g";
 
 export const STATE_VERSION = 2;
 
@@ -15,9 +15,6 @@ export const WORKSPACES = Object.freeze([
   "about",
 ]);
 
-export const MOBILE_QUERY = "(max-width: 767px)";
-export const COARSE_QUERY = "(pointer: coarse)";
-export const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 /* Index 0 is the default: a plain black desktop, with the j3w1-i3 wordmark. */
 export const WALLPAPERS = Object.freeze(["black", "ember", "ridge"]);

@@ -8,15 +8,15 @@
    added, and every fallback rule in the stylesheet renders the site exactly as
    the static version always did. */
 
-import * as tree from "./tree.js?v=20260905f";
-import { clampFloating, GEOMETRY } from "./layout.js?v=20260905f";
-import { createRenderer } from "./render.js?v=20260905f";
-import { installPointer } from "./pointer.js?v=20260905f";
-import { installKeys } from "./keys.js?v=20260905f";
-import { installBar } from "./bar.js?v=20260905f";
-import { installNotify } from "./notify.js?v=20260905f";
-import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260905f";
-import { element, listen, rafBatch, readGap } from "./dom.js?v=20260905f";
+import * as tree from "./tree.js?v=20260905g";
+import { clampFloating, focusTarget, GEOMETRY } from "./layout.js?v=20260905g";
+import { createRenderer } from "./render.js?v=20260905g";
+import { installPointer } from "./pointer.js?v=20260905g";
+import { installKeys } from "./keys.js?v=20260905g";
+import { installBar } from "./bar.js?v=20260905g";
+import { installNotify } from "./notify.js?v=20260905g";
+import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260905g";
+import { element, readGap } from "./dom.js?v=20260905g";
 import {
   clearGreetFlag,
   endSession,
@@ -26,17 +26,17 @@ import {
   shouldGreet,
   startSession,
   supported,
-} from "./session.js?v=20260905f";
-import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260905f";
+} from "./session.js?v=20260905g";
+import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260905g";
 import {
   defaultState,
-  defaultWindowIds,
-  homeWorkspaceFor,
   reapplyResponsiveDefaults,
   WALLPAPERS,
   WORKSPACES,
-} from "./defaults.js?v=20260905f";
-import { APP_NAMES, APPS } from "./apps/index.js?v=20260905f";
+} from "./defaults.js?v=20260905g";
+import { APP_NAMES, APPS, buildAppWindow } from "./apps/index.js?v=20260905g";
+import { commandList, runCommand } from "./commands.js?v=20260905g";
+import { installChrome } from "./chrome.js?v=20260905g";
 
 const TITLE_BUTTONS = [
   ["minimize", "─", "Send to scratchpad"],
@@ -238,50 +238,18 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       const ws = activeWs();
       const layout = renderer.getLayout(active);
       if (!layout || !ws.focused) return false;
-      const current = layout.tiles.get(ws.focused) ?? layout.floats.get(ws.focused);
-      if (!current) return false;
-      const centre = { x: current.x + current.w / 2, y: current.y + current.h / 2 };
-      const visible = [...layout.tiles, ...layout.floats].filter(([id]) => id !== ws.focused);
-
-      /* Geometric descent, like i3: nearest centre in the requested direction,
-         breaking ties on the perpendicular axis. */
-      const best = visible
-        .map(([id, rect]) => {
-          const dx = rect.x + rect.w / 2 - centre.x;
-          const dy = rect.y + rect.h / 2 - centre.y;
-          const valid =
-            (direction === "left" && dx < -2) ||
-            (direction === "right" && dx > 2) ||
-            (direction === "up" && dy < -2) ||
-            (direction === "down" && dy > 2);
-          if (!valid) return null;
-          const primary = direction === "left" || direction === "right" ? Math.abs(dx) : Math.abs(dy);
-          const secondary = direction === "left" || direction === "right" ? Math.abs(dy) : Math.abs(dx);
-          return { id, score: primary * 10 + secondary };
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.score - b.score)[0];
-
+      const best = focusTarget(layout, ws.focused, direction);
       if (!best) {
         /* Nothing visible that way: step through the focused tab container instead. */
-        const path = tree.pathTo(ws.root, ws.focused);
-        const container = path?.reverse().find(({ con }) => tree.isTabular(con.layout));
-        if (!container) return false;
-        const step = direction === "right" || direction === "down" ? 1 : -1;
-        const next = container.con.focus + step;
-        if (next < 0 || next >= container.con.children.length) return false;
-        container.con.focus = next;
-        const leaf = tree.representativeLeaf(container.con.children[next]);
-        if (leaf) tree.setFocus(ws, leaf.id);
+        if (!tree.stepTabular(ws, direction)) return false;
         paint({ persist: false, announceText: `${focusedTitle()} focused` });
         windows.get(ws.focused)?.focus({ preventScroll: true });
         return true;
       }
-
-      tree.setFocus(ws, best.id);
-      if (ws.floating.some((node) => node.id === best.id)) tree.raiseFloating(ws, best.id);
+      tree.setFocus(ws, best);
+      if (tree.floatingNode(ws, best)) tree.raiseFloating(ws, best);
       paint({ persist: false });
-      windows.get(best.id)?.focus({ preventScroll: true });
+      windows.get(best)?.focus({ preventScroll: true });
       return true;
     },
 
@@ -580,6 +548,23 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
 
     powerMenuIsOpen: () => document.querySelector("#power-menu")?.hidden === false,
 
+    mediaQueries: () => [media.mobile],
+
+    /* i3exit: every session action, from the system mode, the nagbar, the
+       launcher and the shell alike. The power sequences arrive with power.js;
+       until then the actions that exist today are honoured and the rest are
+       announced honestly. */
+    power(action) {
+      if (action === "lock") return Boolean(lock?.lock());
+      if (action === "logout" || action === "exit") return wm.logout();
+      if (action === "restart") return wm.restart();
+      if (action === "switch_user") return (showGreeter("login"), true);
+      if (["reboot", "shutdown", "suspend", "hibernate"].includes(action)) return wm.runPower(action);
+      return false;
+    },
+
+    runPower: () => false,
+
     /* Ends the stored session and returns to the greeter's login panel — no
        boot log, exactly as logging out of a running X session behaves. */
     logout() {
@@ -608,20 +593,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       if (!spec) return false;
       spawnCounter += 1;
       const id = `${appName}-${spawnCounter}`;
-      const article = element("article", `window pane wm-spawned ${spec.className}`);
-      article.dataset.wmWindow = id;
-      article.dataset.wmTitle = spec.title;
-      article.tabIndex = 0;
-      article.setAttribute("aria-label", spec.title);
-
-      const header = element("header", "window-titlebar");
-      const title = element("span", "", spec.title);
-      header.append(title, element("span", "window-marks"));
-      const body = spec.body ? spec.body() : element("div", "wm-app-body");
-      const status = element("footer", "app-statusline");
-      (spec.status ?? []).forEach((label) => status.append(element("span", "", label)));
-      status.append(element("span", "status-fill", ""));
-      article.append(header, body, status);
+      const { article, title, body, status } = buildAppWindow(id, spec);
       upgradeTitlebar(article);
 
       layers.get(active)?.insertBefore(article, decos.get(active) ?? null);
@@ -673,88 +645,14 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       return wm.kill();
     },
 
-    runCommand(text) {
-      const command = String(text ?? "").trim().toLowerCase();
-      if (!command) return "empty command";
-      const [head, ...rest] = command.split(/\s+/);
-      const argument = rest.join(" ");
-      if (head === "layout") return wm.setLayout(argument.replace(" ", "")) ? "" : "no change";
-      if (head === "split") return wm.split(argument.startsWith("v") ? "v" : "h") ? "" : "no change";
-      if (head === "fullscreen") return wm.toggleFullscreen() ? "" : "no window";
-      if (head === "kill") return wm.kill() ? "" : "no window";
-      if (head === "floating") return wm.toggleFloating() ? "" : "no window";
-      if (head === "restart") return wm.restart() ? "" : "";
-      if (head === "exec") {
-        if (!APPS[argument]) return `unknown program: ${argument}`;
-        wm.spawn(argument);
-        return "";
-      }
-      if (head === "workspace") {
-        const index = Number.parseInt(argument, 10);
-        if (Number.isFinite(index)) {
-          onWorkspaceRequest(index);
-          return "";
-        }
-        wm.openWorkspace(argument);
-        return "";
-      }
-      if (head === "move") {
-        const index = Number.parseInt(rest[rest.length - 1], 10);
-        return Number.isFinite(index) ? (wm.moveToWorkspaceIndex(index) ? "" : "no window") : "usage: move to workspace N";
-      }
-      return `unknown command: ${head}`;
-    },
+    runCommand: (text) => runCommand(wm, commandContext, text),
 
     onModeChange: (mode) => {
       bar.setMode(mode);
       if (mode !== "default") dunst.notify(`mode ${mode}`, { key: "mode" });
     },
 
-    commands() {
-      const list = [
-        { label: "layout tabbed", aliases: "tab tabs w", run: () => wm.setLayout("tabbed") },
-        { label: "layout stacked", aliases: "stack s", run: () => wm.setLayout("stacked") },
-        { label: "layout splith", aliases: "horizontal", run: () => wm.setLayout("splith") },
-        { label: "layout splitv", aliases: "vertical", run: () => wm.setLayout("splitv") },
-        { label: "split h", aliases: "split horizontal b", run: () => wm.split("h") },
-        { label: "split v", aliases: "split vertical", run: () => wm.split("v") },
-        { label: "fullscreen", aliases: "f max", run: () => wm.toggleFullscreen() },
-        { label: "floating toggle", aliases: "float drag", run: () => wm.toggleFloating() },
-        { label: "kill window", aliases: "q close", run: () => wm.kill() },
-        { label: "restore all windows", aliases: "unkill undo", run: () => wm.restoreAll() },
-        { label: "restart i3 inplace", aliases: "reset reload", run: () => wm.restart() },
-        { label: "scratchpad show", aliases: "minimize", run: () => wm.scratchpadShow() },
-        { label: "resize mode", aliases: "r", run: () => keys.setMode("resize") },
-      ];
-      WORKSPACES.forEach((name, index) => {
-        list.push({
-          label: `move to workspace ${index + 1}:${name}`,
-          aliases: `move ${name} ${index + 1}`,
-          run: () => wm.moveToWorkspaceIndex(index + 1),
-        });
-      });
-      APP_NAMES.forEach((name) => {
-        list.push({ label: `exec ${name}`, aliases: `run open ${APPS[name].label}`, run: () => wm.spawn(name) });
-      });
-      WALLPAPERS.forEach((name) => {
-        list.push({ label: `wallpaper ${name}`, aliases: `feh background ${name}`, run: () => wm.setWallpaper(name) });
-      });
-      list.push(
-        { label: "open wiki (how to use this site)", aliases: "help guide manual docs wiki", run: () => window.open("/wiki/", "_blank", "noopener") },
-        { label: "exec j3w1ctl", aliases: "cms admin publish content", run: () => document.querySelector("#j3w1ctl-launch")?.click() },
-        { label: "exec i3lock", aliases: "lock screen", run: () => lock?.lock() },
-        { label: "lock off", aliases: "idle disable", run: () => { prefs.lock = "off"; lock?.reschedule(); announce("idle lock off"); } },
-        { label: "lock 10m", aliases: "idle ten", run: () => { prefs.lock = "10m"; lock?.reschedule(); announce("idle lock ten minutes"); } },
-        { label: "lock 30m", aliases: "idle thirty", run: () => { prefs.lock = "30m"; lock?.reschedule(); announce("idle lock thirty minutes"); } },
-        { label: "boot on", aliases: "greeter lightdm enable", run: () => { prefs.boot = true; announce("boot sequence on"); } },
-        { label: "boot off", aliases: "greeter lightdm disable", run: () => { prefs.boot = false; announce("boot sequence off"); } },
-        { label: "log out", aliases: "logout exit session lightdm sign out", run: () => wm.logout() },
-        { label: "exec lightdm", aliases: "replay greeter boot sequence", run: () => showGreeter("boot") },
-        { label: "notify off", aliases: "dunst quiet", run: () => { prefs.notify = false; announce("notifications off"); } },
-        { label: "notify on", aliases: "dunst", run: () => { prefs.notify = true; dunst.notify("dunst enabled", { key: "dunst" }); } },
-      );
-      return list;
-    },
+    commands: () => commandList(wm, commandContext),
 
     bindings: () => keys.bindings(),
     resizeBindings: () => keys.resizeBindings(),
@@ -771,8 +669,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       greeterInstance?.destroy();
       for (const [, app] of apps) app.destroy?.();
       apps.clear();
-      for (const remove of cleanup) remove();
-      cleanup.length = 0;
+      removeChrome();
       save.destroy();
       renderer.destroy();
       root.classList.remove("wm-active");
@@ -780,6 +677,24 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   };
 
   const keys = installKeys({ wm, isBlocked: blocked, onWorkspaceRequest, openLauncher });
+
+  /* What the command language needs beyond the facade. Functions rather than
+     values where the thing is created later in this file. */
+  const commandContext = {
+    workspaces: WORKSPACES,
+    apps: APP_NAMES,
+    appLabel: (name) => APPS[name].label,
+    wallpapers: WALLPAPERS,
+    onWorkspaceRequest,
+    keys: () => keys,
+    lock: () => lock,
+    showGreeter: (mode) => showGreeter(mode),
+    openCms: () => document.querySelector("#j3w1ctl-launch")?.click(),
+    openWiki: () => window.open("/wiki/", "_blank", "noopener"),
+    prefs,
+    dunst,
+    announce,
+  };
   const pointer = installPointer({
     wm,
     layers,
@@ -801,7 +716,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     greeterInstance?.destroy();
     greeterInstance = null;
     if (greeterLoading) return greeterLoading;
-    greeterLoading = import("./greeter.js?v=20260905f").then(({ runGreeter }) => {
+    greeterLoading = import("./greeter.js?v=20260905g").then(({ runGreeter }) => {
       greeterLoading = null;
       greeterInstance = runGreeter({
         node: document.querySelector("#greeter"),
@@ -826,92 +741,21 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     return greeterLoading;
   };
 
-  /* Every global handler is registered through listen() so destroy() can
-     remove it; a restart in place must not stack a second set. */
-  const cleanup = [];
-
-  /* Title bar buttons: the decorative marks become real controls. */
-  cleanup.push(listen(document, "click", (event) => {
-    if (blocked()) return;
-    const button = event.target.closest?.("[data-wm-action]");
-    if (!button) return;
-    const id = button.closest("[data-wm-window]")?.dataset.wmWindow;
-    if (!id) return;
-    event.preventDefault();
-    wm.focusWindow(id, { moveBrowserFocus: false });
-    if (button.dataset.wmAction === "close") wm.kill();
-    else if (button.dataset.wmAction === "maximize") wm.toggleFullscreen();
-    else wm.scratchpadMove();
-  }));
-
-  const powerToggle = document.querySelector("#power-menu-toggle");
-  if (powerToggle) cleanup.push(listen(powerToggle, "click", () => wm.togglePowerMenu()));
-
-  const powerMenu = document.querySelector("#power-menu");
-  if (powerMenu) cleanup.push(listen(powerMenu, "click", (event) => {
-    const action = event.target.closest?.("[data-power]")?.dataset.power;
-    if (!action) return;
-    wm.togglePowerMenu(false);
-    if (action === "lock") lock?.lock();
-    else if (action === "logout") wm.logout();
-    else if (action === "restart") wm.restart();
-  }));
-
-  cleanup.push(listen(document, "keydown", (event) => {
-    if (event.key !== "Escape" || !wm.powerMenuIsOpen()) return;
-    event.preventDefault();
-    wm.togglePowerMenu(false);
-  }));
-
-  cleanup.push(listen(document, "click", (event) => {
-    if (blocked()) return;
-    const restore = event.target.closest?.("[data-wm-restore]");
-    if (!restore) return;
-    event.preventDefault();
-    wm.restoreAll();
-    renderer.renderNow();
-    restoreFocus(null);
-  }));
-
-  /* Tablist keyboard support: the tab strip is one tab stop with arrow keys.
-     Activation goes through the facade directly — a synthetic click() fires no
-     pointer event and would leave the visible panel unchanged. */
-  cleanup.push(listen(document, "keydown", (event) => {
-    if (blocked()) return;
-    const tab = event.target.closest?.(".wm-tab");
-    if (!tab) return;
-    const bar = tab.parentElement;
-    const tabs = [...bar.children];
-    const index = tabs.indexOf(tab);
-    const map = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: tabs.length - 1 };
-    const next = map[event.key];
-    if (next === undefined) return;
-    event.preventDefault();
-    const target = tabs[(next + tabs.length) % tabs.length];
-    if (!target) return;
-    wm.focusTab(target.dataset.wmCon, Number(target.dataset.wmIndex), target.dataset.wmTab, { moveBrowserFocus: false });
-    target.focus({ preventScroll: true });
-  }));
-
-  cleanup.push(listen(document, "wm:focus-window", (event) => {
-    const id = event.detail?.id;
-    if (id && windows.has(id)) wm.focusWindow(id);
-  }));
-
-  const onResize = rafBatch(() => {
-    if (reapplyResponsiveDefaults(state, { mobile: media.mobile.matches })) save();
-    renderer.invalidate();
-    renderer.renderNow();
+  /* The chrome handlers live in chrome.js; this is the teardown they return. */
+  const removeChrome = installChrome({
+    wm,
+    windows,
+    renderer,
+    restoreFocus,
+    isBlocked: blocked,
+    root,
+    power: (action) => wm.power(action),
+    onResize: () => {
+      if (reapplyResponsiveDefaults(state, { mobile: media.mobile.matches })) save();
+      renderer.invalidate();
+      renderer.renderNow();
+    },
   });
-  cleanup.push(listen(window, "resize", onResize, { passive: true }));
-  if (media.mobile.addEventListener) cleanup.push(listen(media.mobile, "change", onResize));
-
-  const visualViewport = window.visualViewport;
-  if (visualViewport) {
-    cleanup.push(listen(visualViewport, "resize", () => {
-      root.style.setProperty("--vv-offset", `${visualViewport.offsetTop}px`);
-    }));
-  }
 
   root.dataset.wallpaper = state.wallpaper;
   root.dataset.wm = "on";
@@ -936,14 +780,14 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   attachHomeShell();
 
   if (media.coarse.matches) {
-    import("./touch.js?v=20260905f")
+    import("./touch.js?v=20260905g")
       .then(({ installTouch }) => {
         touch = installTouch({ shell, wm, isBlocked: blocked });
       })
       .catch(() => {});
   }
 
-  import("./idle-lock.js?v=20260905f")
+  import("./idle-lock.js?v=20260905g")
     .then(({ installIdleLock }) => {
       lock = installIdleLock({
         node: document.querySelector("#lockscreen"),
@@ -957,7 +801,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   else startSession();
 
   if (isSelfTest()) {
-    import("./selftest.js?v=20260905f")
+    import("./selftest.js?v=20260905g")
       .then(({ runSelfTest }) => runSelfTest())
       .catch((error) => console.error("[wm] selftest failed to load", error));
   }

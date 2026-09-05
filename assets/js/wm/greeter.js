@@ -9,60 +9,18 @@
    inert nor aria-hidden: it is a labelled dialog with a real focusable button.
    It still never touches <main>, never traps focus, and never runs when the
    visitor arrived at a deep link, when a session already exists, or under
-   automation — see the inline decision script in index.html. */
+   automation — see the inline decision script in index.html.
 
-const BOOT_BANNER = [
-  "Manjaro Linux 24.2 Yonada (tty1)",
-  "Linux 6.12.4-1-MANJARO x86_64",
-];
+   The log lines and the player live in console.js, shared with the power
+   sequences; this module owns only the two greeter phases. */
 
-/* kind: "kernel" | "ok" | "start" | "plain" */
-const BOOT_LOG = [
-  ["kernel", "[    0.000000] Linux version 6.12.4-1-MANJARO (gcc 14.2.1, GNU ld 2.43)"],
-  ["kernel", "[    0.000000] Command line: BOOT_IMAGE=/boot/vmlinuz-6.12-x86_64 rw quiet splash"],
-  ["kernel", "[    0.184213] Memory: 16334M available"],
-  ["kernel", "[    0.291884] Run /init as init process"],
-  ["kernel", "[    0.412518] systemd[1]: systemd 257 running in system mode (+PAM +AUDIT +SELINUX)"],
-  ["kernel", "[    0.418902] systemd[1]: Detected architecture x86-64."],
-  ["ok", "Created slice Slice /system/getty."],
-  ["ok", "Reached target Swaps."],
-  ["ok", "Listening on Journal Socket."],
-  ["start", "Starting Journal Service..."],
-  ["ok", "Started Journal Service."],
-  ["ok", "Finished Load Kernel Modules."],
-  ["ok", "Mounted /boot/efi."],
-  ["ok", "Reached target Local File Systems."],
-  ["start", "Starting Rule-based Manager for Device Events..."],
-  ["ok", "Started Rule-based Manager for Device Events and Files."],
-  ["ok", "Found device /dev/disk/by-uuid/8f3a1c2e-4d7b."],
-  ["ok", "Reached target System Initialization."],
-  ["ok", "Started Daily man-db regeneration."],
-  ["ok", "Reached target Timer Units."],
-  ["ok", "Listening on D-Bus System Message Bus Socket."],
-  ["ok", "Started D-Bus System Message Bus."],
-  ["start", "Starting Network Manager..."],
-  ["ok", "Started Network Manager."],
-  ["ok", "Reached target Network."],
-  ["ok", "Started OpenSSH Daemon."],
-  ["ok", "Started Avahi mDNS/DNS-SD Stack."],
-  ["ok", "Started TLP system startup/shutdown."],
-  ["start", "Starting Light Display Manager..."],
-  ["ok", "Started Light Display Manager."],
-  ["ok", "Reached target Graphical Interface."],
-  ["start", "Starting Update UTMP about System Runlevel Changes..."],
-  ["ok", "Finished Update UTMP about System Runlevel Changes."],
-  ["plain", "lightdm[812]: Starting seat seat0"],
-  ["plain", "lightdm[812]: Starting greeter session"],
-];
+import { BOOT_BANNER, BOOT_LOG, playLines } from "./console.js?v=20260905g";
 
-const BANNER_MS = 320;
-const LINE_MS = 108;
 const HINT_AT = 900;
-const SETTLE_MS = 420;
 const DOTS = 11;
 const DOT_MS = 42;
 
-export const runGreeter = ({ node, mode = "boot", reducedMotion, onLogin }) => {
+export const runGreeter = ({ node, mode = "boot", reducedMotion, onLogin, lines = BOOT_LOG }) => {
   if (!node) {
     onLogin({ silent: true });
     return { destroy() {} };
@@ -77,10 +35,8 @@ export const runGreeter = ({ node, mode = "boot", reducedMotion, onLogin }) => {
   const auth = node.querySelector("[data-auth]");
   const loginButton = node.querySelector("[data-login]");
 
-  let raf = 0;
+  let player = null;
   let dotTimer = 0;
-  let printed = 0;
-  let bannerShown = 0;
   let finished = false;
   let phase = mode === "login" ? "login" : "boot";
   const timers = new Set();
@@ -97,11 +53,11 @@ export const runGreeter = ({ node, mode = "boot", reducedMotion, onLogin }) => {
   };
 
   const cleanup = () => {
-    if (raf) cancelAnimationFrame(raf);
+    player?.cancel();
+    player = null;
     if (dotTimer) clearInterval(dotTimer);
     for (const id of timers) clearTimeout(id);
     timers.clear();
-    raf = 0;
     dotTimer = 0;
     window.removeEventListener("keydown", onKeydown, true);
     node.removeEventListener("pointerdown", onPointerDown);
@@ -118,6 +74,7 @@ export const runGreeter = ({ node, mode = "boot", reducedMotion, onLogin }) => {
   if (auth) auth.textContent = "";
   if (dots) dots.textContent = "";
   node.classList.remove("is-leaving");
+  delete node.dataset.phase;
 
   const finish = () => {
     if (finished) return;
@@ -149,6 +106,7 @@ export const runGreeter = ({ node, mode = "boot", reducedMotion, onLogin }) => {
      There is no password value anywhere in the source, and nothing is checked. */
   const showLogin = () => {
     phase = "login";
+    player = null;
     if (bootScreen) bootScreen.hidden = true;
     if (loginScreen) loginScreen.hidden = false;
     if (hint) {
@@ -173,74 +131,9 @@ export const runGreeter = ({ node, mode = "boot", reducedMotion, onLogin }) => {
     loginButton?.focus({ preventScroll: true });
   };
 
-  const appendLine = ([kind, text]) => {
-    const item = document.createElement("li");
-    item.className = `greeter-line greeter-line-${kind}`;
-    if (kind === "ok") {
-      const tag = document.createElement("span");
-      tag.className = "greeter-ok";
-      tag.textContent = "[  OK  ]";
-      item.append(tag, document.createTextNode(` ${text}`));
-    } else if (kind === "start") {
-      const tag = document.createElement("span");
-      tag.className = "greeter-pending";
-      tag.textContent = "[      ]";
-      item.append(tag, document.createTextNode(` ${text}`));
-    } else {
-      item.textContent = text;
-    }
-    log?.append(item);
-    if (log) log.scrollTop = log.scrollHeight;
-  };
-
-  const started = performance.now();
-
-  /* Driven by elapsed time rather than step count, so a backgrounded tab catches
-     up instantly instead of dragging the sequence out behind the visitor. */
-  const step = () => {
-    const elapsed = performance.now() - started;
-
-    const wantBanner = Math.min(BOOT_BANNER.length, Math.floor(elapsed / BANNER_MS) + 1);
-    while (bannerShown < wantBanner) {
-      const line = document.createElement("span");
-      line.textContent = BOOT_BANNER[bannerShown];
-      banner?.append(line);
-      bannerShown += 1;
-    }
-
-    if (elapsed >= HINT_AT && hint?.hidden) hint.hidden = false;
-
-    const logElapsed = elapsed - BOOT_BANNER.length * BANNER_MS;
-    if (logElapsed >= 0) {
-      const want = Math.min(BOOT_LOG.length, Math.floor(logElapsed / LINE_MS) + 1);
-      while (printed < want) {
-        appendLine(BOOT_LOG[printed]);
-        printed += 1;
-      }
-    }
-
-    if (printed >= BOOT_LOG.length && logElapsed >= BOOT_LOG.length * LINE_MS + SETTLE_MS) {
-      raf = 0;
-      showLogin();
-      return;
-    }
-    raf = requestAnimationFrame(step);
-  };
-
   const skipBoot = () => {
-    if (raf) cancelAnimationFrame(raf);
-    raf = 0;
-    while (bannerShown < BOOT_BANNER.length) {
-      const line = document.createElement("span");
-      line.textContent = BOOT_BANNER[bannerShown];
-      banner?.append(line);
-      bannerShown += 1;
-    }
-    while (printed < BOOT_LOG.length) {
-      appendLine(BOOT_LOG[printed]);
-      printed += 1;
-    }
-    showLogin();
+    if (player) player.skip();
+    else showLogin();
   };
 
   function onKeydown(event) {
@@ -261,7 +154,7 @@ export const runGreeter = ({ node, mode = "boot", reducedMotion, onLogin }) => {
   /* Clicking anywhere skips the boot log, but the login panel only responds to
      the Log In button itself — a stray click on the desktop behind it must not
      log anyone in. */
-  function onPointerDown(event) {
+  function onPointerDown() {
     if (finished || phase !== "boot") return;
     skipBoot();
   }
@@ -273,12 +166,19 @@ export const runGreeter = ({ node, mode = "boot", reducedMotion, onLogin }) => {
   loginButton?.addEventListener("click", authenticate);
 
   if (phase === "login") {
-    if (bootScreen) bootScreen.hidden = true;
     showLogin();
-  } else if (reducedMotion) {
-    skipBoot();
   } else {
-    raf = requestAnimationFrame(step);
+    player = playLines({
+      banner,
+      log,
+      bannerLines: BOOT_BANNER,
+      lines,
+      instant: Boolean(reducedMotion),
+      onProgress: (elapsed) => {
+        if (elapsed >= HINT_AT && hint?.hidden) hint.hidden = false;
+      },
+      onDone: showLogin,
+    });
   }
 
   return {
