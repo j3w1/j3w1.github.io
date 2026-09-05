@@ -120,10 +120,13 @@ instead — which is what makes tab children reachable from the keyboard.
 | `store.js` | `localStorage` persistence. |
 | `dom.js` | Shared helpers: `element`, `listen`, `readPx`, `rafBatch`, `throttle`, `isEditable`. |
 | `greeter.js`, `idle-lock.js`, `touch.js`, `selftest.js` | Loaded on demand: the session curtains, coarse-pointer gestures, and the console assertions. |
-| `apps/` | `shell`, `neofetch`, `htop`, `cmatrix`, `feh`. |
+| `apps/` | `shell` (in the boot graph — it drives the home terminal), and `neofetch`, `htop`, `cmatrix`, `feh`, `conky`, loaded on first launch. |
 | `commands.js` | The i3-msg command language: a pure parser with `;` chaining, the handlers, and the launcher catalogue generated from the same table. |
 | `chrome.js` | Title-bar buttons, the nagbar, the restore link, tablist keys, resize plumbing — every document-level handler, torn down as one. |
 | `console.js` | The boot, shutdown and resume logs, and the time-driven player the greeter, the power sequences and `journalctl -b` share. |
+| `features.js` | The facade methods the original config brought: back-and-forth, borders, gaps, bar modes, reload, container focus, sticky, marks. Spread into the facade by `boot.js`. |
+| `tree-extras.js` | Pure tree operations for those: container focus, marks, swaps, floating setters. Imports only `tree.js`. |
+| `power.js` | i3exit: reboot, shutdown, suspend, hibernate. Loaded on demand; borrows the greeter's screen. |
 | `boot.js` | The facade, and the only file that knows about all of the above. |
 
 Dependency direction is strictly one way: `site.js → wm/*`. The window manager never imports
@@ -226,6 +229,21 @@ It is skipped entirely for a stored session, a deep link (a shared link must nev
 screen), automation, `boot off`, Save-Data, and plain mode. Reduced motion skips the *animation*, not
 the login, and the panel appears immediately.
 
+### The power sequences
+
+`power.js` borrows the greeter's screen for `i3exit`. A **reboot** ends the stored session at the
+start (a reload mid-sequence lands on the boot screen, which is right for a machine that was going
+down), closes every spawned window, plays systemd stopping its units (~2 s at 90 ms a line), goes
+black (~1.4 s; no GRUB menu — the machine booted quiet), then hands the node to the greeter for the
+boot log and login; the saved layout survives, like persisted i3 layouts. A **shutdown** halts to a
+black screen with a real power button. **Suspend** locks first (`i3exit suspend` is `blurlock &&
+systemctl suspend`) and sleeps until a key; **hibernate** resumes through the PM kernel lines. Both
+wake to the lock screen without unlocking it: `power.js` listens on `window` in the capture phase,
+ahead of the greeter and i3lock, which listen on `document` — the ordering that decides which
+listener eats a keystroke. **Switch user** is the login panel with the session kept. Reduced motion
+keeps every state change and skips only the animation, which is also how the browser suite runs
+them.
+
 ## 8. The desktop and the bar
 
 The wallpaper defaults to flat black and carries a `j3w1-i3` wordmark, drawn as `::after` content on
@@ -271,8 +289,13 @@ temperature, network SSID, and system uptime. (`navigator.storage.estimate()` re
 quota, not a disk; labelling it `disk` would be a fabrication.) A desktop's
 `{ level: 1, charging: true }` battery is suppressed specifically because it *looks* fabricated.
 
-The same rule governs `neofetch` (`unknown`, never a guess) and `htop` (real frame timing and heap,
-no synthesised CPU percentages).
+The same rule governs `neofetch` (`unknown`, never a guess), `htop` (real frame timing and heap,
+no synthesised CPU percentages), and `conky` (the open windows as processes, no percentages).
+
+The bar's labels are the original `i3status.conf`'s — Chinese, with their Nerd glyphs — but only for
+blocks with an honest source: `处理器` labels the thread count, never a usage figure; `没有电池` is
+never shown because the absence of a battery is unknowable from a browser. `bar labels en` switches
+the visible text; the screen-reader label is English either way.
 
 ## 11. Cache busting
 

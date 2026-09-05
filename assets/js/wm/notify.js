@@ -6,8 +6,8 @@
    event twice, in terse i3 jargon — so the announcer speaks human sentences and
    dunst shows the short form. */
 
-import { element } from "./dom.js?v=20260905i";
-import { media, prefs } from "./session.js?v=20260905i";
+import { element } from "./dom.js?v=20260905j";
+import { media, prefs } from "./session.js?v=20260905j";
 
 /* dunstrc: geometry "0x4-25+25" — at most four toasts. The window manager's
    own event toasts are short-lived (i3 itself never toasts a layout change;

@@ -2,8 +2,8 @@
    Renders a single static frame under prefers-reduced-motion and stops entirely
    while the tab is hidden. */
 
-import { element } from "../dom.js?v=20260905i";
-import { media } from "../session.js?v=20260905i";
+import { element } from "../dom.js?v=20260905j";
+import { media } from "../session.js?v=20260905j";
 
 const GLYPHS = "アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789j3w1";
 

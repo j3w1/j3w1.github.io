@@ -8,7 +8,7 @@
    the device memory bucket plus the JavaScript heap where the browser reports
    one. Nothing is invented — see wm-architecture.md §10. */
 
-import { element } from "../dom.js?v=20260905i";
+import { element } from "../dom.js?v=20260905j";
 
 const value = (candidate, suffix = "") =>
   candidate === null || candidate === undefined || candidate === "" ? null : `${candidate}${suffix}`;

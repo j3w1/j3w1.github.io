@@ -38,7 +38,31 @@ auth service; the backend's own Playwright spec imports the same fixture. The ba
 under `services/j3w1ctl-auth/`. `.github/workflows/ci.yml` runs all of it on every push.
 
 The tree and layout modules are pure and DOM-free specifically so they can be tested in node without
-a browser or a DOM shim. Keep them that way.
+a browser or a DOM shim — `tree-extras.js` and `commands.js` too. Keep them that way; `session.js`
+creates its media queries lazily for the same reason.
+
+## Generated files
+
+`npm run generate` writes every committed artifact that is derived from something else, and
+`npm run check` (run by CI) fails if any is stale:
+
+| Artifact | Derived from | Generator |
+| --- | --- | --- |
+| `assets/fonts/*.woff2`, the `@generated-fonts` block in `site.css`, the font preload tokens | the pinned Nerd Fonts and Noto CJK sources, and every icon and Han character found in the sources | `scripts/lib/fonts.mjs` |
+| the `modulepreload` list in `index.html` | the static import graph from `site.js` and `public-content.js` | `scripts/lib/preloads.mjs` |
+| `assets/data/content-index.json`, `writing/**`, `photography/**`, `books/**`, `sitemap.xml`, `feed.xml` | `content/**` | `services/j3w1ctl-auth/src/generate.js` |
+
+Adding an icon, a Chinese label, or a static import is therefore a two-step change: edit the source,
+then `npm run generate` and commit what it wrote. `npm run icons` re-renders the raster icons and
+the social card (committed, checked by shape rather than byte).
+
+## Byte budgets
+
+`test/wm-contract.test.js` caps the sizes of the core modules, the whole `assets/js/wm` directory,
+the font faces, and — the one that governs first paint — the **eager graph**: every module a chain
+of static imports reaches from `boot.js`. The greeter, the power sequences, touch, the self test and
+every application except the shell are loaded on demand and do not count against it. Raise a cap
+deliberately, in the same commit as the feature that needs it, with the reason in the test.
 
 ## Adding a keybinding
 

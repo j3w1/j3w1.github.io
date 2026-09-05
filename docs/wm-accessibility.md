@@ -105,6 +105,10 @@ different things, and skipping the login would quietly change what the visitor i
 `prefers-reduced-motion` does **not** force plain mode. Disliking animation and wanting a different
 layout are independent choices.
 
+The power sequences follow the same rule: a reboot under reduced motion still ends the session,
+closes spawned windows and lands on the login panel; a shutdown still halts; suspend still locks.
+The *state* changes are the feature; only the scrolling log and the black pauses are animation.
+
 ## 9. Contrast floor
 
 Measured against `--terminal: #0c0909`:
@@ -177,7 +181,14 @@ Every pointer-only capability has a keyboard equivalent:
 | long-press to float | `Alt`+`Shift`+`Space` or the launcher's `floating toggle` |
 | tab click | arrow keys within the tab strip, or `h`/`l` |
 | clicking **Log In** | `Enter` on the login panel |
-| dismissing a toast | they expire on their own; `notify off` silences them |
+| dismissing a toast | they expire on their own; `Ctrl`+`Space` closes them; `notify off` silences them |
+| the nagbar's lock / log out / switch user / suspend / hibernate / reboot / shut down | the `0` system mode, or `i3exit …` in the launcher and the terminal |
+| hovering the top edge to reveal a hidden bar | `m` shows it; Tab into it reveals it too (`:focus-within`) |
+| the halted screen's power button | any key powers the machine on |
+| clicking a tab | arrow keys and `Enter` within the strip |
+
+`sticky` is refused for authored windows with a toast: they cannot leave their section (§1), and a
+half-working sticky would be worse than an honest no.
 
 A gesture-only capability is an inaccessible capability.
 

@@ -8,16 +8,16 @@
    added, and every fallback rule in the stylesheet renders the site exactly as
    the static version always did. */
 
-import * as tree from "./tree.js?v=20260905i";
-import * as extra from "./tree-extras.js?v=20260905i";
-import { clampFloating, focusTarget, GEOMETRY } from "./layout.js?v=20260905i";
-import { createRenderer } from "./render.js?v=20260905i";
-import { installPointer } from "./pointer.js?v=20260905i";
-import { installKeys } from "./keys.js?v=20260905i";
-import { installBar } from "./bar.js?v=20260905i";
-import { installNotify } from "./notify.js?v=20260905i";
-import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260905i";
-import { element, readGaps } from "./dom.js?v=20260905i";
+import * as tree from "./tree.js?v=20260905j";
+import * as extra from "./tree-extras.js?v=20260905j";
+import { clampFloating, focusTarget, GEOMETRY } from "./layout.js?v=20260905j";
+import { createRenderer } from "./render.js?v=20260905j";
+import { installPointer } from "./pointer.js?v=20260905j";
+import { installKeys } from "./keys.js?v=20260905j";
+import { installBar } from "./bar.js?v=20260905j";
+import { installNotify } from "./notify.js?v=20260905j";
+import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260905j";
+import { element, readGaps } from "./dom.js?v=20260905j";
 import {
   clearGreetFlag,
   endSession,
@@ -27,18 +27,18 @@ import {
   shouldGreet,
   startSession,
   supported,
-} from "./session.js?v=20260905i";
-import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260905i";
+} from "./session.js?v=20260905j";
+import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260905j";
 import {
   defaultState,
   reapplyResponsiveDefaults,
   WALLPAPERS,
   WORKSPACES,
-} from "./defaults.js?v=20260905i";
-import { APP_NAMES, APPS, buildAppWindow } from "./apps/index.js?v=20260905i";
-import { commandList, runCommand } from "./commands.js?v=20260905i";
-import { installChrome } from "./chrome.js?v=20260905i";
-import { installFeatures } from "./features.js?v=20260905i";
+} from "./defaults.js?v=20260905j";
+import { APP_NAMES, APPS, buildAppWindow } from "./apps/index.js?v=20260905j";
+import { commandList, runCommand } from "./commands.js?v=20260905j";
+import { installChrome } from "./chrome.js?v=20260905j";
+import { installFeatures } from "./features.js?v=20260905j";
 
 const TITLE_BUTTONS = [
   ["minimize", "─", "Send to scratchpad"],
@@ -659,7 +659,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       powerInstance?.destroy();
       greeterInstance?.destroy();
       greeterInstance = null;
-      import("./power.js?v=20260905i").then(({ runPower }) => {
+      import("./power.js?v=20260905j").then(({ runPower }) => {
         powerInstance = runPower({
           node: document.querySelector("#greeter"),
           action,
@@ -872,7 +872,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     greeterInstance?.destroy();
     greeterInstance = null;
     if (greeterLoading) return greeterLoading;
-    greeterLoading = import("./greeter.js?v=20260905i").then(({ runGreeter }) => {
+    greeterLoading = import("./greeter.js?v=20260905j").then(({ runGreeter }) => {
       greeterLoading = null;
       greeterInstance = runGreeter({
         node: document.querySelector("#greeter"),
@@ -940,14 +940,14 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   attachHomeShell();
 
   if (media.coarse.matches) {
-    import("./touch.js?v=20260905i")
+    import("./touch.js?v=20260905j")
       .then(({ installTouch }) => {
         touch = installTouch({ shell, wm, isBlocked: blocked });
       })
       .catch(() => {});
   }
 
-  import("./idle-lock.js?v=20260905i")
+  import("./idle-lock.js?v=20260905j")
     .then(({ installIdleLock }) => {
       lock = installIdleLock({
         node: document.querySelector("#lockscreen"),
@@ -961,7 +961,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   else startSession();
 
   if (isSelfTest()) {
-    import("./selftest.js?v=20260905i")
+    import("./selftest.js?v=20260905j")
       .then(({ runSelfTest }) => runSelfTest())
       .catch((error) => console.error("[wm] selftest failed to load", error));
   }

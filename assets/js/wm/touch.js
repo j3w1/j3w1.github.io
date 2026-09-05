@@ -10,7 +10,7 @@
    pointermove is registered passive, so vertical scrolling can never be blocked
    or janked by this module. */
 
-import { media } from "./session.js?v=20260905i";
+import { media } from "./session.js?v=20260905j";
 
 const EDGE = 24;
 const AXIS_AT = 10;

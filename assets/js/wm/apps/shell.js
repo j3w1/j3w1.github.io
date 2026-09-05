@@ -7,9 +7,9 @@
    no new way for content to reach the DOM as markup. */
 
 import { renderAst } from "../../content-renderer.js?v=20260824";
-import { loadContentIndex } from "../../content-index.js?v=20260905i";
-import { BOOT_BANNER, BOOT_LOG } from "../console.js?v=20260905i";
-import { element } from "../dom.js?v=20260905i";
+import { loadContentIndex } from "../../content-index.js?v=20260905j";
+import { BOOT_BANNER, BOOT_LOG } from "../console.js?v=20260905j";
+import { element } from "../dom.js?v=20260905j";
 
 const HOME = "/home/j3w1";
 

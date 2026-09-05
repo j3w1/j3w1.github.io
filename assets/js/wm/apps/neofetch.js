@@ -1,7 +1,7 @@
 /* neofetch. Every field is read from this browser; anything it does not expose
    prints "unknown" rather than a plausible-looking invention. */
 
-import { element } from "../dom.js?v=20260905i";
+import { element } from "../dom.js?v=20260905j";
 
 const LOGO = [
   "██████████████████  ████████",
@@ -55,6 +55,7 @@ export const createNeofetch = ({ body }) => {
     ["Shell", "zsh"],
     ["WM", "i3"],
     ["Terminal", "urxvt"],
+    ["Terminal Font", "SauceCodePro Nerd Font Mono 13px"],
     ["Browser", value(browser())],
     ["Resolution", `${window.innerWidth}x${window.innerHeight}`],
     ["Display", value(screen?.width && `${screen.width}x${screen.height} @${window.devicePixelRatio.toFixed(1)}x`)],

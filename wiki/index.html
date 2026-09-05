@@ -20,7 +20,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <link rel="preload" href="/assets/fonts/sauce-code-pro-text.woff2?v=db62d388" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/site.css?v=20260905i">
+  <link rel="stylesheet" href="/assets/css/site.css?v=20260905j">
   <style>
     /* A scrolling document, unlike the fixed-viewport desktop, so the shared
        stylesheet's full-height/no-scroll rules are released here. */
@@ -344,7 +344,12 @@
             <tr><td><code>dmenu</code></td><td>Open the launcher (same as pressing <kbd>/</kbd>)</td></tr>
             <tr><td><code>feh</code> <code>neofetch</code> <code>htop</code> <code>cmatrix</code></td><td>Launch an application</td></tr>
             <tr><td><code>wiki</code></td><td>Open this guide</td></tr>
-            <tr><td><code>i3-msg &lt;command&gt;</code></td><td>Run a window manager command, e.g. <code>i3-msg layout tabbed</code></td></tr>
+            <tr><td><code>i3-msg &lt;command&gt;</code></td><td>Run a window manager command, e.g. <code>i3-msg layout tabbed</code>; chain with <code>;</code></td></tr>
+            <tr><td><code>i3exit &lt;action&gt;</code>, <code>reboot</code>, <code>poweroff</code></td><td>Lock, log out, suspend, hibernate, reboot, shut down</td></tr>
+            <tr><td><code>journalctl -b</code></td><td>This boot's log</td></tr>
+            <tr><td><code>cat ~/.config/i3/config</code></td><td>The original machine's dotfiles — also <code>i3status.conf</code>, <code>~/.config/dunst/dunstrc</code>, <code>~/.Xresources</code>, <code>~/.dmenurc</code></td></tr>
+            <tr><td><code>xrandr</code> / <code>screenlayout</code></td><td>Your display, and the historical three-monitor layout</td></tr>
+            <tr><td><code>notify-send &lt;text&gt;</code></td><td>A dunst notification</td></tr>
             <tr><td><code>logout</code></td><td>End the session and return to the login screen</td></tr>
             <tr><td><code>clear</code> <code>whoami</code> <code>date</code> <code>echo</code> <code>exit</code></td><td>The usual</td></tr>
           </tbody>
@@ -364,6 +369,7 @@
         <div class="card"><h3>🖼️ feh</h3><p>Pick between three wallpapers, drawn entirely in CSS — black by default, carrying the <strong>j3w1-i3</strong> wordmark. Remembered.</p></div>
         <div class="card"><h3>🟩 cmatrix</h3><p>A toy. Static if you have reduced motion enabled.</p></div>
         <div class="card"><h3>⌨️ urxvt</h3><p>Another terminal — <kbd>Alt</kbd>+<kbd>Enter</kbd>.</p></div>
+        <div class="card"><h3>📅 conky</h3><p>The original desk's panel: the date in Chinese, CPU threads, the open windows, memory, uptime. Floating and sticky at the top right, like its config said. <code>exec conky</code>.</p></div>
       </div>
     </section>
 
@@ -407,7 +413,10 @@
             <tr><td>🔒 Lock the screen</td><td><kbd>Shift</kbd>+<kbd>E</kbd> → <strong>Lock screen</strong>, or <code>exec i3lock</code>. Press a key to dismiss it — moving the mouse will not.</td></tr>
             <tr><td>🚪 Log out</td><td><kbd>Shift</kbd>+<kbd>E</kbd> → <strong>Log out</strong>, the launcher's <code>log out</code>, or <code>logout</code></td></tr>
             <tr><td>🔓 Log back in</td><td>The login panel is already there — press <kbd>Enter</kbd></td></tr>
-            <tr><td>🎬 Watch the boot again</td><td>The launcher's <code>exec lightdm</code></td></tr>
+            <tr><td>🎬 Watch the boot again</td><td>Reboot: <kbd>0</kbd> then <kbd>r</kbd>, <kbd>Shift</kbd>+<kbd>E</kbd> → <strong>Reboot</strong>, or <code>reboot</code> in the terminal — systemd stops, the screen goes black, the machine boots, LightDM waits (about ten seconds; any key skips a phase). The launcher's <code>exec lightdm</code> replays only the boot log</td></tr>
+            <tr><td>⏻ Shut down</td><td><kbd>0</kbd> then <kbd>Shift</kbd>+<kbd>S</kbd>, or <code>poweroff</code>. The machine halts to a power button; any key powers it on</td></tr>
+            <tr><td>💤 Suspend or hibernate</td><td><kbd>0</kbd> then <kbd>s</kbd> or <kbd>h</kbd>. The screen locks and goes dark; the key that wakes it does not unlock it</td></tr>
+            <tr><td>👤 Switch user</td><td><kbd>0</kbd> then <kbd>u</kbd> — the login panel, with your layout kept</td></tr>
             <tr><td>⏭️ Never see it again</td><td>The launcher's <code>boot off</code></td></tr>
           </tbody>
         </table>
@@ -436,6 +445,7 @@
             <tr><td><code>restart</code></td><td>Reset every window and layout to defaults</td></tr>
             <tr><td><code>gaps inner set 14</code> / <code>gaps outer set -2</code></td><td>i3-gaps, as the original machine had them (14 / −2 are the defaults; a lone window gets no gaps)</td></tr>
             <tr><td><code>bar mode hide</code> / <code>bar mode dock</code></td><td>Hide the bar until hovered or focused, or keep it docked</td></tr>
+            <tr><td><code>bar labels zh</code> / <code>bar labels en</code></td><td>The status bar's labels — Chinese as the original i3status.conf had them (default), or English</td></tr>
             <tr><td><code>border none</code> / <code>border pixel 1</code> / <code>border normal</code></td><td>The focused window's border and title bar</td></tr>
             <tr><td><code>i3-msg …</code> in the terminal</td><td>Every launcher entry is an i3 command; <code>workspace 2; layout tabbed</code> chains with semicolons</td></tr>
           </tbody>

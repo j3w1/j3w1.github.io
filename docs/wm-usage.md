@@ -136,8 +136,14 @@ tell you so rather than silently failing.
 | `help` | Commands and keys, listed separately |
 | `keys` | Just the window manager keyboard shortcuts |
 | `dmenu` | Open the command launcher (same as pressing `/`) |
-| `neofetch`, `htop`, `cmatrix`, `feh` | Launch an application |
-| `i3-msg <command>` | Run a window manager command (`i3-msg layout tabbed`) |
+| `neofetch`, `htop`, `cmatrix`, `feh`, `conky` | Launch an application |
+| `i3-msg <command>` | Run a window manager command (`i3-msg layout tabbed`; `;` chains) |
+| `i3exit <action>`, `reboot`, `poweroff`, `systemctl …` | The session and power actions |
+| `journalctl -b` | This boot's log |
+| `cat ~/.config/i3/config` | The original machine's dotfiles: i3, i3status, dunst, `.Xresources`, `.dmenurc`, the screen layout |
+| `xrandr`, `screenlayout` | The display (real), and the historical three-monitor layout |
+| `notify-send <text>` | A dunst notification |
+| `uname -a`, `hostname`, `uptime` | The usual, honest about being a session |
 | `logout` | End the session and return to the login screen |
 | `clear`, `whoami`, `date`, `echo`, `exit` | The usual |
 
@@ -145,16 +151,24 @@ tell you so rather than silently failing.
 
 ## The session menu
 
-The power button at the right of the bar — or `Shift`+`E` — opens an i3-nagbar across the top with
-three actions, the same way i3 answers `$mod+Shift+E`:
+The power button at the right of the bar — or `Shift`+`E` — opens an i3-nagbar across the top, the
+same way i3 answers `$mod+Shift+E`. The `0` key opens the same actions as a binding mode, exactly as
+the original config bound them (`i3exit`), and the terminal takes `i3exit <action>`, `reboot` and
+`poweroff`:
 
 | Action | Does |
 | --- | --- |
-| **Lock screen** | i3lock immediately; press any **key** to dismiss it — moving the mouse will not |
-| **Log out** | Ends the session and returns to the login panel |
+| **Lock screen** (`l`) | i3lock immediately; press any **key** to dismiss it — moving the mouse will not |
+| **Log out** (`e`) | Ends the session and returns to the login panel |
+| **Switch user** (`u`) | The login panel, with the session and layout kept |
 | **Restart i3 in place** | Resets every window and layout to defaults |
+| **Suspend** (`s`) | Locks, then the screen goes dark until a key; that key wakes the machine to the lock screen without unlocking it |
+| **Hibernate** (`h`) | As suspend, resuming through the kernel's PM lines |
+| **Reboot** (`r`) | systemd stops its units, the screen goes black, the machine boots and LightDM waits — about ten seconds. Spawned windows close and the session ends, as on a real reboot; the saved layout survives |
+| **Shut down** (`Shift`+`S`) | The shutdown log, then a halted screen with a power button; any key powers the machine on |
 
-`Escape` or **Cancel** closes it without doing anything.
+`Escape` or **Cancel** closes the menu without doing anything. Under reduced motion every sequence
+still changes state — it just lands there at once.
 
 ---
 
@@ -162,6 +176,9 @@ three actions, the same way i3 answers `$mod+Shift+E`:
 
 Launch any of these from the launcher (`/` then `exec <name>`) or from the terminal:
 
+- **conky** — the original config's panel at the top right: the date in Chinese, CPU threads, the
+  open windows as processes, device memory and the JavaScript heap, uptime. Floating, sticky and
+  borderless, as its config file said.
 - **neofetch** — system information, read from your own browser.
 - **htop** — the open windows as processes, with real frame timing and heap figures.
 - **feh** — pick between three wallpapers, drawn in CSS. Black is the default and carries the
@@ -187,6 +204,7 @@ All of these are launcher commands, and all are remembered in your browser only:
 | `restart` | Reset the layout to defaults |
 | `gaps inner set 14` / `gaps outer set -2` | i3-gaps — 14 / −2 are the defaults, and a lone window gets none (smart gaps) |
 | `bar mode hide` / `bar mode dock` | Hide the bar until hovered or focused, or keep it docked |
+| `bar labels zh` / `bar labels en` | The status bar's labels — Chinese, as the original i3status.conf had them (the default), or English |
 | `border none` / `border pixel 1` / `border normal` | The focused window's border and title bar |
 | `i3-msg …` | Every launcher entry is an i3 command; `workspace 2; layout tabbed` chains with `;` |
 

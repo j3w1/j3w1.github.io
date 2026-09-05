@@ -5,10 +5,10 @@
    through `ctx`, and are spread into the facade there; keeping them here
    keeps boot.js the small core it is meant to be. */
 
-import { clampFloating } from "./layout.js?v=20260905i";
-import { readGaps } from "./dom.js?v=20260905i";
-import * as tree from "./tree.js?v=20260905i";
-import * as extra from "./tree-extras.js?v=20260905i";
+import { clampFloating } from "./layout.js?v=20260905j";
+import { readGaps } from "./dom.js?v=20260905j";
+import * as tree from "./tree.js?v=20260905j";
+import * as extra from "./tree-extras.js?v=20260905j";
 
 export const installFeatures = (ctx) => {
   const { workspaces, onWorkspaceRequest, windows, paint, focusedTitle, dunst, announce, root, renderer, save, bar, bounds, stickyIds } = ctx;

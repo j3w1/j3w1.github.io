@@ -38,7 +38,14 @@ The short version:
 - `1`–`7` switch workspace, or click the names in the bar. On a phone, swipe.
 - `/` opens the launcher — every command is reachable there without a keyboard shortcut.
 - `?` shows the keys.
-- `Shift`+`E` (or the power button in the bar) opens the session menu: lock, log out, restart i3.
+- `Shift`+`E` (or the power button in the bar) opens the session menu; `0` opens the same actions as
+  the original config's system mode: lock, exit, switch user, suspend, hibernate, reboot, shut down.
+  A reboot really reboots — systemd goes down, the machine boots, LightDM waits.
+
+The desktop follows the original machine's dotfiles ([`j3w1/1w3j`](https://github.com/j3w1/1w3j)):
+Source Code Pro, i3-gaps 14/−2, the Xresources palette, i3status's Chinese labels, dunst and dmenu's
+colours, conky, an agnoster prompt, and the dotfiles themselves readable in the terminal
+(`cat ~/.config/i3/config`). Where a browser cannot honestly supply a value the block is absent.
 
 Nothing can be broken permanently: closed windows are only hidden, and reloading always restores the
 full desktop.
