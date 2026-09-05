@@ -60,7 +60,11 @@ jobs:
             services/j3w1ctl-auth/package-lock.json
       - run: npm ci
       - run: npm --prefix services/j3w1ctl-auth ci
+      # Both packages must resolve the same Playwright build; installing for
+      # each keeps a future version drift from launching a browser that was
+      # never downloaded.
       - run: npx playwright install --with-deps chromium
+      - run: npm --prefix services/j3w1ctl-auth exec -- playwright install chromium
       - name: Window manager in a real browser
         run: npm run test:browser
       - name: j3w1ctl client in a real browser
