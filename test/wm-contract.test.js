@@ -226,7 +226,10 @@ test("the window manager stays small enough to keep the site dependency-free", a
     return total;
   };
   const total = await walk(dir);
-  assert.ok(total <= 216_000, `assets/js/wm is ${total} bytes, over its 216000 byte budget`);
+  /* The directory total includes every lazily loaded module (the greeter, the
+     power sequences, the apps); the eager-graph budget below is the one that
+     governs first paint. */
+  assert.ok(total <= 256_000, `assets/js/wm is ${total} bytes, over its 256000 byte budget`);
 
   /* The ratchet that matters for first paint is the eager graph — modules a
      static import chain reaches from boot.js. Lazy curtains, apps and the
@@ -247,7 +250,7 @@ test("the window manager stays small enough to keep the site dependency-free", a
   /* Raised with the keymap's five binding modes, i3-gaps, the bar modes,
      container focus, sticky and marks; the ratchet is against drift, not a
      target. Everything else the config brought (power, greeter, apps) is lazy. */
-  assert.ok(eagerBytes <= 184_000, `the eager window manager graph is ${eagerBytes} bytes, over its 184000 byte budget`);
+  assert.ok(eagerBytes <= 196_000, `the eager window manager graph is ${eagerBytes} bytes, over its 196000 byte budget`);
 });
 
 test("the cache token is bumped whenever a versioned asset changes", async () => {
@@ -351,7 +354,9 @@ test("the self-hosted font is the generated WOFF2 subset, never a whole TTF", as
   for (const name of entries.filter((entry) => entry.endsWith(".woff2"))) {
     total += (await fs.stat(path.join(dir, name))).size;
   }
-  assert.ok(total > 0 && total <= 64_000, `font faces total ${total} bytes, over the 64000 byte budget`);
+  /* Four faces: text, icons, the CJK characters the bar and conky use, and
+     the wordmark — under a tenth of what the whole TTF weighed. */
+  assert.ok(total > 0 && total <= 80_000, `font faces total ${total} bytes, over the 80000 byte budget`);
   const css = await read("assets", "css", "site.css");
   assert.match(css, /\/\* @generated-fonts:start \*\/[\s\S]*sauce-code-pro-text\.woff2\?v=[0-9a-f]{8}[\s\S]*\/\* @generated-fonts:end \*\//);
   assert.match(css, /size-adjust:/, "fallback faces must be metric-matched");

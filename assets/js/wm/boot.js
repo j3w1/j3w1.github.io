@@ -8,16 +8,16 @@
    added, and every fallback rule in the stylesheet renders the site exactly as
    the static version always did. */
 
-import * as tree from "./tree.js?v=20260905h";
-import * as extra from "./tree-extras.js?v=20260905h";
-import { clampFloating, focusTarget, GEOMETRY } from "./layout.js?v=20260905h";
-import { createRenderer } from "./render.js?v=20260905h";
-import { installPointer } from "./pointer.js?v=20260905h";
-import { installKeys } from "./keys.js?v=20260905h";
-import { installBar } from "./bar.js?v=20260905h";
-import { installNotify } from "./notify.js?v=20260905h";
-import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260905h";
-import { element, readGaps } from "./dom.js?v=20260905h";
+import * as tree from "./tree.js?v=20260905i";
+import * as extra from "./tree-extras.js?v=20260905i";
+import { clampFloating, focusTarget, GEOMETRY } from "./layout.js?v=20260905i";
+import { createRenderer } from "./render.js?v=20260905i";
+import { installPointer } from "./pointer.js?v=20260905i";
+import { installKeys } from "./keys.js?v=20260905i";
+import { installBar } from "./bar.js?v=20260905i";
+import { installNotify } from "./notify.js?v=20260905i";
+import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260905i";
+import { element, readGaps } from "./dom.js?v=20260905i";
 import {
   clearGreetFlag,
   endSession,
@@ -27,18 +27,18 @@ import {
   shouldGreet,
   startSession,
   supported,
-} from "./session.js?v=20260905h";
-import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260905h";
+} from "./session.js?v=20260905i";
+import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260905i";
 import {
   defaultState,
   reapplyResponsiveDefaults,
   WALLPAPERS,
   WORKSPACES,
-} from "./defaults.js?v=20260905h";
-import { APP_NAMES, APPS, buildAppWindow } from "./apps/index.js?v=20260905h";
-import { commandList, runCommand } from "./commands.js?v=20260905h";
-import { installChrome } from "./chrome.js?v=20260905h";
-import { installFeatures } from "./features.js?v=20260905h";
+} from "./defaults.js?v=20260905i";
+import { APP_NAMES, APPS, buildAppWindow } from "./apps/index.js?v=20260905i";
+import { commandList, runCommand } from "./commands.js?v=20260905i";
+import { installChrome } from "./chrome.js?v=20260905i";
+import { installFeatures } from "./features.js?v=20260905i";
 
 const TITLE_BUTTONS = [
   ["minimize", "─", "Send to scratchpad"],
@@ -144,6 +144,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     modeNode: document.querySelector("#wm-mode"),
     clockNode: document.querySelector("#local-clock"),
     workspaceLinks: [...document.querySelectorAll(".workspace-strip [data-workspace-link]")],
+    labels: state.barLabels,
   });
 
   const dunst = installNotify({ container: document.querySelector("#dunst") });
@@ -658,7 +659,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       powerInstance?.destroy();
       greeterInstance?.destroy();
       greeterInstance = null;
-      import("./power.js?v=20260905h").then(({ runPower }) => {
+      import("./power.js?v=20260905i").then(({ runPower }) => {
         powerInstance = runPower({
           node: document.querySelector("#greeter"),
           action,
@@ -736,10 +737,29 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       const ws = activeWs();
       const leaf = tree.makeLeaf(id);
       leaf.spawned = true;
+      if (spec.border) leaf.border = spec.border;
       tree.insertChild(ws.root, leaf, ws.root.children.length);
       tree.normalize(ws.root);
       tree.setFocus(ws, id);
       renderer.renderNow();
+      /* An application may ask to start floating at a corner (conky), and to
+         be sticky across workspaces; both are what its config file said. */
+      if (spec.floating) {
+        const box = bounds();
+        tree.toggleFloating(ws, id, box);
+        const node = tree.floatingNode(ws, id);
+        const { w, h, anchor = "top-right", gap = { x: 0, y: 0 } } = spec.floating;
+        const width = Math.min(w, box.w);
+        const height = Math.min(h, box.h);
+        node.floatRect = clampFloating({
+          x: anchor.endsWith("right") ? box.x + box.w - width - gap.x : box.x + gap.x,
+          y: anchor.startsWith("top") ? box.y + gap.y : box.y + box.h - height - gap.y,
+          w: width,
+          h: height,
+        }, box);
+        if (spec.sticky) stickyIds.add(id);
+        renderer.renderNow();
+      }
 
       let instance;
       try {
@@ -852,7 +872,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     greeterInstance?.destroy();
     greeterInstance = null;
     if (greeterLoading) return greeterLoading;
-    greeterLoading = import("./greeter.js?v=20260905h").then(({ runGreeter }) => {
+    greeterLoading = import("./greeter.js?v=20260905i").then(({ runGreeter }) => {
       greeterLoading = null;
       greeterInstance = runGreeter({
         node: document.querySelector("#greeter"),
@@ -920,14 +940,14 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   attachHomeShell();
 
   if (media.coarse.matches) {
-    import("./touch.js?v=20260905h")
+    import("./touch.js?v=20260905i")
       .then(({ installTouch }) => {
         touch = installTouch({ shell, wm, isBlocked: blocked });
       })
       .catch(() => {});
   }
 
-  import("./idle-lock.js?v=20260905h")
+  import("./idle-lock.js?v=20260905i")
     .then(({ installIdleLock }) => {
       lock = installIdleLock({
         node: document.querySelector("#lockscreen"),
@@ -941,7 +961,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   else startSession();
 
   if (isSelfTest()) {
-    import("./selftest.js?v=20260905h")
+    import("./selftest.js?v=20260905i")
       .then(({ runSelfTest }) => runSelfTest())
       .catch((error) => console.error("[wm] selftest failed to load", error));
   }

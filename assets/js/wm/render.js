@@ -4,9 +4,9 @@
    their style, hidden, class and ARIA attributes are touched. Everything the
    window manager draws for itself lives in the per-workspace .wm-deco layer. */
 
-import { findCon, findLeaf, floatingNode } from "./tree.js?v=20260905h";
-import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260905h";
-import { element, rafBatch, readPx, sameRect } from "./dom.js?v=20260905h";
+import { findCon, findLeaf, floatingNode } from "./tree.js?v=20260905i";
+import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260905i";
+import { element, rafBatch, readPx, sameRect } from "./dom.js?v=20260905i";
 
 const GRIPS = Object.freeze(["n", "s", "e", "w", "ne", "nw", "se", "sw"]);
 

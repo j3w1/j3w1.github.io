@@ -1133,3 +1133,70 @@ test("a sticky spawned window follows every workspace; a site window is refused"
   await page.keyboard.press("1");
   await expect(neofetch).toBeHidden();
 });
+
+test("the bar speaks the original config's Chinese by default, English on request, and persists it", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await open(page);
+  await page.evaluate(() => document.fonts.ready);
+  const cpu = page.locator('#i3status [data-block="cpu"] .i3block-value');
+  await expect(cpu).toContainText("处理器");
+  await expect(cpu).toHaveAttribute("lang", "zh");
+  await expect(page.locator('#i3status [data-block="cpu"] .sr-only')).toHaveText("CPU threads: ");
+  await expect(page.locator("#local-clock")).toHaveText(/^\d{2}月\d{2}号 \d{2}时\d{2}分\d{2}秒$/);
+  const loaded = await page.evaluate(() => [...document.fonts].some((face) => face.family.includes("SauceCodePro NFM") && face.status === "loaded" && face.unicodeRange.includes("4E00")));
+  expect(loaded).toBe(true);
+
+  await page.locator("body").press("/");
+  await page.locator("#command-input").fill("bar labels en");
+  await page.locator("#command-input").press("Enter");
+  await expect(cpu).toContainText("cpu");
+  await expect(cpu).not.toContainText("处理器");
+  await expect(cpu).not.toHaveAttribute("lang", /.+/);
+  await expect(page.locator("#local-clock")).toHaveText(/^\d{2}:\d{2}:\d{2}/);
+  await page.reload();
+  await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
+  await expect(cpu).toContainText("cpu");
+});
+
+test("the terminal is the original machine's: agnoster prompt, dotfiles, journalctl, i3exit, notify-send", async ({ page }) => {
+  await open(page);
+  const terminal = page.locator('[data-wm-window="home-terminal"]');
+  const input = terminal.locator(".shell-input");
+  await expect(terminal.locator(".shell-prompt.agnoster .prompt-path").last()).toHaveText("~");
+  await input.click();
+  await input.fill("cat ~/.config/i3/config");
+  await input.press("Enter");
+  await expect(terminal.locator(".terminal-dotfile").last()).toContainText("gaps inner 14");
+  await input.fill("cd .config/i3");
+  await input.press("Enter");
+  await expect(terminal.locator(".shell-prompt.agnoster .prompt-path").last()).toHaveText("~/.config/i3");
+  await input.fill("cat i3status.conf");
+  await input.press("Enter");
+  await expect(terminal.locator(".terminal-dotfile").last()).toContainText("处理器");
+  await input.fill("cd ~");
+  await input.press("Enter");
+  await input.fill("journalctl -b");
+  await input.press("Enter");
+  await expect(terminal).toContainText("Started Light Display Manager.");
+  await input.fill("uname -a");
+  await input.press("Enter");
+  await expect(terminal).toContainText("Linux manjaro 6.12.4-1-MANJARO");
+  await input.fill("notify-send hello from the terminal");
+  await input.press("Enter");
+  await expect(page.locator("#dunst")).toContainText("hello from the terminal");
+  await input.fill("conky");
+  await input.press("Enter");
+  const conky = page.locator('[data-wm-window^="conky-"]');
+  await expect(conky).toBeVisible();
+  await expect(conky).toHaveClass(/is-floating/);
+  await expect(conky.locator(".conky-weekday")).toHaveText(/星期/);
+  /* Sticky by its config: it stays when the workspace changes. */
+  await terminal.focus();
+  await page.keyboard.press("3");
+  await expect(conky).toBeVisible();
+  await page.keyboard.press("1");
+  await input.click();
+  await input.fill("i3exit hibernate");
+  await input.press("Enter");
+  await expect(page.locator("#greeter")).toHaveAttribute("data-phase", "sleep");
+});

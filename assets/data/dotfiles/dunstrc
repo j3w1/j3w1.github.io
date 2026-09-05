@@ -1,0 +1,95 @@
+# Historical: ~/.config/dunst/dunstrc from the Manjaro i3 workstation preserved at
+# https://github.com/j3w1/1w3j (config/config/dunst/dunstrc). Trimmed to the parts this desktop
+# re-creates; nothing here is read by the site at runtime.
+
+[global]
+    frame_width = 1
+    frame_color = "#AE1914"
+    
+    font = Source Code Pro for Powerline 10
+    
+    markup = yes
+    
+    format = "%s %p\n%b"
+    
+    sort = yes
+    
+    indicate_hidden = yes
+    
+    alignment = left
+    
+    bounce_freq = 5
+
+    
+    show_age_threshold = 60
+    
+    word_wrap = no
+    
+    ignore_newline = no
+    
+    
+    geometry = "0x4-25+25"
+    
+    shrink = yes
+    
+    transparency = 15
+    
+    idle_threshold = 120 
+    
+    monitor = 0
+    
+    follow = mouse
+    
+    sticky_history = yes
+    
+    history_length = 20
+    
+    show_indicators = yes
+    
+    line_height = 0
+    
+    separator_height = 1
+    
+    padding = 8
+    
+    horizontal_padding = 10
+    
+    separator_color = #e99499
+    
+    startup_notification = false
+    
+    dmenu = /usr/bin/dmenu -p dunst:
+    
+    browser = palemoon
+
+    icon_position = left
+
+    icon_path = /usr/share/icons/Adwaita/16x16/status/:/usr/share/icons/Adwaita/16x16/devices/
+
+    max_icon_size=128
+
+[shortcuts]
+
+    
+    close = mod1+space
+    
+    close_all = ctrl+mod1+space
+
+    history = ctrl+mod4+h 
+    
+    context = ctrl+mod1+c
+
+[urgency_low]
+    background = "#a3676b"
+    foreground = "#0C0909"
+    timeout = 10
+
+[urgency_normal]
+    background = "#0C0909"
+    foreground = "#e99499"
+    timeout = 10
+
+[urgency_critical]
+    background = "#DC282E"
+    foreground = "#F9FAF9"
+    timeout = 0

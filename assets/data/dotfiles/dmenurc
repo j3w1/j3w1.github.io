@@ -1,0 +1,11 @@
+# Historical: ~/.dmenurc from the Manjaro i3 workstation preserved at
+# https://github.com/j3w1/1w3j (config/dmenurc). Trimmed to the parts this desktop
+# re-creates; nothing here is read by the site at runtime.
+
+DMENU_FN="SourceCodePro-12"
+DMENU_NB="#0C0909"
+DMENU_NF="#E99499"
+DMENU_SB="#630F0D"
+DMENU_SF="#E99499"
+TERMINAL_CMD="terminal -e"
+DMENU_OPTIONS="-i -fn $DMENU_FN -nb $DMENU_NB -nf $DMENU_NF -sf $DMENU_SF -sb $DMENU_SB"

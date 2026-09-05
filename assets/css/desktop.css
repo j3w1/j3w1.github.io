@@ -314,22 +314,27 @@ html.wm-active .window.is-floating {
    first: which block is leftmost changes with the viewport as blocks are shed,
    and a divider pinned to the first would end up drawn on a hidden one. */
 .i3block {
+  display: inline-flex;
   height: 100%;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
   border-left: 1px solid var(--border-strong);
   background: var(--chrome-alt);
+  color: var(--color7);
+  white-space: nowrap;
 }
+
+/* i3status colours from the config: good #FFA2A7 (color7), degraded #C81A1A
+   (color1 — 3.4:1, so the degraded glyph is color5 instead), and the glyphs
+   themselves sit at the decorative floor in color15. */
+.i3block-glyph { color: var(--color15); }
+.i3block.is-degraded .i3block-glyph { color: var(--color5); }
+.i3block-glyph:empty { display: none; }
 
 /* Below 768px the strip scrolls instead, so the tray stays reachable. */
 @media (min-width: 768px) {
   html.wm-active .workspace-strip { flex: 0 0 auto; }
-}
-
-.i3block {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 9px;
-  color: var(--muted);
-  white-space: nowrap;
 }
 
 
@@ -425,6 +430,26 @@ html.wm-active #power-menu-toggle[aria-expanded="true"] {
 /* urgent_workspace from the config: border color0, background fg, text color0. */
 .workspace-link.is-urgent { background: var(--xfg); color: var(--color0); }
 .workspace-link.is-urgent::after { margin-left: 4px; content: "!"; }
+
+/* conky: own_window_transparent in the config, over a wallpaper. Here it can
+   float over windows, so it keeps a translucent ground rather than bleeding
+   the window beneath through its figures. */
+html.wm-active .conky-window { background: rgb(12 9 9 / 90%); border-color: transparent; }
+.conky-window .app-statusline { display: none; }
+.conky { padding: 14px 16px; color: var(--xfg); font-size: 11px; line-height: 1.5; }
+.conky p { margin: 0; }
+.conky-date { padding-bottom: 8px; border-bottom: 1px solid #ae1914; margin-bottom: 14px; text-align: right; }
+.conky-weekday { color: #ae1914; font-size: 16px; }
+.conky-day { font-size: 38px; line-height: 1; }
+.conky-month { color: #ae1914; font-size: 18px; }
+.conky-year { font-size: 20px; }
+.conky-row { display: flex; justify-content: space-between; gap: 12px; padding-left: 24px; }
+.conky-label { color: #ae1914; }
+.conky-strong { color: var(--xfg); font-weight: 700; }
+.conky-value { color: var(--xfg); }
+.conky-sections { display: flex; flex-direction: column; gap: 2px; }
+.conky-foot { margin-top: 14px; text-align: right; }
+.conky-foot .conky-row { justify-content: flex-end; padding-left: 0; }
 
 /* focus parent: client.focused_inactive's color6 around the focused container. */
 .wm-confocus {
@@ -882,11 +907,11 @@ html[data-wm="off"] .project-detail,
 /* The bar clips rather than squeezing the workspace names, so blocks are shed
    in ascending order of usefulness before they ever reach that point. */
 /* Shedding order, re-tuned for the 13px bar: least useful readings go first. */
-@media (max-width: 1919px) { .i3block-lang { display: none; } }
+@media (max-width: 2199px) { .i3block-lang { display: none; } }
+@media (max-width: 2019px) { .i3block-tz { display: none; } }
 @media (max-width: 1839px) { .i3block-heap { display: none; } }
-@media (max-width: 1749px) { .i3block-tz { display: none; } }
-@media (max-width: 1619px) { .i3block-up { display: none; } }
-@media (max-width: 1549px) { .i3block-res { display: none; } }
+@media (max-width: 1719px) { .i3block-up { display: none; } }
+@media (max-width: 1579px) { .i3block-res { display: none; } }
 @media (max-width: 1399px) { .i3block-mem { display: none; } }
 @media (max-width: 1319px) { .i3block-net { display: none; } }
 @media (max-width: 1079px) { .i3block-cpu, .i3block-bat { display: none; } }

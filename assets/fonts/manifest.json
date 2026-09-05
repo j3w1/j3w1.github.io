@@ -6,8 +6,12 @@
       "sha256": "db62d388b5039aea9b0656fa8b752488662aaf48b50a4dd0ad3a13fb8d43001e"
     },
     "sauce-code-pro-icons.woff2": {
-      "bytes": 5496,
-      "sha256": "88a9a1bd4b0a68ccdcd79fd010c014e735910c76785b1c3c9a8a092d2d147a7d"
+      "bytes": 6852,
+      "sha256": "2cb5bbd21a27181eecc93f7ce1b62245bf5a4a7829c1494151f455fd5bf7873c"
+    },
+    "noto-sans-cjk-sc.woff2": {
+      "bytes": 21628,
+      "sha256": "235ae7c1237df15cf79c5baaa106f04bdb55ffddf332b55e49954db955c6d50d"
     },
     "sauce-code-pro-wordmark.woff2": {
       "bytes": 4416,
@@ -38,7 +42,9 @@
     "U+F002",
     "U+F00A",
     "U+F011",
+    "U+F012",
     "U+F015",
+    "U+F017",
     "U+F023",
     "U+F02D",
     "U+F030",
@@ -51,7 +57,19 @@
     "U+F09B",
     "U+F0AC",
     "U+F0AE",
+    "U+F0E7",
+    "U+F108",
+    "U+F11C",
+    "U+F128",
     "U+F129",
-    "U+F17C"
-  ]
+    "U+F17C",
+    "U+F1CE",
+    "U+F1E6",
+    "U+F1EB",
+    "U+F213",
+    "U+F240",
+    "U+F244",
+    "U+F2DB"
+  ],
+  "cjk": "アイウエオカキクケコサシスセソタチツテトナニヌネノ一七三主九二五低储八六内分区十号器四域堆处夹存局无日时星月有期未杰根池没率理申电的知秒线网行言语负载辨运："
 }

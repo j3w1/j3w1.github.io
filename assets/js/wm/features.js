@@ -5,10 +5,10 @@
    through `ctx`, and are spread into the facade there; keeping them here
    keeps boot.js the small core it is meant to be. */
 
-import { clampFloating } from "./layout.js?v=20260905h";
-import { readGaps } from "./dom.js?v=20260905h";
-import * as tree from "./tree.js?v=20260905h";
-import * as extra from "./tree-extras.js?v=20260905h";
+import { clampFloating } from "./layout.js?v=20260905i";
+import { readGaps } from "./dom.js?v=20260905i";
+import * as tree from "./tree.js?v=20260905i";
+import * as extra from "./tree-extras.js?v=20260905i";
 
 export const installFeatures = (ctx) => {
   const { workspaces, onWorkspaceRequest, windows, paint, focusedTitle, dunst, announce, root, renderer, save, bar, bounds, stickyIds } = ctx;
@@ -211,6 +211,22 @@ export const installFeatures = (ctx) => {
       return true;
     },
 
+    /* bar labels zh | en — the original bar was Chinese; the pref persists. */
+    setBarLabels(next) {
+      if (!bar.setLabels(next)) return false;
+      state().barLabels = next;
+      save();
+      announce(next === "zh" ? "bar labels in Chinese" : "bar labels in English");
+      return true;
+    },
+
     closeNotifications: () => (dunst.closeAll(), true),
+
+    /* notify-send: an application toast, with dunstrc's 10 s. */
+    notify(summary, body = "") {
+      if (!summary) return false;
+      dunst.notify(summary, { key: `notify-send:${summary}`, body, timeout: dunst.appTimeout });
+      return true;
+    },
   };
 };

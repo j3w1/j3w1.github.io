@@ -9,10 +9,12 @@
    faces, and the faces are committed. `npm run check` regenerates them in
    memory and fails if the committed copies differ.
 
-   Three faces, so each is fetched only when its glyphs are needed:
+   Four faces, so each is fetched only when its glyphs are needed:
      text     — Latin, punctuation, arrows, box drawing and block elements
      icons    — Powerline U+E0A0–E0B3 plus every private-use codepoint found in
                 the sources (a new icon cannot silently fall back to a box)
+     cjk      — every CJK character found in the sources (the bar's labels,
+                the name, conky's dates), cut from Noto Sans CJK SC
      wordmark — the bold "j3w1-i3" on the wallpaper, six characters
 
    Every face is served with ?v=<content hash>, written into site.css and the
@@ -32,6 +34,13 @@ const SOURCES = {
   bold: {
     url: `https://raw.githubusercontent.com/ryanoasis/nerd-fonts/${RELEASE}/patched-fonts/SourceCodePro/SauceCodeProNerdFontMono-Bold.ttf`,
     sha256: "fedd1dcdfc4228621075dc8a61190474aace7617aff61d1faca877d340a40ff6",
+  },
+  /* The i3status labels, the name, and conky's dates are Chinese; Source Code
+     Pro has no CJK, so the handful of characters the site uses come from Noto
+     Sans CJK SC at a pinned commit. */
+  cjk: {
+    url: "https://raw.githubusercontent.com/notofonts/noto-cjk/165c01b46ea533872e002e0785ff17e44f6d97d8/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
+    sha256: "2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b",
   },
 };
 
@@ -101,23 +110,25 @@ export const collectIconCodepoints = async (repoRoot) => {
     } catch { /* optional directory */ }
   }
   const codepoints = new Set(POWERLINE_CODEPOINTS);
+  const cjk = new Set();
   const pua = (value) => (value >= 0xe000 && value <= 0xf8ff) || (value >= 0xf0000 && value <= 0xffffd);
+  const han = (value) => (value >= 0x3000 && value <= 0x30ff) || (value >= 0x4e00 && value <= 0x9fff) || (value >= 0xff00 && value <= 0xffef);
+  const collect = (value) => {
+    if (pua(value)) codepoints.add(value);
+    if (han(value)) cjk.add(value);
+  };
   for (const file of scanned) {
     const source = await fs.readFile(file, "utf8");
-    for (const [, hex] of source.matchAll(/&#x([0-9a-fA-F]{4,5});/g)) {
-      const value = Number.parseInt(hex, 16);
-      if (pua(value)) codepoints.add(value);
-    }
-    for (const [, hex] of source.matchAll(/\\u\{?([0-9a-fA-F]{4,5})\}?/g)) {
-      const value = Number.parseInt(hex, 16);
-      if (pua(value)) codepoints.add(value);
-    }
-    for (const char of source) {
-      const value = char.codePointAt(0);
-      if (pua(value)) codepoints.add(value);
-    }
+    for (const [, hex] of source.matchAll(/&#x([0-9a-fA-F]{4,5});/g)) collect(Number.parseInt(hex, 16));
+    for (const [, hex] of source.matchAll(/\\u\{?([0-9a-fA-F]{4,5})\}?/g)) collect(Number.parseInt(hex, 16));
+    for (const char of source) collect(char.codePointAt(0));
   }
-  return [...codepoints].sort((a, b) => a - b);
+  /* conky's date block: every weekday and month name Intl produces for zh-CN. */
+  const zh = new Intl.DateTimeFormat("zh-CN", { weekday: "long", month: "long" });
+  for (let day = 0; day < 366; day += 1) {
+    for (const char of zh.format(new Date(Date.UTC(2024, 0, 1 + day)))) collect(char.codePointAt(0));
+  }
+  return { icons: [...codepoints].sort((a, b) => a - b), cjk: [...cjk].sort((a, b) => a - b) };
 };
 
 const ensureSource = async (repoRoot, key) => {
@@ -211,11 +222,13 @@ export const fallbackStack = () =>
 export const buildFonts = async (repoRoot) => {
   const regular = await ensureSource(repoRoot, "regular");
   const bold = await ensureSource(repoRoot, "bold");
-  const icons = await collectIconCodepoints(repoRoot);
+  const cjkSource = await ensureSource(repoRoot, "cjk");
+  const { icons, cjk } = await collectIconCodepoints(repoRoot);
 
   const faces = [
     { name: "text", source: regular, codepoints: TEXT_CODEPOINTS, weight: 400 },
     { name: "icons", source: regular, codepoints: icons, weight: 400, unicodeRange: "U+E000-F8FF, U+F0000-FFFFD" },
+    { name: "cjk", file: "noto-sans-cjk-sc.woff2", source: cjkSource, codepoints: cjk, weight: 400, unicodeRange: "U+3000-30FF, U+4E00-9FFF, U+FF00-FFEF" },
     { name: "wordmark", source: bold, codepoints: [...new Set([...WORDMARK_TEXT].map((c) => c.codePointAt(0)))], weight: 700 },
   ];
 
@@ -225,7 +238,7 @@ export const buildFonts = async (repoRoot) => {
   const cssFaces = [];
   for (const face of faces) {
     const woff2 = await subset(face.source, face.codepoints);
-    const file = `sauce-code-pro-${face.name}.woff2`;
+    const file = face.file ?? `sauce-code-pro-${face.name}.woff2`;
     const token = sha256(woff2).slice(0, 8);
     files.set(`${FONT_DIR}/${file}`, woff2);
     tokens[face.name] = token;
@@ -247,6 +260,7 @@ export const buildFonts = async (repoRoot) => {
     source: `SauceCodePro Nerd Font Mono ${RELEASE}`,
     faces: Object.fromEntries([...files].map(([file, buffer]) => [path.basename(file), { bytes: buffer.length, sha256: sha256(buffer) }])),
     icons: icons.map((value) => `U+${value.toString(16).toUpperCase().padStart(4, "0")}`),
+    cjk: String.fromCodePoint(...cjk),
   }, null, 2) + "\n";
   files.set(`${FONT_DIR}/manifest.json`, Buffer.from(manifest));
 
@@ -293,6 +307,7 @@ export const applyFonts = async (repoRoot, { files, css, tokens }, { check = fal
      the old 2.4 MB TTF above all — must not linger. */
   const keep = new Set([...files.keys()].map((file) => path.basename(file)));
   keep.add("OFL.txt");
+  keep.add("OFL-NotoSansCJK.txt");
   for (const entry of await fs.readdir(path.join(repoRoot, FONT_DIR))) {
     if (keep.has(entry)) continue;
     stale.push(`${FONT_DIR}/${entry} (unexpected)`);

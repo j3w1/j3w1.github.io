@@ -11,8 +11,8 @@
    workstation's config defined — the system menu on 0, and the gaps modes on
    Shift+G. Each mode is a table; the bar shows the mode's prompt verbatim. */
 
-import { isEditable } from "./dom.js?v=20260905h";
-import { announce } from "./a11y.js?v=20260905h";
+import { isEditable } from "./dom.js?v=20260905i";
+import { announce } from "./a11y.js?v=20260905i";
 
 const DIRECTIONS = Object.freeze({
   h: "left",
