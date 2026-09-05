@@ -15,6 +15,7 @@ import {
 } from "../src/constants.js";
 import { loadConfig } from "../src/config.js";
 import { createRedisStore } from "../src/store.js";
+import { classifyVercelLink } from "./vercel-link.mjs";
 
 const execute = promisify(execFile);
 const serviceRoot = path.resolve(import.meta.dirname, "..");
@@ -135,12 +136,21 @@ if (config.blobToken) {
   }
 } else skip("blob.connectivity", "BLOB_READ_WRITE_TOKEN is unavailable in this environment");
 
-const localProjectFile = path.join(serviceRoot, ".vercel/project.json");
-try {
-  const project = JSON.parse(await fs.readFile(localProjectFile, "utf8"));
-  project.projectId && project.orgId ? pass("vercel.link", { projectId: project.projectId, orgId: project.orgId, rootDirectory: "services/j3w1ctl-auth" }) : fail("vercel.link", "linked project identifiers are incomplete");
-} catch {
-  skip("vercel.link", "local project link is unavailable; no link was created");
+/* Read both supported link locations; only a genuinely absent file is a SKIP, so a malformed or
+   unreadable link can no longer disguise itself as "no link was created". */
+const linkAt = async (root, location) => {
+  try {
+    return { location, raw: await fs.readFile(path.join(root, ".vercel/project.json"), "utf8") };
+  } catch (error) {
+    return error.code === "ENOENT" ? { location, raw: null } : { location, raw: null, unreadable: error.code };
+  }
+};
+const candidates = [await linkAt(repoRoot, "the repository root"), await linkAt(serviceRoot, "services/j3w1ctl-auth")];
+const unreadable = candidates.find((candidate) => candidate.unreadable);
+if (unreadable) fail("vercel.link", `the Vercel link at ${unreadable.location} could not be read (${unreadable.unreadable})`);
+else {
+  const link = classifyVercelLink(candidates);
+  record("vercel.link", link.status, link.detail);
 }
 skip("vercel.provider-controls", "WAF, protection, spend, Git settings, domains, and storage identities require authenticated provider readback");
 skip("github.provider-controls", "App installation/permissions and main ruleset require authenticated provider readback");

@@ -18,7 +18,7 @@ npm --prefix services/j3w1ctl-auth run content:check
 npm --prefix services/j3w1ctl-auth run deploy:preflight
 ```
 
-The preflight is zero-mutation. With no provider credentials it checks source, lock, protocol, fixed-target, secret-scan, and cutover invariants and marks credential-dependent checks unavailable. With Production credentials it additionally creates, reads, and removes one disposable Redis TTL key and one private Blob object. `--json` emits strict machine-readable results. Provider setup and acceptance use separately named commands.
+The preflight makes no durable mutation. With no provider credentials it checks source, lock, protocol, fixed-target, secret-scan, link, and cutover invariants and marks credential-dependent checks unavailable. With Production credentials it additionally creates, reads, and removes one disposable Redis TTL key and one private Blob object. `--json` emits strict machine-readable results. Provider setup and acceptance use separately named commands.
 
 ## Configuration ownership
 
@@ -41,7 +41,7 @@ All publication paths use one branch snapshot and `expectedHeadOid`. GitHub CAS,
 
 ## Vercel deployment
 
-The Vercel project is `j3w1ctl-auth`, linked to `j3w1/j3w1.github.io` with Root Directory `services/j3w1ctl-auth`, Node 24, Fastify Functions/Fluid compute, and `git.deploymentEnabled=false`. `vercel.json` schedules the bounded staging cleanup. No Next.js wrapper is used.
+The Vercel project is `j3w1ctl-auth`, linked to `j3w1/j3w1.github.io` with Root Directory `services/j3w1ctl-auth`, Node 24, Fastify Functions/Fluid compute, and `git.deploymentEnabled=false`. `vercel.json` schedules the bounded staging cleanup. No Next.js wrapper is used. The CLI runs from the repository root, so the canonical link is the repository-level `.vercel/project.json`; Root Directory is remote project configuration that no local link file records, and the preflight reports it as expected rather than verified.
 
 Provider activation sequence:
 
@@ -50,8 +50,25 @@ Provider activation sequence:
 3. Configure Vercel WAF limits for OAuth start/callback, authenticated reads, and mutation/upload controls. Identity and Origin checks remain application-level.
 4. Review team metered spend, then enable low web/email notifications and automatic production pause at a threshold above fixed plan/seat charges and normal low-volume traffic.
 5. Build a protected Preview with `vercel deploy`; it must report `configured=false` and remain zero-write.
-6. Stage the exact reviewed commit with `vercel --prod --skip-domain`, run preflight and provider acceptance, then promote only that deployment with `vercel promote <exact-deployment>`.
-7. Put the accepted production origin alone in `admin/config.js`, publish through the reviewed repository path, and verify GitHub Pages and the real browser flow.
+6. Stage the exact reviewed commit with `vercel --prod --skip-domain` from a proven-clean tree: `git status --porcelain` empty, fetched, and `HEAD` equal to `origin/main` unless a deliberate exception is recorded. The CLI uploads the working tree while the deployment takes its Git metadata from local `HEAD`, so an uncommitted edit makes `/healthz` name a commit whose bytes were never deployed. Record the exact `HEAD` and the staged deployment identifier.
+7. Run preflight and provider acceptance against that candidate. Acceptance exercises the local candidate source against the real GitHub provider; it does not exercise the staged Vercel URL, so passing it is evidence about publication semantics and not about the deployment.
+8. Read production `/healthz` and record the current `provenance.deploymentId` as the known-good rollback target, promote only the staged deployment with `vercel promote <exact-deployment>`, then read production `/healthz` uncached and require `provenance.sourceRevision` to equal the recorded `HEAD` and `provenance.deploymentId` to equal the promoted deployment. Activation is complete only then; if either differs, `vercel rollback <recorded-deployment>` and verify again.
+9. Put the accepted production origin alone in `admin/config.js`, publish through the reviewed repository path, and verify GitHub Pages and the real browser flow. `/healthz` proves deployed identity and the browser flow proves deployed integration; neither substitutes for the other.
+
+Deployment completion is the verified identity of one promoted deployment, not equality with `main`. A later commit that changes no deployed runtime input legitimately leaves the production `sourceRevision` behind `main`, so a promotion is owed when the deployed runtime actually changes and is closed by the activation-time check above, not by a standing comparison.
+
+Provider acceptance requires `GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY_BASE64`, `GITHUB_API_VERSION`, `--apply`, and separately an authenticated `gh`. The two credentials are not interchangeable: `gh` reads the exact `main` head, creates and deletes the ephemeral branch, and reads every commit back, while the GitHub App private key makes the six single-attempt provider commits that must resolve to one consistent bot identity. `vercel env ls` reports a type per name — `GITHUB_APP_ID` and `GITHUB_API_VERSION` are `Config` values, `GITHUB_PRIVATE_KEY_BASE64` is a `Secret` and reads `Hidden`. Production Functions consume that Secret; the CLI does not return it. `vercel env run -e production` therefore supplies the App ID and API version but never the private key, and `vercel env pull` is not a way round it: it defaults to Development and accepts `--environment`, but the `Secret` type rather than the environment is what withholds the value. `GITHUB_CLIENT_SECRET`, `CMS_SESSION_SECRET`, and `CRON_SECRET` behave the same way.
+
+Supply the key from the separately retained App private key, in memory only. The npm shim consumes `--` under PowerShell, so call the CLI and the script directly:
+
+```powershell
+$pem = [IO.File]::ReadAllBytes("<retained GitHub App private key>")
+$env:GITHUB_PRIVATE_KEY_BASE64 = [Convert]::ToBase64String($pem)
+vercel.cmd env run -e production -- node services/j3w1ctl-auth/bin/provider-acceptance.mjs --apply
+Remove-Item Env:GITHUB_PRIVATE_KEY_BASE64 -ErrorAction SilentlyContinue
+```
+
+Never print, log, or persist the Base64 value. GitHub cannot reissue the private half of an existing key, so a lost file is recovered by rotation rather than re-download: generate a new private key, verify it, update the Production Secret, verify production, then revoke the old key.
 
 Automatic Git deployment and automatic production-domain assignment for staged deployments are disabled. There is no dynamic target selector, permanent test branch, DigitalOcean fallback, or automatic publication retry.
 
