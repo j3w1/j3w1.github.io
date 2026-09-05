@@ -1144,7 +1144,8 @@ test("the bar speaks the original config's Chinese by default, English on reques
   const cpu = page.locator('#i3status [data-block="cpu"] .i3block-value');
   await expect(label).toHaveText("处理器");
   await expect(label).toHaveAttribute("lang", "zh");
-  await expect(cpu).toHaveText("16 thr");
+  /* The reading is this machine's, so assert its shape: CI has four cores. */
+  await expect(cpu).toHaveText(/^\d+ thr$/);
   await expect(page.locator('#i3status [data-block="cpu"] .sr-only')).toHaveText("CPU threads: ");
   await expect(page.locator("#local-clock")).toHaveText(/^\d{2}月\d{2}号 \d{2}时\d{2}分\d{2}秒$/);
   const loaded = await page.evaluate(() => [...document.fonts].some((face) => face.family.includes("SauceCodePro NFM") && face.status === "loaded" && face.unicodeRange.includes("4E00")));
@@ -1171,7 +1172,7 @@ test("the bar sheds its labels before it squeezes anything, keeping the glyph an
      the screen-reader label is untouched. */
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(label).toBeHidden();
-  await expect(page.locator('#i3status [data-block="cpu"] .i3block-value')).toHaveText("16 thr");
+  await expect(page.locator('#i3status [data-block="cpu"] .i3block-value')).toHaveText(/^\d+ thr$/);
   await expect(page.locator('#i3status [data-block="cpu"] .i3block-glyph')).toBeVisible();
   await expect(page.locator('#i3status [data-block="cpu"] .sr-only')).toHaveText("CPU threads: ");
   /* And the bar has real room to spare, not a pixel: text measures differently
