@@ -190,3 +190,31 @@ git add -A && git commit -m "docs: publish window manager documentation" && git 
   `display` rule; do not set `hidden` on something you intend to show with CSS.
 - **`.no-js` and `html:not(.wm-active)` are different things.** The first means "no JavaScript"; the
   second also covers plain mode and a failed boot, and is the one most fallback rules should use.
+
+### On the CI runner
+
+- **A shallow clone makes every file look newly added.** The cache-token ratchets compare a file's
+  last commit date against its `?v=` token, so they need real history: `actions/checkout` defaults
+  to depth 1 and grafts its one commit as a root commit, so every file looks added today and the
+  ratchet demands a token dated now. Both CI jobs check out with `fetch-depth: 0`; anywhere else
+  the ratchets skip themselves on `git rev-parse --is-shallow-repository` rather than assert
+  against a fabricated date.
+- **Text measures differently on every platform.** Do not tune a breakpoint to the last pixel of
+  one machine's font metrics: no other host is obliged to reproduce them, and a layout left with a
+  pixel of slack overflows where the glyphs are a hair wider. Give geometry headroom and assert the
+  headroom rather than a one-pixel tolerance — the same reason sizes belong in the stylesheet under
+  *Changing geometry* above.
+- **Never assert a value the host supplies.** `navigator.hardwareConcurrency`, and anything else
+  the machine rather than the fixture decides, differs between here and a runner. Assert the shape
+  of the reading — `/^\d+ thr$/` — unless the fixture controls the value.
+- **Each package context needs the browser build its own resolved Playwright version expects.** The
+  repository root and `services/j3w1ctl-auth` carry independent lockfiles, so a dependency update
+  can move one without the other. Installing Chromium through only one package leaves the other
+  asking for an executable a clean runner never downloaded; a development machine hides it because
+  earlier runs populated the Playwright cache. CI installs for both package contexts, which is the
+  defensive form of the rule; the alternative is to enforce version parity between them explicitly.
+- **Geometry lands on a `requestAnimationFrame`.** A measurement taken straight after the input
+  that causes a relayout can still read the layout that was there before it. Wait for the rendering
+  boundary the assertion actually depends on — `awaitFullscreen` waits for the window to fill its
+  layer before measuring. `workers: 1` and `retries: 0` make such a race a hard first-try failure,
+  and a fast machine wins the race every time.

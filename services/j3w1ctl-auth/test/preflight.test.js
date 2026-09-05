@@ -28,6 +28,9 @@ test("deploy preflight reports strict JSON and makes no durable workspace or pro
   assert.equal(result.results.find(({ name }) => name === "vercel.git-deployment")?.status, "PASS");
   assert.equal(result.results.find(({ name }) => name === "security.tracked-secrets")?.status, "PASS");
   assert.equal(result.results.find(({ name }) => name === "vercel.provider-controls")?.status, "SKIP");
+  /* PASS where a link exists, SKIP on a runner that has none. The status is the host's, so assert
+     the contract — a link is never malformed — rather than this machine's answer. */
+  assert.ok(["PASS", "SKIP"].includes(result.results.find(({ name }) => name === "vercel.link")?.status));
   const after = (await execute("git", ["status", "--porcelain=v1", "-z"], { cwd: repoRoot })).stdout;
   assert.equal(after, before);
 });
