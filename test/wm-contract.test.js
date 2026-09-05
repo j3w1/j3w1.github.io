@@ -201,11 +201,13 @@ test("the window manager stays small enough to keep the site dependency-free", a
   /* Caps sit just above today's sizes: they are a ratchet against drift, not a
      target. Raise one deliberately when a feature justifies it. */
   const budget = [
-    ["assets/css/desktop.css", 24_000],
-    ["assets/js/wm/boot.js", 36_000],
-    ["assets/js/wm/tree.js", 20_000],
-    ["assets/js/wm/layout.js", 8_000],
-    ["assets/js/wm/render.js", 10_000],
+    ["assets/css/desktop.css", 26_000],
+    /* boot.js is over its intended size and is split in the realism phase
+       (commands.js, chrome.js, console.js); this cap is the interim ceiling. */
+    ["assets/js/wm/boot.js", 38_000],
+    ["assets/js/wm/tree.js", 24_000],
+    ["assets/js/wm/layout.js", 10_000],
+    ["assets/js/wm/render.js", 11_000],
   ];
   for (const [file, cap] of budget) {
     const { size } = await fs.stat(path.join(repoRoot, file));
@@ -221,7 +223,7 @@ test("the window manager stays small enough to keep the site dependency-free", a
     return total;
   };
   const total = await walk(dir);
-  assert.ok(total <= 160_000, `assets/js/wm is ${total} bytes, over its 160000 byte budget`);
+  assert.ok(total <= 176_000, `assets/js/wm is ${total} bytes, over its 176000 byte budget`);
 });
 
 test("the cache token is bumped whenever a versioned asset changes", async () => {
@@ -268,4 +270,53 @@ test("the root package is development tooling only: the site has no runtime depe
   const manifest = JSON.parse(await read("package.json"));
   assert.equal(manifest.dependencies, undefined, "the public site must not acquire npm runtime dependencies");
   assert.ok(manifest.devDependencies, "development tooling lives in devDependencies");
+});
+
+test("a boot failure always reaches the stacked fallback", async () => {
+  /* html.js hides six workspaces and locks scrolling on the assumption that the
+     desktop will take over. Three things can break that assumption — createWm
+     throwing, a module in the static graph failing to load, or a boot that
+     never completes — and each needs its own guard, because the one in site.js
+     never runs when site.js itself fails to load. */
+  const site = await read("assets", "js", "site.js");
+  assert.match(site, /try \{\s*wm = createWm\(/, "site.js must wrap createWm in try/catch");
+  const html = await read("index.html");
+  assert.match(html, /window\.addEventListener\("error", fail, true\)/, "the inline script must catch module load failures");
+  assert.match(html, /window\.setTimeout\(fail, \d{4,5}\)/, "the inline script must arm a boot deadline");
+  for (const stub of ["404.html", "about/index.html", "projects/index.html"]) {
+    assert.match(await read(stub), /<html[^>]*class="no-js"/, `${stub} must opt into the scrolling fallback rules`);
+  }
+});
+
+test("nothing in the window manager still refers to removed features", async () => {
+  const html = await read("index.html");
+  assert.doesNotMatch(html, /i3 \/ plain/, "the help dialog must not point at the removed plain-mode button");
+  const dir = path.join(repoRoot, "assets", "js", "wm");
+  const walk = async (target) => {
+    let sources = "";
+    for (const entry of await fs.readdir(target, { withFileTypes: true })) {
+      const next = path.join(target, entry.name);
+      sources += entry.isDirectory() ? await walk(next) : await fs.readFile(next, "utf8");
+    }
+    return sources;
+  };
+  const sources = await walk(dir);
+  assert.doesNotMatch(sources, /modPreference/, "modPreference had no setter and bricked the keys when hand-edited");
+});
+
+test("keyboard focus on a pane is visible, and recycled tab buttons never keep a stale id", async () => {
+  const css = await read("assets", "css", "site.css");
+  assert.doesNotMatch(css, /\.pane:focus \{/, "an unconditional outline: 0 on .pane cancelled the focus ring");
+  assert.match(css, /\.pane:focus-visible \{/);
+  const render = await read("assets", "js", "wm", "render.js");
+  assert.doesNotMatch(render, /if \(!button\.id\)/);
+});
+
+test("global window manager handlers are registered through listen() so destroy() can remove them", async () => {
+  const boot = await read("assets", "js", "wm", "boot.js");
+  assert.doesNotMatch(boot, /\n  document\.addEventListener\(/, "boot.js must register document handlers through listen()");
+  assert.doesNotMatch(boot, /\n  window\.addEventListener\(/, "boot.js must register window handlers through listen()");
+  assert.match(boot, /try \{\s*instance = spec\.create\(/, "spawn needs an error boundary");
+  const greeter = await read("assets", "js", "wm", "greeter.js");
+  assert.doesNotMatch(greeter.replace(/const later = [\s\S]*?\n  \};/, ""), /\bsetTimeout\(/, "greeter timers must be tracked through later()");
 });

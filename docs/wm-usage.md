@@ -99,10 +99,10 @@ scroll.
 | Tap a tab | Switch window |
 | Long-press a title bar | Float the window, then drag it |
 
-Each workspace uses i3's **tabbed** layout on a phone, which is the same thing i3 does when a screen
-is too narrow to tile usefully. Tiling, gutter-dragging, and the scratchpad are switched off below
-768px; everything else works. Swiping never overrides scrolling — if a table or a code block can
-still scroll sideways, it gets the gesture first.
+Each workspace starts in i3's **tabbed** layout on a phone, which is the same thing i3 does when a
+screen is too narrow to tile usefully; every command still works, and the gutter grab area grows to
+16px for fingers. Swiping never overrides scrolling — if a table or a code block can still scroll
+sideways, it gets the gesture first.
 
 ---
 

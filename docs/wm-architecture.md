@@ -71,7 +71,7 @@ WmNode = {
 }
 
 WmWorkspace = { name, root, floating[], killed[], focused, fullscreen, focusMode, userTouched }
-WmState     = { version, workspaces, scratchpad[], scratchpadShown, modPreference, wallpaper }
+WmState     = { version, workspaces, scratchpad[], scratchpadShown, wallpaper }
 ```
 
 `splith` and `tabbed` are the horizontal axis; `splitv` and `stacked` the vertical one — the same
@@ -115,7 +115,8 @@ instead — which is what makes tab children reachable from the keyboard.
 | `a11y.js` | The announcer and the focus fallback chain. |
 | `session.js` | Preferences, capability detection, named media queries. |
 | `store.js` | `localStorage` persistence. |
-| `greeter.js`, `idle-lock.js` | Session curtains. Loaded on demand. |
+| `dom.js` | Shared helpers: `element`, `listen`, `readPx`, `rafBatch`, `throttle`, `isEditable`. |
+| `greeter.js`, `idle-lock.js`, `touch.js`, `selftest.js` | Loaded on demand: the session curtains, coarse-pointer gestures, and the console assertions. |
 | `apps/` | `shell`, `neofetch`, `htop`, `cmatrix`, `feh`. |
 | `boot.js` | The facade, and the only file that knows about all of the above. |
 
@@ -132,8 +133,9 @@ paint and guarantee a visible reflow from the fallback grid to the window manage
 ```
 1. Inline <head> script (synchronous, pre-paint)
    → module-support probe sets html.js
-   → html[data-wm="off"] only if the window manager cannot run
    → html[data-boot="greeter"] if there is no stored session and this is not a deep link
+   → arms two guards: a capture-phase window "error" listener and an 8 s deadline, either of
+     which sets html[data-wm="off"] (and clears data-boot) unless html.wm-active has appeared
 2. site.css + desktop.css applied. Fallback grids describe the layout.
 3. site.js executes; createWm() runs synchronously inside try/catch:
    inventory → load + validate → compute → write styles → html.classList.add("wm-active")
@@ -143,7 +145,9 @@ paint and guarantee a visible reflow from the fallback grid to the window manage
 
 Two flags, deliberately separate:
 
-- `html[data-wm="off"]` marks a **failed or impossible boot**, so the stacked fallback applies.
+- `html[data-wm="off"]` marks a **failed or impossible boot**, so the stacked fallback applies. It is
+  set by `site.js` when `createWm` returns null or throws, and by the inline guards when `site.js`
+  never runs at all (a 404 anywhere in the static module graph fails the whole script).
 - `html.wm-active` is the **fact**, added only after a successful synchronous boot.
 
 **All fallback CSS keys off `html:not(.wm-active)`**, which covers no-JS, plain mode, and a failed
@@ -177,7 +181,9 @@ The login is a **stored session**, not a per-visit animation. `j3w1.wm.session` 
 visits, so someone who has logged in once lands on the desktop directly; logging out removes it and
 returns to the greeter's login panel without replaying the boot log.
 
-**Never persisted:** computed rects, and killed windows.
+**Never persisted:** computed rects, and killed windows. The scratchpad — including which window
+is currently shown — *is* persisted, so a reload restores it rather than letting a shown window
+quietly escape as a permanent floating window.
 **Never in the URL:** layout state. The hash belongs to content routing (`#writing/<slug>`).
 
 Writes are debounced 400ms and flushed on `pagehide`, `beforeunload`, and `visibilitychange`, so a

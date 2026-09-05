@@ -444,6 +444,22 @@ html.wm-active #power-menu-toggle[aria-expanded="true"] {
 
 .greeter[hidden] { display: none; }
 
+/* The pre-paint script sets data-boot before greeter.js has loaded, so for a
+   few frames the desktop would paint and then be covered. This curtain paints
+   black from frame 1 instead — the same black a machine shows before tty1.
+   It is not the forbidden "opacity curtain that never clears": data-boot is
+   removed on login, when the greeter fails to load, and by the inline boot
+   guards, so nothing can leave it up over a working page. */
+html[data-boot] body::before {
+  content: "";
+  position: fixed;
+  z-index: calc(var(--wm-z-curtain) - 1);
+  background: var(--desktop);
+  inset: 0;
+}
+
+html[data-boot] .desktop-shell { pointer-events: none; }
+
 .greeter.is-leaving { opacity: 0; transition: opacity 240ms linear; }
 
 .greeter-boot {

@@ -1,7 +1,7 @@
 /* Default desktop. The percents match the CSS grid fractions the static site
    uses, so the handoff from fallback layout to window manager is sub-pixel. */
 
-import { makeCon, makeLeaf, normalize } from "./tree.js?v=20260905c";
+import { makeCon, makeLeaf, normalize } from "./tree.js?v=20260905d";
 
 export const STATE_VERSION = 2;
 
@@ -63,7 +63,6 @@ export const defaultState = ({ mobile = false } = {}) => ({
   ),
   scratchpad: [],
   scratchpadShown: null,
-  modPreference: "bare",
   wallpaper: WALLPAPERS[0],
 });
 

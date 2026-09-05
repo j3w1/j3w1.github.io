@@ -7,7 +7,7 @@
    no new way for content to reach the DOM as markup. */
 
 import { renderAst } from "../../content-renderer.js?v=20260824";
-import { element } from "../dom.js?v=20260905c";
+import { element } from "../dom.js?v=20260905d";
 
 const HOME = "/home/j3w1";
 const INDEX_URL = "/assets/data/content-index.json";
@@ -455,11 +455,12 @@ export const createShell = ({ body, statusline, wm, close, title }) => {
     if (title) title.textContent = `j3w1@manjaro: ${promptPath()}`;
   };
 
-  input.addEventListener("keydown", onKeydown);
-  buffer.addEventListener("click", (event) => {
+  const onBufferClick = (event) => {
     if (event.target.closest("a, button")) return;
     if (!window.getSelection()?.toString()) input.focus({ preventScroll: true });
-  });
+  };
+  input.addEventListener("keydown", onKeydown);
+  buffer.addEventListener("click", onBufferClick);
 
   buildTree().then((value) => {
     tree = value;
@@ -470,6 +471,7 @@ export const createShell = ({ body, statusline, wm, close, title }) => {
     focus: () => input.focus({ preventScroll: true }),
     destroy: () => {
       input.removeEventListener("keydown", onKeydown);
+      buffer.removeEventListener("click", onBufferClick);
       inputLine.remove();
     },
   };

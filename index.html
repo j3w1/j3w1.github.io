@@ -13,9 +13,9 @@
   <meta name="theme-color" content="#0c0909">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/assets/fonts/JetBrainsMonoNerdFont-Regular.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="/assets/css/site.css?v=20260905c">
-  <link rel="stylesheet" href="/assets/css/desktop.css?v=20260905c">
-  <link rel="modulepreload" href="/assets/js/wm/boot.js?v=20260905c">
+  <link rel="stylesheet" href="/assets/css/site.css?v=20260905d">
+  <link rel="stylesheet" href="/assets/css/desktop.css?v=20260905d">
+  <link rel="modulepreload" href="/assets/js/wm/boot.js?v=20260905d">
   <script>
   /* Runs before first paint so the greeter never delays content. Storage keys are
      mirrored in wm/session.js; wm-contract.test.js asserts the two agree. */
@@ -36,6 +36,19 @@
       && local("j3w1.wm.boot", "1") !== "0"
       && navigator.webdriver !== true;
     if (greet) html.dataset.boot = "greeter";
+    /* Two guards for the failures site.js cannot catch itself: a module in the
+       static graph that 404s (the module script element fires "error", seen
+       here in the capture phase), and a boot that never completes. Either way
+       the site must become the stacked, scrolling document — html.js has
+       already hidden six workspaces on the assumption that the desktop will
+       take over. A late but successful boot sets data-wm="on" and wins. */
+    const fail = () => {
+      if (html.classList.contains("wm-active")) return;
+      html.dataset.wm = "off";
+      delete html.dataset.boot;
+    };
+    window.addEventListener("error", fail, true);
+    window.setTimeout(fail, 8000);
   })();
   </script>
   <script type="application/ld+json">
@@ -417,14 +430,14 @@
       </div>
       <dl id="help-bindings"><div><dt>1–7</dt><dd>switch workspace</dd></div><div><dt>h / j / k / l</dt><dd>focus left / down / up / right</dd></div><div><dt>/ or :</dt><dd>open the command launcher</dd></div><div><dt>?</dt><dd>show this help</dd></div></dl>
       <p id="help-privacy">Every status value in the bar is read from your own browser and never leaves this page.</p>
-      <p>Keyboard shortcuts pause while you type in a form control. Focus is never trapped outside an open dialog. Prefer a plain scrolling page? Use the <strong>i3 / plain</strong> button in the bar.</p>
+      <p>Keyboard shortcuts pause while you type in a form control. Focus is never trapped outside an open dialog. Every window stays reachable with <kbd>Tab</kbd> alone, and <kbd>Shift</kbd>+<kbd>R</kbd> restores the default layout.</p>
     </div>
   </dialog>
 
   <dialog id="photo-viewer" class="photo-viewer" aria-labelledby="photo-viewer-title"><header class="window-titlebar"><h2 id="photo-viewer-title">photograph — ristretto</h2><button type="button" class="window-close" data-close-photo aria-label="Close photograph">×</button></header><figure><img alt=""><figcaption></figcaption></figure></dialog>
   <div id="j3w1ctl-root"></div>
 
-  <script src="/assets/js/site.js?v=20260905c" type="module"></script>
-  <script src="/assets/js/public-content.js?v=20260905c" type="module"></script>
+  <script src="/assets/js/site.js?v=20260905d" type="module"></script>
+  <script src="/assets/js/public-content.js?v=20260905d" type="module"></script>
 </body>
 </html>

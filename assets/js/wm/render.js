@@ -4,9 +4,9 @@
    their style, hidden, class and ARIA attributes are touched. Everything the
    window manager draws for itself lives in the per-workspace .wm-deco layer. */
 
-import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260905c";
-import { isTabular } from "./tree.js?v=20260905c";
-import { element, rafBatch, readPx, sameRect } from "./dom.js?v=20260905c";
+import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260905d";
+import { isTabular } from "./tree.js?v=20260905d";
+import { element, rafBatch, readPx, sameRect } from "./dom.js?v=20260905d";
 
 const GRIPS = Object.freeze(["n", "s", "e", "w", "ne", "nw", "se", "sw"]);
 
@@ -92,7 +92,8 @@ export const createRenderer = ({ windows, layers, decos, empties, getState, getA
         button.style.height = `${tab.rect.h}px`;
         if (target) {
           const id = windowId(tab.id);
-          if (!button.id) button.id = `wm-tab-${tab.id}`;
+          /* Recycled buttons must not keep an id minted for another window. */
+          button.id = `wm-tab-${tab.id}`;
           button.setAttribute("aria-controls", id);
           target.setAttribute("role", "tabpanel");
           target.setAttribute("aria-labelledby", button.id);
@@ -171,10 +172,11 @@ export const createRenderer = ({ windows, layers, decos, empties, getState, getA
     const result = computeWorkspace(ws, bounds, geometry);
     layouts.set(wsName, result);
 
-    /* Windows belonging to other workspaces stay hidden; their sections are
-       display:none anyway, but this keeps the accessibility tree honest. */
+    /* Every window that is not part of the active workspace is hidden, whichever
+       section it was authored in: inactive sections are only visibility:hidden,
+       and a window that has been moved to this workspace lives in another
+       section's DOM. This is also what keeps the accessibility tree honest. */
     for (const [id, node] of windows) {
-      if (node.closest("[data-wm-layer]") !== layer) continue;
       if (!result.tiles.has(id) && !result.floats.has(id)) {
         if (!node.hidden) node.hidden = true;
         node.classList.remove("is-focused");

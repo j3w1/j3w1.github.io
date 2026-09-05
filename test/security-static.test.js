@@ -86,6 +86,23 @@ test("direct and i3bar launchers use the same CMS bundle cache key", async () =>
   assert.equal(publicVersion, adminVersion);
 });
 
+test("the admin stylesheet token is bumped whenever the stylesheet changes", async () => {
+  /* admin/j3w1ctl.js injects its stylesheet from JavaScript, so no HTML-level
+     check can see the token; the same git-date ratchet the shared token uses
+     covers it here. */
+  const { execFileSync } = await import("node:child_process");
+  const source = await fs.readFile(path.join(repoRoot, "admin", "j3w1ctl.js"), "utf8");
+  const token = source.match(/\/admin\/j3w1ctl\.css\?v=(\d{8})/)?.[1];
+  assert.ok(token, "j3w1ctl.js must version its stylesheet with a dated token");
+  const git = (args) => execFileSync("git", args, { cwd: repoRoot, encoding: "utf8" }).trim();
+  const target = ["--", "admin/j3w1ctl.css"];
+  const dirty = git(["status", "--porcelain", ...target]).length > 0;
+  const lastChanged = dirty
+    ? new Date().toISOString().slice(0, 10).replaceAll("-", "")
+    : git(["log", "-1", "--format=%cd", "--date=format:%Y%m%d", ...target]);
+  assert.ok(!lastChanged || token >= lastChanged, `admin/j3w1ctl.css changed on ${lastChanged} but its token is ${token}`);
+});
+
 test("CMS integration locks mutations, uses semantic editor sizing, and uploads generated WebP only", async () => {
   const source = await fs.readFile(path.join(repoRoot, "admin", "j3w1ctl.js"), "utf8");
   const imageSource = await fs.readFile(path.join(repoRoot, "admin", "j3w1ctl-images.js"), "utf8");

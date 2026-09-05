@@ -2,8 +2,8 @@
    written: a reload always restores a complete desktop, which bounds the worst
    case of any layout experiment to "press F5". */
 
-import { KEYS } from "./session.js?v=20260905c";
-import { STATE_VERSION } from "./defaults.js?v=20260905c";
+import { KEYS } from "./session.js?v=20260905d";
+import { STATE_VERSION } from "./defaults.js?v=20260905d";
 
 const stripNode = (node) => {
   if (node.type === "win") {
@@ -27,9 +27,9 @@ const stripNode = (node) => {
 
 export const serialize = (state) => ({
   version: STATE_VERSION,
-  modPreference: state.modPreference,
   wallpaper: state.wallpaper,
   scratchpad: state.scratchpad.map(stripNode),
+  scratchpadShown: state.scratchpadShown ?? null,
   workspaces: Object.fromEntries(
     Object.entries(state.workspaces).map(([name, ws]) => [
       name,
@@ -82,16 +82,23 @@ export const createSaver = (getState, delay = 400) => {
   const flushIfPending = () => {
     if (timer) flush();
   };
+  const onVisibility = () => {
+    if (document.visibilityState === "hidden") flushIfPending();
+  };
   addEventListener("pagehide", flushIfPending);
   addEventListener("beforeunload", flushIfPending);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") flushIfPending();
-  });
+  document.addEventListener("visibilitychange", onVisibility);
 
   const save = () => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(flush, delay);
   };
   save.flush = flush;
+  save.destroy = () => {
+    flushIfPending();
+    removeEventListener("pagehide", flushIfPending);
+    removeEventListener("beforeunload", flushIfPending);
+    document.removeEventListener("visibilitychange", onVisibility);
+  };
   return save;
 };

@@ -7,9 +7,9 @@
    so link clicks, table row selection, form fields and text selection inside the
    terminal buffers all behave exactly as they did before. */
 
-import { gutterAt, tabAt } from "./layout.js?v=20260905c";
-import { element } from "./dom.js?v=20260905c";
-import { media } from "./session.js?v=20260905c";
+import { gutterAt, tabAt } from "./layout.js?v=20260905d";
+import { element } from "./dom.js?v=20260905d";
+import { media } from "./session.js?v=20260905d";
 
 const THRESHOLD = 4;
 const PROXY_FRACTION = 0.5;
@@ -76,11 +76,10 @@ export const installPointer = ({ wm, layers, decos, getLayout, getActive, isEnab
     const layer = layers.get(wsName);
     if (!layer || !layer.contains(event.target)) return;
 
-    const tab = event.target.closest?.(".wm-tab");
-    if (tab) {
-      wm.focusTab(tab.dataset.wmCon, Number(tab.dataset.wmIndex), tab.dataset.wmTab);
-      return;
-    }
+    /* Tabs activate on click (below), which mouse, touch, and a keyboard's
+       Enter or Space all produce; pointerdown only has to keep a drag from
+       starting on the strip. */
+    if (event.target.closest?.(".wm-tab")) return;
 
     const layout = getLayout(wsName);
     const point = pointIn(layer, event);
@@ -225,16 +224,36 @@ export const installPointer = ({ wm, layers, decos, getLayout, getActive, isEnab
     layer.style.cursor = gutter ? (gutter.orientation === "h" ? "col-resize" : "row-resize") : "";
   };
 
+  const onClick = (event) => {
+    if (!isEnabled()) return;
+    const tab = event.target.closest?.(".wm-tab");
+    if (!tab || !layers.get(getActive())?.contains(tab)) return;
+    wm.focusTab(tab.dataset.wmCon, Number(tab.dataset.wmIndex), tab.dataset.wmTab);
+  };
+
   document.addEventListener("pointerdown", onPointerDown);
+  document.addEventListener("click", onClick);
   document.addEventListener("pointermove", onPointerMove);
   document.addEventListener("pointerup", finish);
   document.addEventListener("pointercancel", finish);
   document.addEventListener("lostpointercapture", finish);
   document.addEventListener("pointermove", onCursor, { passive: true });
 
+  /* A long press floats the window under the finger while the title-bar drag
+     that began on pointerdown is still in progress; rebasing that drag onto the
+     new floating rect lets the same gesture carry the window away. */
+  const rebaseDrag = (id) => {
+    if (!drag || drag.kind !== "move" || drag.id !== id) return false;
+    const rect = getLayout(drag.wsName)?.floats.get(id);
+    if (rect) drag.rect = rect;
+    return true;
+  };
+
   return {
+    rebaseDrag,
     destroy: () => {
       document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("click", onClick);
       document.removeEventListener("pointermove", onPointerMove);
       document.removeEventListener("pointerup", finish);
       document.removeEventListener("pointercancel", finish);

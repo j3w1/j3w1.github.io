@@ -12,6 +12,13 @@ export const element = (tag, className, text) => {
   return node;
 };
 
+/* Registers a listener and returns the function that removes it, so every
+   global handler a module installs can be torn down by the same list. */
+export const listen = (target, type, handler, options) => {
+  target.addEventListener(type, handler, options);
+  return () => target.removeEventListener(type, handler, options);
+};
+
 export const sameRect = (a, b) =>
   Boolean(a) && Boolean(b) && a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
 

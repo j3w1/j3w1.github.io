@@ -9,7 +9,7 @@
    disk usage, CPU load, temperature, network SSID, and system uptime.
    (navigator.storage.estimate() reports an origin quota, not a disk.) */
 
-import { element } from "./dom.js?v=20260905c";
+import { element } from "./dom.js?v=20260905d";
 
 const FAST_MS = 1000;
 const SLOW_MS = 10000;

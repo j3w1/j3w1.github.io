@@ -9,6 +9,7 @@ import {
   leafIds,
   makeCon,
   makeLeaf,
+  moveToScratchpad,
   moveLeaf,
   moveToWorkspace,
   normalize,
@@ -16,6 +17,7 @@ import {
   restoreKilled,
   setFocus,
   setLayout,
+  showScratchpad,
   split,
   toggleFloating,
   toggleFullscreen,
@@ -328,4 +330,65 @@ test("focus bookkeeping points at a real window after every structural change", 
     assert.ok(live.includes(ws.focused), "focused window still exists");
     assert.ok(findLeaf(ws.root, ws.focused) || ws.floating.some((n) => n.id === ws.focused));
   }
+});
+
+test("scratchpad show cycles through every scratchpad window, i3-style", () => {
+  const state = defaultState({ mobile: false });
+  const ws = state.workspaces.home;
+  const bounds = { x: 0, y: 0, w: 1200, h: 800 };
+  const [first, second] = leafIds(ws.root);
+  assert.ok(moveToScratchpad(state, ws, first));
+  assert.ok(moveToScratchpad(state, ws, second));
+  assert.deepEqual(state.scratchpad.map((node) => node.id), [first, second]);
+
+  assert.ok(showScratchpad(state, ws, bounds), "shows the first window");
+  assert.equal(state.scratchpadShown, first);
+  assert.equal(ws.focused, first);
+  assert.ok(showScratchpad(state, ws, bounds), "hides the focused shown window and queues it last");
+  assert.equal(state.scratchpadShown, null);
+  assert.deepEqual(state.scratchpad.map((node) => node.id), [second, first]);
+  assert.ok(showScratchpad(state, ws, bounds), "the next press shows the other window");
+  assert.equal(state.scratchpadShown, second);
+
+  /* Visible but unfocused: show focuses it instead of hiding it. */
+  ws.focused = leafIds(ws.root)[0] ?? null;
+  assert.ok(showScratchpad(state, ws, bounds));
+  assert.equal(ws.focused, second);
+  assert.equal(state.scratchpadShown, second);
+});
+
+test("validate keeps the shown scratchpad window only while it is still floating somewhere", () => {
+  const state = defaultState({ mobile: false });
+  const ws = state.workspaces.home;
+  const bounds = { x: 0, y: 0, w: 1200, h: 800 };
+  const [first] = leafIds(ws.root);
+  moveToScratchpad(state, ws, first);
+  showScratchpad(state, ws, bounds);
+  const kept = validate(structuredClone(state), defaultWindowIds(), defaultState({ mobile: false }));
+  assert.equal(kept.scratchpadShown, first, "a shown window stays in the scratchpad across a reload");
+  assert.ok(kept.workspaces.home.floating.some((node) => node.id === first));
+
+  const escaped = structuredClone(state);
+  escaped.workspaces.home.floating = [];
+  const reset = validate(escaped, defaultWindowIds(), defaultState({ mobile: false }));
+  assert.equal(reset.scratchpadShown, null);
+});
+
+test("validate sanitises layouts, percents, focus indices and float rects", () => {
+  const state = defaultState({ mobile: false });
+  const ws = state.workspaces.home;
+  ws.root.layout = "grid";
+  ws.root.percent = Number.NaN;
+  ws.root.focus = -3;
+  ws.root.children[0].percent = "wide";
+  const [first] = leafIds(ws.root);
+  toggleFloating(ws, first, { x: 10, y: 10, w: 300, h: 200 });
+  ws.floating[0].floatRect = { x: Number.NaN, y: 5, w: "big" };
+  const result = validate(state, defaultWindowIds(), defaultState({ mobile: false }));
+  assert.equal(result.workspaces.home.root.layout, "splith");
+  assert.equal(result.workspaces.home.root.percent, 1);
+  assert.equal(result.workspaces.home.root.focus, 0);
+  for (const child of result.workspaces.home.root.children) assert.ok(Number.isFinite(child.percent) && child.percent > 0);
+  assert.equal(result.workspaces.home.floating[0].floatRect, null, "a malformed rect is dropped, never NaN");
+  assert.equal(setLayout(ws, leafIds(ws.root)[0], "bogus"), false, "unknown layout names are refused");
 });

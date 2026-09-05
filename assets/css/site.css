@@ -284,8 +284,36 @@ dl {
   min-height: 0;
 }
 
-.js .workspace:not(.is-active) {
+/* Before the window manager has booted (and when it never will, with data-wm
+   still unset) only the routed workspace shows. Once it is active the sections
+   stack in one box and inactive ones are invisible rather than display:none,
+   so a window moved to another workspace can be shown from its own section —
+   authored windows are never reparented. */
+.js:not(.wm-active) .workspace:not(.is-active) {
   display: none;
+}
+
+html.wm-active .desktop-shell {
+  position: relative;
+}
+
+html.wm-active .workspace {
+  position: absolute;
+  inset: var(--gap);
+  width: auto;
+  height: auto;
+}
+
+html.wm-active .workspace:not(.is-active) {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* The renderer hides every window that is not part of the active workspace,
+   so any window left visible belongs on screen wherever its section lives. */
+html.wm-active .window:not([hidden]) {
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .workspace-grid {
@@ -316,8 +344,15 @@ dl {
   position: relative;
 }
 
-.pane:focus {
+/* Mouse focus on a pane shows only the i3 border; keyboard focus must be
+   visible, and the dashed 1px ring is not, on a selected row. */
+.pane:focus:not(:focus-visible) {
   outline: 0;
+}
+
+.pane:focus-visible {
+  outline: 2px solid var(--foreground-bright);
+  outline-offset: -3px;
 }
 
 .pane.is-focused {

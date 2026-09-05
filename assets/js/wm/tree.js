@@ -173,17 +173,6 @@ export const setFocus = (ws, id) => {
   return false;
 };
 
-export const focusedLeaf = (ws) => {
-  if (ws.focused) {
-    const tiled = findLeaf(ws.root, ws.focused);
-    if (tiled) return tiled.node;
-    const floated = floatingNode(ws, ws.focused);
-    if (floated) return floated;
-  }
-  const first = leafIds(ws.root)[0] ?? ws.floating[0]?.id ?? null;
-  return first ? findLeaf(ws.root, first)?.node ?? floatingNode(ws, first) : null;
-};
-
 /* Raise a floating window to the top of the stack. */
 export const raiseFloating = (ws, id) => {
   const index = ws.floating.findIndex((node) => node.id === id);
@@ -192,7 +181,10 @@ export const raiseFloating = (ws, id) => {
   return true;
 };
 
+export const LAYOUTS = new Set(["splith", "splitv", "tabbed", "stacked"]);
+
 export const setLayout = (ws, id, layout) => {
+  if (!LAYOUTS.has(layout)) return false;
   const location = findLeaf(ws.root, id);
   if (!location) return false;
   const con = location.parent ?? ws.root;
@@ -437,10 +429,19 @@ export const moveToScratchpad = (state, ws, id) => {
   return true;
 };
 
+/* i3 semantics: `scratchpad show` hides the shown scratchpad window if it is
+   focused, focuses it if it is visible but not focused, and otherwise shows
+   the next one. Hidden windows go to the back of the queue, so repeated
+   presses cycle through every scratchpad window rather than toggling one. */
 export const showScratchpad = (state, ws, bounds) => {
   if (state.scratchpadShown) {
     const shown = floatingNode(ws, state.scratchpadShown);
     if (shown) {
+      if (ws.focused !== shown.id) {
+        ws.focused = shown.id;
+        ws.focusMode = "floating";
+        return true;
+      }
       ws.floating.splice(ws.floating.indexOf(shown), 1);
       delete shown.floating;
       delete shown.floatRect;
@@ -451,7 +452,7 @@ export const showScratchpad = (state, ws, bounds) => {
     }
     state.scratchpadShown = null;
   }
-  const node = state.scratchpad.pop();
+  const node = state.scratchpad.shift();
   if (!node) return false;
   node.floating = true;
   node.floatRect = centredRect(node.rect, bounds);
@@ -480,17 +481,27 @@ export const validate = (state, liveIds, defaults) => {
     ws.killed = [];
     ws.scratchpad = undefined;
 
+    /* Persisted numbers are coerced, not trusted: a NaN percent or a malformed
+       floatRect would otherwise reach the renderer as "NaNpx". */
+    const finite = (value, fallback) => (Number.isFinite(value) && value > 0 ? value : fallback);
     const prune = (node) => {
+      if (!node || typeof node !== "object") return null;
       if (node.type === "win") {
         if (!live.has(node.id) || seen.has(node.id)) {
           if (seen.has(node.id)) duplicated = true;
           return null;
         }
         seen.add(node.id);
+        node.percent = finite(node.percent, 1);
+        delete node.floating;
+        delete node.floatRect;
         return node;
       }
-      if (!Array.isArray(node.children)) return null;
+      if (node.type !== "con" || !Array.isArray(node.children)) return null;
       seedConCounter(Number.parseInt(String(node.id).slice(1), 10) || 0);
+      node.layout = LAYOUTS.has(node.layout) ? node.layout : "splith";
+      node.percent = finite(node.percent, 1);
+      node.focus = Number.isInteger(node.focus) && node.focus >= 0 ? node.focus : 0;
       node.children = node.children.map(prune).filter(Boolean);
       return node.children.length ? node : null;
     };
@@ -502,6 +513,10 @@ export const validate = (state, liveIds, defaults) => {
         return false;
       }
       seen.add(node.id);
+      node.floating = true;
+      const rect = node.floatRect;
+      const valid = rect && ["x", "y", "w", "h"].every((key) => Number.isFinite(rect[key]));
+      node.floatRect = valid ? { x: rect.x, y: rect.y, w: Math.max(rect.w, 1), h: Math.max(rect.h, 1) } : null;
       return true;
     });
     normalize(ws.root);
@@ -519,7 +534,11 @@ export const validate = (state, liveIds, defaults) => {
         return true;
       })
     : [];
-  state.scratchpadShown = null;
+  /* The shown scratchpad window survives a reload only while it is still a
+     floating window somewhere; otherwise it would silently escape the
+     scratchpad and `-` would pop a different window. */
+  const shownIn = names.find((name) => floatingNode(state.workspaces[name], state.scratchpadShown));
+  state.scratchpadShown = shownIn ? state.scratchpadShown : null;
 
   /* Any window in the document but absent from the tree joins its home workspace. */
   for (const name of names) {
@@ -535,7 +554,6 @@ export const validate = (state, liveIds, defaults) => {
   }
 
   state.version = defaults.version;
-  state.modPreference = state.modPreference === "alt" ? "alt" : "bare";
   state.wallpaper = typeof state.wallpaper === "string" ? state.wallpaper : defaults.wallpaper;
   return state;
 };

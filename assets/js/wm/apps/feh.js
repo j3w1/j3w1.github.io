@@ -1,8 +1,8 @@
 /* feh, as a wallpaper picker. The wallpapers are drawn in CSS, so switching one
    costs no request and adds no image bytes to the site. */
 
-import { element } from "../dom.js?v=20260905c";
-import { WALLPAPERS } from "../defaults.js?v=20260905c";
+import { element } from "../dom.js?v=20260905d";
+import { WALLPAPERS } from "../defaults.js?v=20260905d";
 
 const LABELS = Object.freeze({
   black: "black — the default, plain",

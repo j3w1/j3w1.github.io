@@ -83,16 +83,41 @@ export const runGreeter = ({ node, mode = "boot", reducedMotion, onLogin }) => {
   let bannerShown = 0;
   let finished = false;
   let phase = mode === "login" ? "login" : "boot";
+  const timers = new Set();
+
+  /* Every timeout is tracked so destroy() during authentication cannot land in
+     finish() and log a visitor in after the greeter was torn down. */
+  const later = (callback, delay) => {
+    const id = setTimeout(() => {
+      timers.delete(id);
+      callback();
+    }, delay);
+    timers.add(id);
+    return id;
+  };
 
   const cleanup = () => {
     if (raf) cancelAnimationFrame(raf);
     if (dotTimer) clearInterval(dotTimer);
+    for (const id of timers) clearTimeout(id);
+    timers.clear();
     raf = 0;
     dotTimer = 0;
     window.removeEventListener("keydown", onKeydown, true);
     node.removeEventListener("pointerdown", onPointerDown);
     loginButton?.removeEventListener("click", authenticate);
   };
+
+  /* A replay (log out, then log in; `exec lightdm`) starts from a clean screen
+     rather than appending a second boot log under the first. */
+  banner?.replaceChildren();
+  log?.replaceChildren();
+  if (bootScreen) bootScreen.hidden = false;
+  if (loginScreen) loginScreen.hidden = true;
+  if (hint) hint.hidden = true;
+  if (auth) auth.textContent = "";
+  if (dots) dots.textContent = "";
+  node.classList.remove("is-leaving");
 
   const finish = () => {
     if (finished) return;
@@ -106,7 +131,7 @@ export const runGreeter = ({ node, mode = "boot", reducedMotion, onLogin }) => {
       onLogin({ silent: false });
     };
     if (reducedMotion) hide();
-    else setTimeout(hide, 240);
+    else later(hide, 240);
   };
 
   const authenticate = () => {
@@ -114,9 +139,9 @@ export const runGreeter = ({ node, mode = "boot", reducedMotion, onLogin }) => {
     phase = "authenticating";
     if (auth) auth.textContent = "authenticating…";
     if (hint) hint.hidden = true;
-    setTimeout(() => {
+    later(() => {
       if (auth) auth.textContent = "authentication succeeded";
-      setTimeout(finish, reducedMotion ? 0 : 260);
+      later(finish, reducedMotion ? 0 : 260);
     }, reducedMotion ? 0 : 340);
   };
 

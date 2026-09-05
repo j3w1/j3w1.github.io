@@ -7,8 +7,8 @@
    wherever the browser allows it. Bindings that genuinely need a modifier to
    avoid breaking the page (Space would kill space-to-scroll) are Alt-only. */
 
-import { isEditable } from "./dom.js?v=20260905c";
-import { announce } from "./a11y.js?v=20260905c";
+import { isEditable } from "./dom.js?v=20260905d";
+import { announce } from "./a11y.js?v=20260905d";
 
 const DIRECTIONS = Object.freeze({
   h: "left",
@@ -128,6 +128,9 @@ export const installKeys = ({ wm, isBlocked, onWorkspaceRequest, openLauncher })
         if (!binding.test(event)) continue;
         event.preventDefault();
         binding.run(event);
+        /* One Escape leaves both the mode and fullscreen; a silent first press
+           that only left the mode read as the key not working. */
+        if (event.key === "Escape") wm.exitFullscreen();
         return;
       }
       return;
@@ -138,10 +141,8 @@ export const installKeys = ({ wm, isBlocked, onWorkspaceRequest, openLauncher })
       return;
     }
 
-    const bare = !event.altKey;
     for (const binding of bindings) {
       if (binding.altOnly && !event.altKey) continue;
-      if (bare && wm.modPreference() === "alt" && !binding.altOnly) continue;
       if (!binding.test(event)) continue;
       /* Arrow keys only steer the window manager when a window already has focus,
          so ordinary browser scrolling and caret movement are left alone. */

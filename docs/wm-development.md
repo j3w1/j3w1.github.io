@@ -148,9 +148,10 @@ git add -A && git commit -m "docs: publish window manager documentation" && git 
 - `?wm=selftest` — layout assertions in the console.
 - `localStorage.removeItem("j3w1.wm.layout")` — forget the saved layout.
 - `Shift`+`R` — restart in place.
-- If the desktop does not appear at all, check the console: `createWm` is wrapped in `try/catch`, so
-  a throw leaves `html.wm-active` unset and the site silently renders as the static fallback. That is
-  intentional, but it does mean a boot error looks like "the window manager just didn't load".
+- If the desktop does not appear at all, check the console: `createWm` is wrapped in `try/catch`, and
+  the inline head script sets `data-wm="off"` on any module load error or after an 8 s deadline, so
+  a boot error renders the site as the static fallback. That is intentional, but it does mean a boot
+  error looks like "the window manager just didn't load".
 
 ## Things that will bite you
 

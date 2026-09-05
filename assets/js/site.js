@@ -3,8 +3,8 @@
    would resolve after first paint and guarantee a visible reflow from the
    fallback grid to the window manager's layout. */
 
-import { createWm } from "./wm/boot.js?v=20260905c";
-import { isEditable } from "./wm/dom.js?v=20260905c";
+import { createWm } from "./wm/boot.js?v=20260905d";
+import { isEditable } from "./wm/dom.js?v=20260905d";
 
 const workspaceNames = [
   "home",
@@ -62,14 +62,12 @@ const activateWorkspace = (
   const nextName = workspaceNames.includes(name) ? name : "home";
   activeWorkspace = nextName;
 
-  /* If the window manager failed to boot, every workspace stays visible as one
-     scrolling document, so the hidden attribute (which site.css enforces with
-     !important) must not be applied. */
-  const stacked = document.documentElement.dataset.wm === "off";
+  /* Visibility is CSS's: `.is-active` hides the other sections with display:none
+     before the window manager boots and with visibility:hidden once it runs (a
+     window moved to another workspace is shown from its own section), and the
+     failed-boot fallback shows every section as one scrolling document. */
   workspaceSections.forEach((section, sectionName) => {
-    const isActive = sectionName === nextName;
-    section.classList.toggle("is-active", isActive);
-    section.hidden = stacked ? false : !isActive;
+    section.classList.toggle("is-active", sectionName === nextName);
   });
 
   workspaceLinks.forEach((link) => {
@@ -496,11 +494,21 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.altKey) activateFocusedItem();
 });
 
-wm = createWm({
-  onWorkspaceRequest: (index) => navigateToWorkspace(workspaceNames[index - 1], { moveFocus: true }),
-  isBlocked: () => Boolean(dialogIsOpen() || launcherIsOpen() || curtainIsOpen()),
-  openLauncher,
-});
+/* A throw anywhere in boot must land in the stacked fallback, never in a
+   half-initialised desktop: html.js has already hidden six workspaces and
+   locked body scrolling, and only data-wm="off" undoes that. The inline head
+   script covers the failures this catch cannot see — a module that fails to
+   load at all — with a window error listener and a boot deadline. */
+try {
+  wm = createWm({
+    onWorkspaceRequest: (index) => navigateToWorkspace(workspaceNames[index - 1], { moveFocus: true }),
+    isBlocked: () => Boolean(dialogIsOpen() || launcherIsOpen() || curtainIsOpen()),
+    openLauncher,
+  });
+} catch (error) {
+  console.error("[wm] boot failed; rendering the stacked fallback", error);
+  wm = null;
+}
 
 if (wm) {
   commands = [...baseCommands, ...wm.commands()];

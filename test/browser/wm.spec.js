@@ -602,3 +602,186 @@ test("mobile widths use a tabbed container with large touch targets", async ({ p
   const box = await tab.boundingBox();
   expect(box.height).toBeGreaterThanOrEqual(40);
 });
+
+test("a module that fails to load leaves the stacked, scrolling fallback", async ({ page }) => {
+  await page.route("**/assets/js/wm/layout.js*", (route) => route.abort());
+  await page.goto(`${fixture.frontendOrigin}/#home`);
+  await page.waitForFunction(() => document.documentElement.dataset.wm === "off");
+  await expect(page.locator("html")).not.toHaveClass(/wm-active/);
+  await expect(page.locator("html")).not.toHaveAttribute("data-boot", /.+/);
+  expect(await page.locator(".workspace:visible").count()).toBe(7);
+  expect(await page.evaluate(() => getComputedStyle(document.body).overflowY)).not.toBe("hidden");
+});
+
+test("a throw inside boot leaves the stacked, scrolling fallback", async ({ page }) => {
+  await page.addInitScript(() => {
+    /* Only the window manager's own inventory query throws, so site.js
+       evaluates normally and the try/catch around createWm is what is tested. */
+    const original = document.querySelectorAll.bind(document);
+    document.querySelectorAll = (selector) => {
+      if (selector === "[data-wm-layer]") throw new Error("boom");
+      return original(selector);
+    };
+  });
+  await page.goto(`${fixture.frontendOrigin}/#home`);
+  await page.waitForFunction(() => document.documentElement.dataset.wm === "off");
+  await expect(page.locator("html")).not.toHaveClass(/wm-active/);
+  expect(await page.evaluate(() => getComputedStyle(document.body).overflowY)).not.toBe("hidden");
+});
+
+test("arrow keys on the tab strip switch the visible panel and keep focus on the strip", async ({ page }) => {
+  await open(page);
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("w");
+  const tabs = page.locator('[data-wm-layer="home"] .wm-tabbar [role="tab"]');
+  await expect(tabs).toHaveCount(2);
+  await tabs.first().focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('[data-wm-window="home-files"]')).toBeVisible();
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toBeHidden();
+  expect(await page.evaluate(() => document.activeElement?.getAttribute("role"))).toBe("tab");
+  /* The visible panel is labelled by the tab that controls it, not a recycled id. */
+  const labelledBy = await page.locator('[data-wm-window="home-files"]').getAttribute("aria-labelledby");
+  await expect(tabs.nth(1)).toHaveAttribute("id", labelledBy);
+
+  /* Enter on a focused tab activates it too, and moves focus into the window. */
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("Enter");
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
+  expect(await page.evaluate(() => document.activeElement?.closest("[data-wm-window]")?.dataset.wmWindow)).toBe("home-terminal");
+});
+
+test("tapping a tab does not freeze the workspace's responsive defaults", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await open(page);
+  const tabs = page.locator('[data-wm-layer="home"] .wm-tabbar [role="tab"]');
+  await expect(tabs.first()).toBeVisible();
+  await tabs.nth(1).click();
+  await expect(page.locator('[data-wm-window="home-files"]')).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(page.locator('[data-wm-layer="home"] .wm-tabbar')).toHaveCount(0);
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
+  await expect(page.locator('[data-wm-window="home-files"]')).toBeVisible();
+});
+
+test("logging out and back in twice leaves one clean greeter each time", async ({ page }) => {
+  await open(page);
+  for (let i = 0; i < 2; i += 1) {
+    await page.locator("body").press("/");
+    await page.locator("#command-input").fill("log out");
+    await page.locator("#command-input").press("Enter");
+    await expect(page.locator("#greeter")).toBeVisible();
+    await expect(page.locator("[data-login-screen]")).toBeVisible();
+    await expect(page.locator("[data-boot-screen]")).toBeHidden();
+    await page.getByRole("button", { name: "Log In" }).click();
+    await expect(page.locator("#greeter")).toBeHidden();
+    await expect(page.locator("html")).not.toHaveClass(/wm-greeting/);
+    await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
+  }
+  /* One keydown capture listener: a second Escape/Enter is not swallowed by a
+     stale greeter after two round trips. */
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("f");
+  await page.keyboard.press("Escape");
+  await expect(page.locator('[data-wm-window="home-files"]')).toBeVisible();
+});
+
+test("the first paint under the greeter flag is a curtain, not the desktop", async ({ page }) => {
+  await openWithGreeter(page);
+  await expect(page.locator("#greeter")).toBeVisible();
+  expect(await page.evaluate(() => getComputedStyle(document.body, "::before").position)).toBe("fixed");
+  await page.keyboard.press("x");
+  await page.getByRole("button", { name: "Log In" }).click();
+  await expect(page.locator("#greeter")).toBeHidden();
+  expect(await page.evaluate(() => getComputedStyle(document.body, "::before").position)).not.toBe("fixed");
+});
+
+test("a window moved to another workspace is visible there and comes back with Shift+R", async ({ page }) => {
+  await open(page);
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("Alt+Shift+Digit2");
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toBeHidden();
+  await page.keyboard.press("2");
+  await expect(page).toHaveURL(/#writing$/);
+  const terminal = page.locator('[data-wm-window="home-terminal"]');
+  await expect(terminal).toBeVisible();
+  const moved = await rect(page, "home-terminal");
+  const reader = await rect(page, "writing-reader");
+  expect(moved.w).toBeGreaterThan(100);
+  expect(moved.x).toBeGreaterThanOrEqual(reader.x + reader.w);
+  /* It is a real window on this workspace: focusable, and its section's
+     invisibility does not leak into it. */
+  await terminal.locator(".shell-input").click();
+  expect(await page.evaluate(() => document.activeElement?.closest("[data-wm-window]")?.dataset.wmWindow)).toBe("home-terminal");
+  /* The workspace it left still renders correctly without it. */
+  await terminal.focus();
+  await page.keyboard.press("1");
+  await expect(page).toHaveURL(/#home$/);
+  await expect(terminal).toBeHidden();
+  await expect(page.locator('[data-wm-window="home-files"]')).toBeVisible();
+  await page.locator("body").press("Shift+R");
+  await expect(terminal).toBeVisible();
+});
+
+test("an application that throws on launch leaves no orphan window behind", async ({ page }) => {
+  await open(page);
+  /* htop is the only application that builds a <tbody> while launching. */
+  await page.evaluate(() => {
+    const original = Document.prototype.createElement;
+    Document.prototype.createElement = function createElement(tag, ...rest) {
+      if (tag === "tbody") throw new Error("boom");
+      return original.call(this, tag, ...rest);
+    };
+  });
+  const before = await page.locator("[data-wm-window]:visible").count();
+  await page.locator("body").press("/");
+  await page.locator("#command-input").fill("exec htop");
+  await page.locator("#command-input").press("Enter");
+  await expect(page.locator("#dunst")).toContainText("exec htop failed");
+  expect(await page.locator('[data-wm-window^="htop-"]').count()).toBe(0);
+  expect(await page.locator("[data-wm-window]:visible").count()).toBe(before);
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
+});
+
+test("restarting in place three times leaves one click handler on the terminal", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "CDP only");
+  await open(page);
+  for (let i = 0; i < 3; i += 1) {
+    await page.locator('[data-wm-window="home-terminal"]').focus();
+    await page.keyboard.press("Shift+R");
+    await expect(page.locator("#dunst")).toContainText("restart");
+  }
+  const cdp = await page.context().newCDPSession(page);
+  const { root } = await cdp.send("DOM.getDocument", { depth: 0 });
+  const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: root.nodeId, selector: '[data-wm-window="home-terminal"] .terminal-buffer' });
+  const { object } = await cdp.send("DOM.resolveNode", { nodeId });
+  const { listeners } = await cdp.send("DOMDebugger.getEventListeners", { objectId: object.objectId });
+  expect(listeners.filter((entry) => entry.type === "click").length).toBe(1);
+});
+
+test("Escape in resize mode also leaves fullscreen in one press", async ({ page }) => {
+  await open(page);
+  await page.locator('[data-wm-window="home-terminal"]').focus();
+  await page.keyboard.press("f");
+  await page.keyboard.press("r");
+  await expect(page.locator("#wm-mode")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#wm-mode")).toBeHidden();
+  await expect(page.locator('[data-wm-window="home-files"]')).toBeVisible();
+});
+
+test("title bar buttons do nothing while a curtain is up", async ({ page }) => {
+  await openWithGreeter(page);
+  await expect(page.locator("#greeter")).toBeVisible();
+  const before = await page.evaluate(() => JSON.parse(localStorage.getItem("j3w1.wm.layout") ?? "null"));
+  await page.locator('[data-wm-action="close"]').first().dispatchEvent("click");
+  await page.waitForTimeout(200);
+  await expect(page.locator("#greeter")).toBeVisible();
+  await page.keyboard.press("x");
+  await page.getByRole("button", { name: "Log In" }).click();
+  await expect(page.locator("#greeter")).toBeHidden();
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
+  await expect(page.locator('[data-wm-window="home-files"]')).toBeVisible();
+  void before;
+});

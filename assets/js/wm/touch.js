@@ -10,7 +10,7 @@
    pointermove is registered passive, so vertical scrolling can never be blocked
    or janked by this module. */
 
-import { media } from "./session.js?v=20260905c";
+import { media } from "./session.js?v=20260905d";
 
 const EDGE = 24;
 const AXIS_AT = 10;
@@ -150,10 +150,11 @@ export const installTouch = ({ shell, wm, isBlocked }) => {
   document.addEventListener("pointerdown", onPointerDown, { passive: true });
   document.addEventListener("pointermove", onPointerMove, { passive: true });
   document.addEventListener("pointerup", onPointerUp, { passive: true });
-  document.addEventListener("pointercancel", () => {
+  const onPointerCancel = () => {
     clearPress();
     reset();
-  }, { passive: true });
+  };
+  document.addEventListener("pointercancel", onPointerCancel, { passive: true });
   document.addEventListener("contextmenu", onContextMenu);
 
   return {
@@ -163,6 +164,7 @@ export const installTouch = ({ shell, wm, isBlocked }) => {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("pointermove", onPointerMove);
       document.removeEventListener("pointerup", onPointerUp);
+      document.removeEventListener("pointercancel", onPointerCancel);
       document.removeEventListener("contextmenu", onContextMenu);
     },
   };

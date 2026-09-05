@@ -8,15 +8,15 @@
    added, and every fallback rule in the stylesheet renders the site exactly as
    the static version always did. */
 
-import * as tree from "./tree.js?v=20260905c";
-import { clampFloating, GEOMETRY } from "./layout.js?v=20260905c";
-import { createRenderer } from "./render.js?v=20260905c";
-import { installPointer } from "./pointer.js?v=20260905c";
-import { installKeys } from "./keys.js?v=20260905c";
-import { installBar } from "./bar.js?v=20260905c";
-import { installNotify } from "./notify.js?v=20260905c";
-import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260905c";
-import { element, readGap } from "./dom.js?v=20260905c";
+import * as tree from "./tree.js?v=20260905d";
+import { clampFloating, GEOMETRY } from "./layout.js?v=20260905d";
+import { createRenderer } from "./render.js?v=20260905d";
+import { installPointer } from "./pointer.js?v=20260905d";
+import { installKeys } from "./keys.js?v=20260905d";
+import { installBar } from "./bar.js?v=20260905d";
+import { installNotify } from "./notify.js?v=20260905d";
+import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260905d";
+import { element, listen, readGap } from "./dom.js?v=20260905d";
 import {
   clearGreetFlag,
   endSession,
@@ -26,8 +26,8 @@ import {
   shouldGreet,
   startSession,
   supported,
-} from "./session.js?v=20260905c";
-import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260905c";
+} from "./session.js?v=20260905d";
+import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260905d";
 import {
   defaultState,
   defaultWindowIds,
@@ -35,8 +35,8 @@ import {
   reapplyResponsiveDefaults,
   WALLPAPERS,
   WORKSPACES,
-} from "./defaults.js?v=20260905c";
-import { APP_NAMES, APPS } from "./apps/index.js?v=20260905c";
+} from "./defaults.js?v=20260905d";
+import { APP_NAMES, APPS } from "./apps/index.js?v=20260905d";
 
 const TITLE_BUTTONS = [
   ["minimize", "─", "Send to scratchpad"],
@@ -137,13 +137,15 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
 
   const dunst = installNotify({ container: document.querySelector("#dunst") });
 
-  const paint = ({ persist = true, announceText, toast } = {}) => {
+  /* `touched` lists the workspaces whose structure the visitor just edited:
+     those stop receiving responsive defaults on resize. Focus changes and tab
+     taps persist without touching anything, or the first tap on a phone would
+     freeze that workspace's layout forever. */
+  const paint = ({ persist = true, touched = persist ? [active] : [], announceText, toast } = {}) => {
     renderer.schedule();
     updateCounts();
-    if (persist) {
-      activeWs().userTouched = true;
-      save();
-    }
+    for (const name of touched) state.workspaces[name].userTouched = true;
+    if (persist) save();
     if (announceText) announce(announceText);
     if (toast) dunst.notify(toast.text, { key: toast.key ?? toast.text });
   };
@@ -176,7 +178,6 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   const bounds = () => renderer.measure(active) ?? { x: 0, y: 0, w: 0, h: 0 };
 
   const wm = {
-    modPreference: () => state.modPreference,
 
     setActiveWorkspace(name) {
       if (!state.workspaces[name]) return;
@@ -212,13 +213,15 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       return true;
     },
 
-    focusTab(conId, index, id) {
+    focusTab(conId, index, id, { moveBrowserFocus = true } = {}) {
       const ws = activeWs();
       const con = tree.findCon(ws.root, conId);
       if (con) con.focus = index;
       if (id) tree.setFocus(ws, id);
-      paint({ announceText: `${describeWindow(windows.get(id))} focused` });
-      windows.get(id)?.focus({ preventScroll: true });
+      paint({ touched: [], announceText: `${describeWindow(windows.get(id))} focused` });
+      /* Arrow keys keep focus on the roving tab; a click or Enter moves it into
+         the window, as activating a tab does in i3. */
+      if (moveBrowserFocus) windows.get(id)?.focus({ preventScroll: true });
     },
 
     focus(direction) {
@@ -388,12 +391,9 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     },
 
     restoreAll() {
-      let changed = false;
-      for (const name of WORKSPACES) {
-        if (tree.restoreKilled(state.workspaces[name])) changed = true;
-      }
-      if (changed) paint({ announceText: "windows restored", toast: { text: "restore", key: "restore" } });
-      return changed;
+      const touched = WORKSPACES.filter((name) => tree.restoreKilled(state.workspaces[name]));
+      if (touched.length) paint({ touched, announceText: "windows restored", toast: { text: "restore", key: "restore" } });
+      return touched.length > 0;
     },
 
     restart() {
@@ -463,6 +463,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       const title = focusedTitle();
       if (!tree.moveToWorkspace(state, ws.focused, active, target)) return false;
       paint({
+        touched: [active, target],
         announceText: `${title} moved to ${target}`,
         toast: { text: `move to ${index}:${target}`, key: "moveto" },
       });
@@ -524,6 +525,8 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       tree.setFocus(ws, id);
       if (!tree.toggleFloating(ws, id, bounds())) return false;
       paint({ announceText: `${describeWindow(windows.get(id))} floating`, toast: { text: "floating", key: "floating" } });
+      renderer.renderNow();
+      pointer.rebaseDrag(id);
       return true;
     },
 
@@ -620,21 +623,36 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       tree.setFocus(ws, id);
       renderer.renderNow();
 
-      const instance = spec.create({
-        body,
-        statusline: status,
-        title,
-        wm,
-        close: () => {
-          tree.setFocus(ws, id);
-          wm.kill();
-        },
-      });
+      let instance;
+      try {
+        instance = spec.create({ body, statusline: status, title, wm, close: () => wm.killWindow(id) });
+      } catch (error) {
+        /* An application that throws must not leave a window with no app behind
+           it: the leaf and the node go, and the desktop is exactly as before. */
+        console.error(`[wm] exec ${appName} failed`, error);
+        tree.detachLeaf(ws, id);
+        windows.delete(id);
+        article.remove();
+        renderer.renderNow();
+        restoreFocus(null);
+        dunst.notify(`exec ${appName} failed`, { key: "exec" });
+        return false;
+      }
       apps.set(id, instance ?? {});
       paint({ announceText: `${spec.title} opened`, toast: { text: `exec ${appName}`, key: "exec" } });
       renderer.renderNow();
       instance?.focus?.();
       return true;
+    },
+
+    /* Close a specific window wherever it lives now — an application's own
+       close button must not act on whichever window happens to be focused. */
+    killWindow(id) {
+      const wsName = WORKSPACES.find((name) => tree.allIds(state.workspaces[name]).includes(id));
+      if (!wsName) return false;
+      if (wsName !== active) onWorkspaceRequest(WORKSPACES.indexOf(wsName) + 1);
+      tree.setFocus(state.workspaces[wsName], id);
+      return wm.kill();
     },
 
     runCommand(text) {
@@ -728,6 +746,12 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       dunst.destroy();
       lock?.destroy();
       touch?.destroy();
+      greeterInstance?.destroy();
+      for (const [, app] of apps) app.destroy?.();
+      apps.clear();
+      for (const remove of cleanup) remove();
+      cleanup.length = 0;
+      save.destroy();
       renderer.destroy();
       root.classList.remove("wm-active");
     },
@@ -747,8 +771,16 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   let touch = null;
   let greeterInstance = null;
 
+  let greeterLoading = null;
   const showGreeter = (mode) => {
-    import("./greeter.js?v=20260905c").then(({ runGreeter }) => {
+    /* One instance at a time: a second `exec lightdm` while the first is up, or
+       while the module is still loading, must not stack a second boot log and a
+       second set of key listeners over the first. */
+    greeterInstance?.destroy();
+    greeterInstance = null;
+    if (greeterLoading) return greeterLoading;
+    greeterLoading = import("./greeter.js?v=20260905d").then(({ runGreeter }) => {
+      greeterLoading = null;
       greeterInstance = runGreeter({
         node: document.querySelector("#greeter"),
         mode,
@@ -765,13 +797,20 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       });
     }).catch(() => {
       /* If the greeter cannot load, do not strand the visitor behind it. */
+      greeterLoading = null;
       startSession();
       clearGreetFlag();
     });
+    return greeterLoading;
   };
 
+  /* Every global handler is registered through listen() so destroy() can
+     remove it; a restart in place must not stack a second set. */
+  const cleanup = [];
+
   /* Title bar buttons: the decorative marks become real controls. */
-  document.addEventListener("click", (event) => {
+  cleanup.push(listen(document, "click", (event) => {
+    if (blocked()) return;
     const button = event.target.closest?.("[data-wm-action]");
     if (!button) return;
     const id = button.closest("[data-wm-window]")?.dataset.wmWindow;
@@ -781,36 +820,42 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     if (button.dataset.wmAction === "close") wm.kill();
     else if (button.dataset.wmAction === "maximize") wm.toggleFullscreen();
     else wm.scratchpadMove();
-  });
+  }));
 
-  document.querySelector("#power-menu-toggle")?.addEventListener("click", () => wm.togglePowerMenu());
+  const powerToggle = document.querySelector("#power-menu-toggle");
+  if (powerToggle) cleanup.push(listen(powerToggle, "click", () => wm.togglePowerMenu()));
 
-  document.querySelector("#power-menu")?.addEventListener("click", (event) => {
+  const powerMenu = document.querySelector("#power-menu");
+  if (powerMenu) cleanup.push(listen(powerMenu, "click", (event) => {
     const action = event.target.closest?.("[data-power]")?.dataset.power;
     if (!action) return;
     wm.togglePowerMenu(false);
     if (action === "lock") lock?.lock();
     else if (action === "logout") wm.logout();
     else if (action === "restart") wm.restart();
-  });
+  }));
 
-  document.addEventListener("keydown", (event) => {
+  cleanup.push(listen(document, "keydown", (event) => {
     if (event.key !== "Escape" || !wm.powerMenuIsOpen()) return;
     event.preventDefault();
     wm.togglePowerMenu(false);
-  });
+  }));
 
-  document.addEventListener("click", (event) => {
+  cleanup.push(listen(document, "click", (event) => {
+    if (blocked()) return;
     const restore = event.target.closest?.("[data-wm-restore]");
     if (!restore) return;
     event.preventDefault();
     wm.restoreAll();
     renderer.renderNow();
     restoreFocus(null);
-  });
+  }));
 
-  /* Tablist keyboard support: the tab strip is one tab stop with arrow keys. */
-  document.addEventListener("keydown", (event) => {
+  /* Tablist keyboard support: the tab strip is one tab stop with arrow keys.
+     Activation goes through the facade directly — a synthetic click() fires no
+     pointer event and would leave the visible panel unchanged. */
+  cleanup.push(listen(document, "keydown", (event) => {
+    if (blocked()) return;
     const tab = event.target.closest?.(".wm-tab");
     if (!tab) return;
     const bar = tab.parentElement;
@@ -821,28 +866,30 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     if (next === undefined) return;
     event.preventDefault();
     const target = tabs[(next + tabs.length) % tabs.length];
-    target?.click();
-    target?.focus({ preventScroll: true });
-  });
+    if (!target) return;
+    wm.focusTab(target.dataset.wmCon, Number(target.dataset.wmIndex), target.dataset.wmTab, { moveBrowserFocus: false });
+    target.focus({ preventScroll: true });
+  }));
 
-  document.addEventListener("wm:focus-window", (event) => {
+  cleanup.push(listen(document, "wm:focus-window", (event) => {
     const id = event.detail?.id;
     if (id && windows.has(id)) wm.focusWindow(id);
-  });
+  }));
 
   const onResize = () => {
     if (reapplyResponsiveDefaults(state, { mobile: media.mobile.matches })) save();
     renderer.invalidate();
     renderer.renderNow();
   };
-  window.addEventListener("resize", onResize, { passive: true });
-  media.mobile.addEventListener?.("change", onResize);
+  cleanup.push(listen(window, "resize", onResize, { passive: true }));
+  if (media.mobile.addEventListener) cleanup.push(listen(media.mobile, "change", onResize));
 
   const visualViewport = window.visualViewport;
-  visualViewport?.addEventListener("resize", () => {
-    root.style.setProperty("--vv-height", `${visualViewport.height}px`);
-    root.style.setProperty("--vv-offset", `${visualViewport.offsetTop}px`);
-  });
+  if (visualViewport) {
+    cleanup.push(listen(visualViewport, "resize", () => {
+      root.style.setProperty("--vv-offset", `${visualViewport.offsetTop}px`);
+    }));
+  }
 
   root.dataset.wallpaper = state.wallpaper;
   root.dataset.wm = "on";
@@ -860,24 +907,21 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       statusline: terminal.querySelector(".terminal-statusline"),
       title: terminal.querySelector(".window-titlebar > span"),
       wm,
-      close: () => {
-        tree.setFocus(state.workspaces.home, "home-terminal");
-        wm.kill();
-      },
+      close: () => wm.killWindow("home-terminal"),
     }));
   }
 
   attachHomeShell();
 
   if (media.coarse.matches) {
-    import("./touch.js?v=20260905c")
+    import("./touch.js?v=20260905d")
       .then(({ installTouch }) => {
         touch = installTouch({ shell, wm, isBlocked: blocked });
       })
       .catch(() => {});
   }
 
-  import("./idle-lock.js?v=20260905c")
+  import("./idle-lock.js?v=20260905d")
     .then(({ installIdleLock }) => {
       lock = installIdleLock({
         node: document.querySelector("#lockscreen"),
@@ -891,7 +935,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   else startSession();
 
   if (isSelfTest()) {
-    import("./selftest.js?v=20260905c")
+    import("./selftest.js?v=20260905d")
       .then(({ runSelfTest }) => runSelfTest())
       .catch((error) => console.error("[wm] selftest failed to load", error));
   }
