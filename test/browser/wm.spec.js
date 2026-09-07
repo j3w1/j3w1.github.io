@@ -181,8 +181,11 @@ test("dragging the gutter resizes neighbouring tiles", async ({ page }) => {
   await page.mouse.down();
   await page.mouse.move(seamX + 160, seamY, { steps: 12 });
   await page.mouse.up();
+  /* Pointer release schedules the new tiling geometry on requestAnimationFrame.
+     Poll the rendered width so a slower runner cannot observe the old frame. */
+  await expect.poll(async () => (await rect(page, "home-terminal"))?.w ?? 0)
+    .toBeGreaterThan(before.w + 100);
   const after = await rect(page, "home-terminal");
-  expect(after.w).toBeGreaterThan(before.w + 100);
   const files = await rect(page, "home-files");
   expect(files.x - (after.x + after.w)).toBe((await gaps(page)).inner);
 });
