@@ -47,6 +47,12 @@ Source Code Pro, i3-gaps 14/−2, the Xresources palette, i3status's Chinese lab
 colours, conky, an agnoster prompt, and the dotfiles themselves readable in the terminal
 (`cat ~/.config/i3/config`). Where a browser cannot honestly supply a value the block is absent.
 
+The palette's current contract is defined by
+[`j3w1/theme`](https://github.com/j3w1/theme), not by this repository. This site is a pinned
+CSS-variable consumer of `j3w1/theme@v0.1.0`: it commits the verified export and generates its
+legacy variable names from that copy. It never imports a moving branch, and there is no
+synchronisation from the site back into the theme.
+
 Nothing can be broken permanently: closed windows are only hidden, and reloading always restores the
 full desktop.
 

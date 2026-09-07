@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "theme": "j3w1-theme",
+  "version": "0.1.0",
+  "ref": "v0.1.0",
+  "revision": "328076217d2728ee7dc2aea01c2f71452dbfc9c5",
+  "profile": "default",
+  "integration": {
+    "id": "j3w1-site-legacy-css-vars",
+    "version": "1",
+    "kind": "css-vars"
+  },
+  "resolvedAt": "2026-09-06T16:03:09.989Z",
+  "exports": {
+    "exports/tokens.css": "sha256-xvJ8yxOUx3UEgxXt7wGNyNBvy+DzDIHuzJruIeOSS2E="
+  },
+  "components": [],
+  "deviations": []
+}
