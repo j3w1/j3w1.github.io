@@ -49,12 +49,31 @@ creates its media queries lazily for the same reason.
 | Artifact | Derived from | Generator |
 | --- | --- | --- |
 | `assets/fonts/*.woff2`, the `@generated-fonts` block in `site.css`, the font preload tokens | the pinned Nerd Fonts and Noto CJK sources, and every icon and Han character found in the sources | `scripts/lib/fonts.mjs` |
+| the 37 legacy aliases in the `@generated-theme` block in `site.css` | `vendor/j3w1-theme/exports/tokens.css`, verified by `theme.lock.json` | `scripts/lib/theme.mjs` |
 | the `modulepreload` list in `index.html` | the static import graph from `site.js` and `public-content.js` | `scripts/lib/preloads.mjs` |
 | `assets/data/content-index.json`, `writing/**`, `photography/**`, `books/**`, `sitemap.xml`, `feed.xml` | `content/**` | `services/j3w1ctl-auth/src/generate.js` |
 
 Adding an icon, a Chinese label, or a static import is therefore a two-step change: edit the source,
 then `npm run generate` and commit what it wrote. `npm run icons` re-renders the raster icons and
 the social card (committed, checked by shape rather than byte).
+
+### Updating the theme pin
+
+The site consumes a release of [`j3w1/theme`](https://github.com/j3w1/theme); it does not follow that
+repository's branch. The explicit updater is the only theme-integration command that uses the
+network:
+
+```powershell
+npm run update-theme -- v0.1.0  # tag or full 40-character commit; never a branch
+npm run generate
+npm run bump-cache-token
+```
+
+The updater resolves a tag to its commit, reads every upstream input at that immutable revision,
+checks the published digest, and only then rewrites `theme.lock.json` and the vendored CSS. A failed
+fetch or validation leaves the existing pin alone. `npm run generate` and `npm run check` read the
+committed copy, verify its digest again, and never fetch theme data. Review and commit the lock,
+vendored export, generated block, and shared cache-token changes together.
 
 ## Byte budgets
 

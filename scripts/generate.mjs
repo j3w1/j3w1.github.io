@@ -12,11 +12,12 @@ import { fileURLToPath } from "node:url";
 import { fontsGenerator } from "./lib/fonts.mjs";
 import { pagesGenerator } from "./lib/pages.mjs";
 import { preloadsGenerator } from "./lib/preloads.mjs";
+import { themeGenerator } from "./lib/theme.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const check = process.argv.includes("--check");
 
-const generators = [fontsGenerator, preloadsGenerator, pagesGenerator];
+const generators = [fontsGenerator, themeGenerator, preloadsGenerator, pagesGenerator];
 
 let failures = 0;
 for (const { name, run } of generators) {

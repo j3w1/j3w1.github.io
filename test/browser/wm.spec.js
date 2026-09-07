@@ -572,9 +572,11 @@ test("dragging a fullscreen window carries a manageable proxy, not the whole scr
 
   expect(ghost).not.toBeNull();
   expect(ghost.w).toBeLessThan(full.w * 0.75);
+  /* Dropping schedules paint on requestAnimationFrame. The class is applied
+     in that paint after the floating rectangle, so wait before measuring. */
+  await expect(page.locator('[data-wm-window="home-terminal"]')).toHaveClass(/is-floating/);
   const dropped = await rect(page, "home-terminal");
   expect(dropped.w).toBeLessThan(full.w * 0.75);
-  await expect(page.locator('[data-wm-window="home-terminal"]')).toHaveClass(/is-floating/);
 });
 
 test("dragging a title bar never leaves text selected", async ({ page }) => {

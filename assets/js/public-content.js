@@ -1,7 +1,7 @@
 import { renderAst } from "./content-renderer.js?v=20260824";
 import { closePhotoViewer, isPhotoViewerBackdropClick } from "./photo-viewer.js?v=20260825b";
-import { loadContentIndex } from "./content-index.js?v=20260905k";
-import { parseRoute } from "./route.js?v=20260905k";
+import { loadContentIndex } from "./content-index.js?v=20260907";
+import { parseRoute } from "./route.js?v=20260907";
 
 const collections = ["writing", "books", "photography"];
 let index;

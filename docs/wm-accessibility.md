@@ -111,24 +111,30 @@ The *state* changes are the feature; only the scrolling log and the black pauses
 
 ## 9. Contrast floor
 
-Measured against `--terminal: #0c0909`:
+Measured against every surface where these roles are used — `--terminal: #0c0909`,
+`--chrome: #100909`, `--surface: #160b0b`, the reader's `#0a0707`, and
+`--chrome-alt: #1c0a09` — the table records the lowest ratio:
 
-| Token | Ratio | Use |
+| Token | Minimum ratio | Use |
 | --- | --- | --- |
-| `--muted` | 5.81:1 | passes — the darkest colour permitted for new chrome text |
-| `--quiet` | 4.45:1 | decorative glyphs only |
-| `--inactive` | 1.85:1 | **never** for text |
+| `--muted` (`#bd787d`) | 5.60:1 | passes |
+| `--quiet` (`#ad7175`) | 4.92:1 | passes — the darkest colour permitted for ordinary text |
+| `--inactive` (`#7d1310`) | 1.80:1 | disabled/decorative treatment only; **never** for ordinary text |
 
-Known outstanding issue: `--inactive` is used by the pre-existing `.content-number` and
-`.prose-line::before` rules. Raising it toward `#a8403a` would fix that, but it is a palette change
-and out of scope for this work.
+Known outstanding issue: the pre-existing `.line-number`, `.link-list .permissions`,
+`.prose-line::before`, and `.content-number` rules still use `--inactive` for ordinary text. The
+pinned theme adoption deliberately does not rewrite selectors, so that semantic correction remains
+separate work. The former suggestion of raising the palette value to `#a8403a` was not viable: it
+reaches only 3.15–3.31:1 on these surfaces and would conflate disabled-border and text roles. A
+future fix should move those four rules to the subtle-text role instead.
 
 ### The Xresources palette, and where it is not followed
 
-`site.css` carries the original machine's sixteen colours as `--color0`…`--color15`. The i3bar and
-client colours follow the original config **except** where the config's text colour fails the floor
-against its own background — computed against `#0C0909`, `color1` is 3.42:1, `color4` 2.09:1,
-`color8` 1.86:1, `color12` 2.12:1:
+`site.css`'s generated theme block carries the original machine's sixteen colours as
+`--color0`…`--color15` from the pinned default profile. The i3bar and client colours follow the
+original config **except** where the config's text colour fails the floor against its own
+background — computed against `#0C0909`, `color1` is 3.42:1, `color4` 2.09:1, `color8` 1.86:1,
+`color12` 2.12:1:
 
 | i3 class | Config | Applied | Why |
 | --- | --- | --- | --- |
