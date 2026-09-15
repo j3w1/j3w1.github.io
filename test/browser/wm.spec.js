@@ -677,8 +677,11 @@ test("arrow keys on the tab strip switch the visible panel and keep focus on the
 
   /* Enter on a focused tab activates it too, and moves focus into the window. */
   await page.keyboard.press("ArrowLeft");
-  await page.keyboard.press("Enter");
+  /* The arrow key reveals its panel on requestAnimationFrame. Activating in that
+     same frame would focus a window that is still hidden, which the browser
+     refuses — so wait for the panel before pressing Enter. */
   await expect(page.locator('[data-wm-window="home-terminal"]')).toBeVisible();
+  await page.keyboard.press("Enter");
   expect(await page.evaluate(() => document.activeElement?.closest("[data-wm-window]")?.dataset.wmWindow)).toBe("home-terminal");
 });
 
@@ -1119,8 +1122,11 @@ test("marks show in the title bar, [con_mark] focus finds them across workspaces
   await page.locator("body").press("/");
   await page.locator("#command-input").fill("swap container with mark term");
   await page.locator("#command-input").press("Enter");
-  const after = await rect(page, "home-terminal");
-  expect(after.x).toBeGreaterThan(before.x);
+  /* The swapped tiles are painted on requestAnimationFrame, so a measurement
+     taken straight after the command can still read the pre-swap layout. Poll
+     the rendered position so a slower runner cannot observe the old frame. */
+  await expect.poll(async () => (await rect(page, "home-terminal"))?.x ?? 0)
+    .toBeGreaterThan(before.x);
   /* Marks survive a reload. */
   await page.reload();
   await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
