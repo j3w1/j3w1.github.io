@@ -4,9 +4,11 @@
 
 :root {
   --color-primitive-ink-0: #000000;
+  --color-primitive-ink-14: #090707;
   --color-primitive-ink-15: #0a0707;
   --color-primitive-ink-20: #0c0909;
   --color-primitive-ink-25: #100909;
+  --color-primitive-ink-28: #100c0c;
   --color-primitive-ink-30: #160b0b;
   --color-primitive-ink-40: #1c0a09;
   --color-primitive-ink-52: #241010;
@@ -70,17 +72,17 @@
   --color-primitive-ansi-14: #e0292f;
   --color-primitive-ansi-15: #a3676b;
   --color-surface-desktop: #000000;
-  --color-surface-canvas: #0c0909;
-  --color-surface-chrome: #100909;
+  --color-surface-canvas: #000000;
+  --color-surface-chrome: #090707;
   --color-surface-chrome-alt: #1c0a09;
-  --color-surface-sunken: #0a0707;
-  --color-surface-default: #160b0b;
+  --color-surface-sunken: #000000;
+  --color-surface-default: #100c0c;
   --color-surface-raised: #241010;
   --color-surface-overlay: #241010;
-  --color-surface-input: #0c0909;
+  --color-surface-input: #000000;
   --color-surface-backdrop: rgb(0 0 0 / 65%);
-  --color-surface-code: #0c0909;
-  --color-surface-terminal: #0c0909;
+  --color-surface-code: #000000;
+  --color-surface-terminal: #000000;
   --color-text-default: #e99499;
   --color-text-bright: #ffa2a7;
   --color-text-prose: #f4eeee;
@@ -90,7 +92,7 @@
   --color-text-placeholder: #bd787d;
   --color-text-accent: #e53935;
   --color-text-accent-strong: #f73f35;
-  --color-text-link: #ffa2a7;
+  --color-text-link: #f73f35;
   --color-text-link-underline: #dc282e;
   --color-text-link-hover: #f4eeee;
   --color-text-on-selection: #f4eeee;
@@ -327,7 +329,15 @@
 }
 
 [data-profile="heritage-ansi"] {
+  --color-surface-canvas: #0c0909;
+  --color-surface-chrome: #100909;
+  --color-surface-sunken: #0a0707;
+  --color-surface-default: #160b0b;
+  --color-surface-input: #0c0909;
+  --color-surface-code: #0c0909;
+  --color-surface-terminal: #0c0909;
   --color-text-subtle: #a3676b;
+  --color-text-link: #ffa2a7;
   --color-border-overlay: #ae1914;
   --color-status-neutral-on-fill: #0c0909;
   --color-code-line-number: #7d1310;

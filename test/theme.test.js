@@ -6,11 +6,15 @@ import test from "node:test";
 
 import {
   buildThemeCss,
+  INTEGRATION_ID,
+  INTEGRATION_VERSION,
   LEGACY_THEME_MAP,
   parseDefaultColorProperties,
+  parseDefaultProperties,
   THEME_END,
   THEME_EXPORT,
   THEME_LOCK_FILE,
+  THEME_PASSTHROUGH,
   THEME_START,
   THEME_VENDOR_FILE,
   themeDigest,
@@ -21,10 +25,18 @@ import { parseThemeRef, resolveThemeRevision } from "../scripts/update-theme.mjs
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const read = (...parts) => fs.readFile(path.join(repoRoot, ...parts));
-const EXPECTED_REVISION = "328076217d2728ee7dc2aea01c2f71452dbfc9c5";
-const EXPECTED_DIGEST = "sha256-xvJ8yxOUx3UEgxXt7wGNyNBvy+DzDIHuzJruIeOSS2E=";
 
-const PRE_ADOPTION_VALUES = {
+/* The pin. Bumping the theme means changing these four values together with
+   theme.lock.json and the vendored export, then reviewing the diff below. */
+const EXPECTED_VERSION = "1.1.0";
+const EXPECTED_REF = "v1.1.0";
+const EXPECTED_REVISION = "7d1389ed11dbca002e9d77f378d8c3a516770620";
+const EXPECTED_DIGEST = "sha256-Xtd/k0yv0Dvx4oznpb29MfqOqufhWgNT9NTk1QELhDU=";
+
+/* The legacy aliases as v0.1.0 resolved them. v1.1.0 (D-023, True Black /
+   Rose) changes exactly three surfaces; everything else the site names is
+   unchanged, and the test below proves it. */
+const V0_1_0_VALUES = {
   "--desktop": "#000000",
   "--terminal": "#0c0909",
   "--chrome": "#100909",
@@ -41,7 +53,7 @@ const PRE_ADOPTION_VALUES = {
   "--foreground-bright": "#ffa2a7",
   "--prose": "#f4eeee",
   "--muted": "#bd787d",
-  "--quiet": "#a3676b",
+  "--quiet": "#ad7175",
   "--inactive": "#7d1310",
   "--border": "#531310",
   "--border-strong": "#9e231f",
@@ -65,20 +77,20 @@ const PRE_ADOPTION_VALUES = {
 };
 
 const declarations = (css) => new Map(
-  [...css.matchAll(/^\s*(--[a-z0-9-]+):\s*(#[0-9a-f]{6});\s*$/gm)]
+  [...css.matchAll(/^\s*(--[a-z0-9-]+):\s*([^;]+);\s*$/gm)]
     .map((match) => [match[1], match[2]]),
 );
 
-test("theme.lock.json pins the approved v0.1.0 CSS-variable integration", async () => {
+test("theme.lock.json pins the approved v1.1.0 CSS-variable integration", async () => {
   const lock = JSON.parse(await read(THEME_LOCK_FILE));
   assert.doesNotThrow(() => validateThemeLock(lock));
-  assert.equal(lock.version, "0.1.0");
-  assert.equal(lock.ref, "v0.1.0");
+  assert.equal(lock.version, EXPECTED_VERSION);
+  assert.equal(lock.ref, EXPECTED_REF);
   assert.equal(lock.revision, EXPECTED_REVISION);
   assert.equal(lock.profile, "default");
   assert.deepEqual(lock.integration, {
-    id: "j3w1-site-legacy-css-vars",
-    version: "1",
+    id: INTEGRATION_ID,
+    version: INTEGRATION_VERSION,
     kind: "css-vars",
   });
   assert.equal(lock.exports[THEME_EXPORT], EXPECTED_DIGEST);
@@ -86,38 +98,63 @@ test("theme.lock.json pins the approved v0.1.0 CSS-variable integration", async 
   assert.deepEqual(lock.deviations, []);
 });
 
-test("the vendored v0.1.0 export has the published bytes and digest", async () => {
+test("the vendored export has the published digest", async () => {
   const vendor = await read(...THEME_VENDOR_FILE.split("/"));
-  assert.equal(vendor.length, 13_423);
   assert.equal(vendor.includes(Buffer.from("\r\n")), false, "vendored theme must use LF");
   assert.equal(themeDigest(vendor), EXPECTED_DIGEST);
 });
 
-test("the default profile generates 37 aliases and changes only quiet", async () => {
+test("the default profile changes exactly the three True Black / Rose surfaces", async () => {
   const lock = JSON.parse(await read(THEME_LOCK_FILE));
   const vendor = await read(...THEME_VENDOR_FILE.split("/"));
-  const parsed = parseDefaultColorProperties(vendor);
-  assert.equal(parsed.get("--color-text-subtle"), "#ad7175");
+  const parsed = parseDefaultProperties(vendor);
+  /* The heritage profile keeps the old canvas; the parser must never read a
+     profile block as if it were the default. */
+  assert.equal(parsed.get("--color-surface-canvas"), "#000000");
   assert.ok(
     vendor.toString("utf8").includes("[data-profile=\"heritage-ansi\"]") &&
-      vendor.toString("utf8").includes("--color-text-subtle: #a3676b"),
-    "fixture must exercise a profile override of text.subtle",
+      vendor.toString("utf8").includes("--color-surface-canvas: #0c0909"),
+    "fixture must exercise a profile override of surface.canvas",
   );
 
   const generated = buildThemeCss(vendor, lock);
   const mapped = declarations(generated);
   assert.equal(LEGACY_THEME_MAP.length, 37);
-  assert.equal(mapped.size, 37);
-  assert.ok(Buffer.byteLength(generated, "utf8") < 1024, "generated block must stay below 1 KiB");
+  assert.equal(mapped.size, LEGACY_THEME_MAP.length + THEME_PASSTHROUGH.length);
+  assert.ok(Buffer.byteLength(generated, "utf8") < 3072, "generated block must stay below 3 KiB");
   assert.equal(mapped.has("--xbg"), false);
   assert.equal(mapped.has("--xfg"), false);
 
-  const changes = Object.entries(PRE_ADOPTION_VALUES)
+  const changes = Object.entries(V0_1_0_VALUES)
     .filter(([name, before]) => mapped.get(name) !== before)
     .map(([name, before]) => ({ name, before, after: mapped.get(name) }));
   assert.deepEqual(changes, [
-    { name: "--quiet", before: "#a3676b", after: "#ad7175" },
+    { name: "--terminal", before: "#0c0909", after: "#000000" },
+    { name: "--chrome", before: "#100909", after: "#090707" },
+    { name: "--surface", before: "#160b0b", after: "#100c0c" },
   ]);
+});
+
+test("the pass-through copies roles and scales under their canonical names", async () => {
+  const lock = JSON.parse(await read(THEME_LOCK_FILE));
+  const vendor = await read(...THEME_VENDOR_FILE.split("/"));
+  const mapped = declarations(buildThemeCss(vendor, lock));
+  for (const token of THEME_PASSTHROUGH) {
+    assert.doesNotMatch(token, /^--color-primitive-/, token + " is a primitive");
+    assert.ok(mapped.has(token), token + " missing from the generated block");
+  }
+  /* D-024: links are the strong red with a persistent underline. */
+  assert.equal(mapped.get("--color-text-link"), "#f73f35");
+  assert.equal(mapped.get("--color-text-link-underline"), "#dc282e");
+  assert.equal(mapped.get("--color-text-link-hover"), "#f4eeee");
+  assert.equal(mapped.get("--color-surface-backdrop"), "rgb(0 0 0 / 65%)");
+  assert.equal(mapped.get("--focus-ring"), "1px dashed #e53935");
+  assert.equal(mapped.get("--focus-ring-container"), "2px solid #ffa2a7");
+  assert.equal(mapped.get("--z-skip-link"), "1000");
+  /* The i3 metrics the site keeps as literals agree with the theme's scale. */
+  assert.equal(mapped.get("--font-size-terminal"), "13px");
+  assert.equal(mapped.get("--font-size-ui-lg"), "14px");
+  assert.equal(mapped.get("--font-size-ui-md"), "13px");
 });
 
 test("site.css commits the current generated block and keeps host variables authored", async () => {
@@ -132,28 +169,33 @@ test("site.css commits the current generated block and keeps host variables auth
 
   const authored = siteCss.slice(end + THEME_END.length);
   for (const line of [
-    "--xbg: #0c0909;",
-    "--xfg: #e99499;",
     "--bar-height: 28px;",
     "--font-size-term: 13px;",
+    "--font-size-i3: 14px;",
+    "--font-size-bar: 13px;",
     "--gaps-outer: -2px;",
     "--font:",
   ]) {
     assert.ok(authored.includes(line), "hand-authored root is missing " + line);
   }
-  assert.doesNotMatch(authored, /^\s*--quiet:/m);
-  assert.doesNotMatch(authored, /^\s*--color15:/m);
+  /* Nothing the generator owns may be re-declared by hand. */
+  for (const [legacy] of LEGACY_THEME_MAP) {
+    assert.doesNotMatch(authored, new RegExp("^\\s*" + legacy + ":", "m"), legacy + " is authored twice");
+  }
+  assert.doesNotMatch(authored, /^\s*--color-/m, "theme tokens must come from the generated block");
 });
 
 test("theme parsing and validation fail closed", async () => {
   assert.throws(
-    () => parseDefaultColorProperties(":root {\n  --color-a: #000000;\n  --color-a: #111111;\n}\n"),
+    () => parseDefaultProperties(":root {\n  --color-a: #000000;\n  --color-a: #111111;\n}\n"),
     /repeats --color-a/,
   );
   assert.throws(
-    () => parseDefaultColorProperties("[data-profile=\"default\"] {\n  --color-a: #000000;\n}\n"),
+    () => parseDefaultProperties("[data-profile=\"default\"] {\n  --color-a: #000000;\n}\n"),
     /exactly one default :root/,
   );
+  const colours = parseDefaultColorProperties(":root {\n  --color-a: #000000;\n  --space-1: 1px;\n}\n");
+  assert.deepEqual([...colours.keys()], ["--color-a"]);
 
   const lock = JSON.parse(await read(THEME_LOCK_FILE));
   const vendor = await read(...THEME_VENDOR_FILE.split("/"));
@@ -164,13 +206,17 @@ test("theme parsing and validation fail closed", async () => {
     }),
     /does not match the pinned/,
   );
+  assert.throws(
+    () => validateThemeLock({ ...lock, integration: { ...lock.integration, version: "1" } }),
+    /integration version must be/,
+  );
   assert.throws(() => parseThemeRef("main"), /release tag.*full lowercase commit/);
-  assert.equal(parseThemeRef("v0.1.0"), "v0.1.0");
+  assert.equal(parseThemeRef(EXPECTED_REF), EXPECTED_REF);
   assert.equal(parseThemeRef(EXPECTED_REVISION), EXPECTED_REVISION);
 });
 
 test("the updater dereferences annotated tags to commits", async () => {
-  const tagObject = "d5b660dd576916e81cd5122589df584d2e9c01cc";
+  const tagObject = "c11749bf0000000000000000000000000000abcd";
   const requested = [];
   const fetchImpl = async (url) => {
     requested.push(url);
@@ -183,11 +229,11 @@ test("the updater dereferences annotated tags to commits", async () => {
     });
   };
   assert.equal(
-    await resolveThemeRevision("v0.1.0", { fetchImpl }),
+    await resolveThemeRevision(EXPECTED_REF, { fetchImpl }),
     EXPECTED_REVISION,
   );
   assert.equal(requested.length, 2);
-  assert.match(requested[0], /\/git\/ref\/tags\/v0\.1\.0$/);
+  assert.match(requested[0], /\/git\/ref\/tags\/v1\.1\.0$/);
   assert.match(requested[1], new RegExp("/git/tags/" + tagObject + "$"));
 });
 

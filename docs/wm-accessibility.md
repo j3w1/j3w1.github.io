@@ -111,9 +111,11 @@ The *state* changes are the feature; only the scrolling log and the black pauses
 
 ## 9. Contrast floor
 
-Measured against every surface where these roles are used — `--terminal: #0c0909`,
-`--chrome: #100909`, `--surface: #160b0b`, the reader's `#0a0707`, and
-`--chrome-alt: #1c0a09` — the table records the lowest ratio:
+Measured against every surface where these roles are used — `--terminal: #000000`,
+`--chrome: #090707`, `--surface: #100c0c`, `--surface-raised: #241010`, and
+`--chrome-alt: #1c0a09` — the table records the lowest ratio. The minimums are set by the
+lightest surfaces (`--chrome-alt`, `--surface-raised`), which the v1.1.0 True Black / Rose
+foundation left unchanged, so the floor survived the upgrade:
 
 | Token | Minimum ratio | Use |
 | --- | --- | --- |

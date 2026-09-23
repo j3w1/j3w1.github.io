@@ -1,7 +1,13 @@
-/* Generates the site's legacy colour variables from a committed, pinned
-   j3w1/theme export. The export is an input, not a runtime stylesheet: GitHub
-   Pages still serves the generated site.css verbatim and generation/checking
-   never needs the network. */
+/* Generates the site's theme variables from a committed, pinned j3w1/theme
+   export. The export is an input, not a runtime stylesheet: GitHub Pages still
+   serves the generated site.css verbatim and generation/checking never needs
+   the network.
+
+   Two groups are written into one :root block. The legacy aliases are the
+   site's historical variable names bridged to the approved default profile;
+   the pass-through copies a curated set of the theme's own role and scale
+   tokens under their canonical names, so the stylesheets can speak the
+   theme's vocabulary without inventing new short names. */
 
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
@@ -12,6 +18,13 @@ export const THEME_EXPORT = "exports/tokens.css";
 export const THEME_VENDOR_FILE = "vendor/j3w1-theme/exports/tokens.css";
 export const THEME_START = "/* @generated-theme:start */";
 export const THEME_END = "/* @generated-theme:end */";
+
+export const INTEGRATION_ID = "j3w1-site-legacy-css-vars";
+/* Version 2 added the canonical pass-through group to the generated block. */
+export const INTEGRATION_VERSION = "2";
+
+export const THEME_TAG_PATTERN = /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+export const THEME_REVISION_PATTERN = /^[0-9a-f]{40}$/;
 
 /* The consumer-owned bridge from the site's historical variable names to the
    approved default profile. Its provenance is
@@ -44,10 +57,48 @@ export const LEGACY_THEME_MAP = [
   ]),
 ];
 
-const TAG_PATTERN = /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
-const REVISION_PATTERN = /^[0-9a-f]{40}$/;
+/* Theme tokens copied under their own names. Roles and scales only: the
+   primitives (--color-primitive-*) are exposed by the theme for inspection,
+   never for consumption, and the ANSI slots above are the one sanctioned
+   exception (mapping.json maps them). */
+export const THEME_PASSTHROUGH = Object.freeze([
+  "--color-text-link",
+  "--color-text-link-hover",
+  "--color-text-link-underline",
+  "--color-text-disabled",
+  "--color-border-divider",
+  "--color-border-overlay",
+  "--color-surface-backdrop",
+  "--color-interaction-marquee",
+  "--color-interaction-focus-ring-container",
+  "--color-interaction-disabled-bg",
+  "--color-status-danger-fill",
+  "--color-status-danger-on-fill",
+  "--color-status-neutral-fill",
+  "--color-status-neutral-on-fill",
+  "--color-status-success-text",
+  "--color-status-warning-text",
+  "--focus-ring",
+  "--focus-ring-container",
+  "--focus-offset",
+  "--focus-offset-container",
+  "--shadow-floating",
+  "--z-raised",
+  "--z-skip-link",
+  "--font-size-ui-sm",
+  "--font-size-ui-md",
+  "--font-size-ui-lg",
+  "--font-size-reading",
+  "--font-size-terminal",
+  "--font-size-caption",
+  "--font-size-h1",
+  "--font-size-h2",
+  "--motion-duration-base",
+]);
+
 const DIGEST_PATTERN = /^sha256-[A-Za-z0-9+/]+={0,2}$/;
-const COLOR_PATTERN = /^#[0-9a-f]{6}$/;
+const HEX_PATTERN = /^#[0-9a-f]{6}$/;
+const RGB_PATTERN = /^rgb\(\d{1,3} \d{1,3} \d{1,3} \/ \d{1,3}%\)$/;
 const LOCK_KEYS = [
   "schemaVersion",
   "theme",
@@ -102,21 +153,21 @@ export const validateThemeLock = (lock) => {
   );
   invariant(
     typeof lock.ref === "string" &&
-      (TAG_PATTERN.test(lock.ref) || REVISION_PATTERN.test(lock.ref)),
+      (THEME_TAG_PATTERN.test(lock.ref) || THEME_REVISION_PATTERN.test(lock.ref)),
     "theme lock ref must be a release tag or full commit",
   );
   invariant(
-    typeof lock.revision === "string" && REVISION_PATTERN.test(lock.revision),
+    typeof lock.revision === "string" && THEME_REVISION_PATTERN.test(lock.revision),
     "theme lock revision must be a full lowercase commit",
   );
   invariant(lock.profile === "default", "theme integration requires the default profile");
 
   requireExactKeys(lock.integration, ["id", "version", "kind"], "theme lock integration");
+  invariant(lock.integration.id === INTEGRATION_ID, "theme lock has the wrong integration id");
   invariant(
-    lock.integration.id === "j3w1-site-legacy-css-vars",
-    "theme lock has the wrong integration id",
+    lock.integration.version === INTEGRATION_VERSION,
+    "theme lock integration version must be " + INTEGRATION_VERSION,
   );
-  invariant(lock.integration.version === "1", "theme lock integration version must be 1");
   invariant(lock.integration.kind === "css-vars", "theme lock integration kind must be css-vars");
   invariant(
     typeof lock.resolvedAt === "string" &&
@@ -136,7 +187,9 @@ export const validateThemeLock = (lock) => {
   return lock;
 };
 
-export const parseDefaultColorProperties = (css) => {
+/* Every custom property declared in the default profile's :root block. Profile
+   overrides ([data-profile="…"]) are deliberately not read. */
+export const parseDefaultProperties = (css) => {
   const source = normalizeThemeText(css);
   const roots = [...source.matchAll(/(?:^|\n):root\s*\{/g)];
   invariant(roots.length === 1, "vendored tokens.css must contain exactly one default :root block");
@@ -146,13 +199,22 @@ export const parseDefaultColorProperties = (css) => {
 
   const properties = new Map();
   const body = source.slice(open + 1, close);
-  for (const match of body.matchAll(/^\s*(--color-[a-z0-9-]+)\s*:\s*([^;]+);\s*$/gm)) {
+  for (const match of body.matchAll(/^\s*(--[a-z0-9-]+)\s*:\s*([^;]+);\s*$/gm)) {
     const [, name, rawValue] = match;
     invariant(!properties.has(name), "vendored default profile repeats " + name);
     properties.set(name, rawValue.trim());
   }
   return properties;
 };
+
+/* Kept for callers that only want the colour roles. */
+export const parseDefaultColorProperties = (css) =>
+  new Map([...parseDefaultProperties(css)].filter(([name]) => name.startsWith("--color-")));
+
+const isThemeColor = (value) => HEX_PATTERN.test(value) || RGB_PATTERN.test(value);
+
+const isPlainValue = (value) =>
+  value.length > 0 && !/[\n;]/.test(value) && !/\b(?:var|url)\(/.test(value);
 
 export const buildThemeCss = (vendorCss, lock) => {
   validateThemeLock(lock);
@@ -164,19 +226,33 @@ export const buildThemeCss = (vendorCss, lock) => {
       " does not match the pinned " + expectedDigest,
   );
 
-  const properties = parseDefaultColorProperties(vendorCss);
-  const declarations = LEGACY_THEME_MAP.map(([legacy, token]) => {
+  const properties = parseDefaultProperties(vendorCss);
+  const aliases = LEGACY_THEME_MAP.map(([legacy, token]) => {
     const value = properties.get(token);
     invariant(value !== undefined, "vendored default profile is missing " + token);
-    invariant(COLOR_PATTERN.test(value), token + " must resolve to a lowercase six-digit hex colour");
+    invariant(HEX_PATTERN.test(value), token + " must resolve to a lowercase six-digit hex colour");
     return "  " + legacy + ": " + value + ";";
+  });
+  const passthrough = THEME_PASSTHROUGH.map((token) => {
+    const value = properties.get(token);
+    invariant(value !== undefined, "vendored default profile is missing " + token);
+    invariant(!token.startsWith("--color-primitive-"), token + " is a primitive, not a role");
+    invariant(isPlainValue(value), token + " must be a plain single-line value");
+    invariant(
+      !token.startsWith("--color-") || isThemeColor(value),
+      token + " must resolve to a hex or rgb() colour",
+    );
+    return "  " + token + ": " + value + ";";
   });
 
   return [
     THEME_START,
     "/* j3w1-theme " + lock.ref + "/" + lock.profile + "; generated by scripts/generate.mjs. */",
     ":root {",
-    ...declarations,
+    "  /* legacy aliases (references/j3w1-web/mapping.json) */",
+    ...aliases,
+    "  /* pass-through, canonical names */",
+    ...passthrough,
     "}",
     THEME_END,
   ].join("\n");
@@ -208,11 +284,11 @@ export const themeGenerator = {
     const target = path.join(repoRoot, "assets/css/site.css");
     const current = await fs.readFile(target, "utf8");
     const next = replaceThemeBlock(current, generated);
-    if (next === normalizeThemeText(current)) {
-      return LEGACY_THEME_MAP.length + " aliases from " + lock.ref;
-    }
+    const summary = LEGACY_THEME_MAP.length + " aliases + " + THEME_PASSTHROUGH.length +
+      " tokens from " + lock.ref;
+    if (next === normalizeThemeText(current)) return summary;
     if (check) throw new Error("stale: assets/css/site.css — run npm run generate");
     await fs.writeFile(target, next);
-    return LEGACY_THEME_MAP.length + " aliases from " + lock.ref + " (assets/css/site.css written)";
+    return summary + " (assets/css/site.css written)";
   },
 };
