@@ -20,12 +20,18 @@ const cardName = escape(`${site.identity.name} / ${site.identity.alternateName} 
 const cardHost = escape(site.site.origin.replace(/^https:\/\//, ""));
 const dataUrl = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 
+/* The card and the icon ground are painted in the theme's own colours: the
+   generated block in site.css is injected as-is, so a new theme pin re-dresses
+   them on the next `npm run icons`. */
+const siteCss = await fs.readFile(path.join(repoRoot, "assets", "css", "site.css"), "utf8");
+const themeCss = siteCss.match(/\/\* @generated-theme:start \*\/[\s\S]*?\/\* @generated-theme:end \*\//)[0];
+
 const browser = await chromium.launch();
 const page = await browser.newPage();
 
 const raster = async (size) => {
   await page.setViewportSize({ width: size, height: size });
-  await page.setContent(`<!doctype html><style>html,body{margin:0;background:#0c0909}img{display:block;width:${size}px;height:${size}px}</style><img src="${dataUrl}">`);
+  await page.setContent(`<!doctype html><style>${themeCss}html,body{margin:0;background:var(--terminal)}img{display:block;width:${size}px;height:${size}px}</style><img src="${dataUrl}">`);
   await page.locator("img").waitFor();
   return page.screenshot({ type: "png", clip: { x: 0, y: 0, width: size, height: size } });
 };
@@ -58,22 +64,29 @@ await fs.writeFile(path.join(repoRoot, "assets", "icons", "icon-512.png"), await
 
 /* The social card: the desktop's wordmark on its black, with the name under
    it, at the 1200×630 every preview renderer expects. */
-const fontCss = (await fs.readFile(path.join(repoRoot, "assets", "css", "site.css"), "utf8"))
-  .match(/\/\* @generated-fonts:start \*\/[\s\S]*?\/\* @generated-fonts:end \*\//)[0]
-  .replaceAll('url("../fonts/', `url("file:///${path.join(repoRoot, "assets", "fonts").replaceAll("\\", "/")}/`);
+/* The faces are inlined as data: URLs. A blank page may not load file://
+   fonts (Chromium refuses them on Linux), and a silent fallback would paint
+   the card in a system face with no glyphs for the Chinese name. */
+const fontBlock = siteCss.match(/\/\* @generated-fonts:start \*\/[\s\S]*?\/\* @generated-fonts:end \*\//)[0];
+let fontCss = fontBlock;
+for (const [, name] of fontBlock.matchAll(/url\("\.\.\/fonts\/([^"?]+)(?:\?[^"]*)?"\)/g)) {
+  const data = (await fs.readFile(path.join(repoRoot, "assets", "fonts", name))).toString("base64");
+  fontCss = fontCss.replace(new RegExp(`url\\("\\.\\./fonts/${name.replace(".", "\\.")}[^"]*"\\)`, "g"), `url("data:font/woff2;base64,${data}")`);
+}
 await page.setViewportSize({ width: 1200, height: 630 });
 await page.setContent(`<!doctype html><style>
 ${fontCss}
-html,body{margin:0;width:1200px;height:630px;background:#0c0909;color:#e99499;font-family:"SauceCodePro NFM",monospace;overflow:hidden}
+${themeCss}
+html,body{margin:0;width:1200px;height:630px;background:var(--terminal);color:var(--foreground);font-family:"SauceCodePro NFM",monospace;overflow:hidden}
 .card{position:relative;width:1200px;height:630px;display:flex;flex-direction:column;justify-content:center;padding:0 96px;box-sizing:border-box}
-.bar{position:absolute;top:0;left:0;right:0;height:34px;background:#190b0b;border-bottom:1px solid #5b1714;display:flex;align-items:center;padding:0 16px;gap:18px;font-size:16px;color:#bd787d}
-.bar b{color:#0c0909;background:#c81a1a;padding:0 10px;height:34px;line-height:34px;font-weight:400}
-.mark{font-size:128px;font-weight:700;color:#ffa2a7;letter-spacing:-0.02em;line-height:1}
-.mark span{color:#e53935}
-.name{margin-top:26px;font-size:34px;color:#e99499}
-.tag{margin-top:10px;font-size:24px;color:#bd787d}
-.prompt{position:absolute;left:96px;bottom:54px;font-size:22px;color:#bd787d}
-.prompt i{font-style:normal;color:#ffa2a7}
+.bar{position:absolute;top:0;left:0;right:0;height:34px;background:var(--chrome-alt);border-bottom:1px solid var(--border-active);display:flex;align-items:center;padding:0 16px;gap:18px;font-size:16px;color:var(--muted)}
+.bar b{color:var(--prose);background:var(--selection);padding:0 10px;height:34px;line-height:34px;font-weight:400}
+.mark{font-size:128px;font-weight:700;color:var(--foreground-bright);letter-spacing:-0.02em;line-height:1}
+.mark span{color:var(--focus)}
+.name{margin-top:26px;font-size:34px;color:var(--foreground)}
+.tag{margin-top:10px;font-size:24px;color:var(--muted)}
+.prompt{position:absolute;left:96px;bottom:54px;font-size:22px;color:var(--muted)}
+.prompt i{font-style:normal;color:var(--foreground-bright)}
 </style><div class="card"><div class="bar"><b>1:home</b><span>2:writing</span><span>3:projects</span><span>4:photography</span><span>5:books</span><span>6:elsewhere</span><span>7:about</span></div>
 <div class="mark">j3w1<span>-i3</span></div><div class="name">${cardName}</div><div class="tag">a working i3 window manager, in the browser · ${cardHost}</div>
 <div class="prompt"><i>j3w1@manjaro</i> ~ $ whoami</div></div>`);

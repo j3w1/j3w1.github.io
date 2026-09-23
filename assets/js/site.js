@@ -177,8 +177,9 @@ const selectProject = (projectId) => {
     candidate.classList.toggle("is-selected", candidate === detail);
   });
 
-  const selectionStatus = document.querySelector("#project-status-selection");
-  if (selectionStatus) selectionStatus.textContent = row.cells[1]?.textContent.trim() ?? projectId;
+  /* Both windows' statuslines report the selection. */
+  const name = row.cells[1]?.textContent.trim() ?? projectId;
+  document.querySelectorAll("[data-project-selection]").forEach((status) => { status.textContent = name; });
 };
 
 const applyProjectFilters = () => {

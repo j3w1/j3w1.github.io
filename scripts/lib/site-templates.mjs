@@ -222,7 +222,7 @@ export const projects = (site) => {
     `              </table>`,
     `            </div>`,
     `          </div>`,
-    `          <footer class="app-statusline"><span>${plural(entries.length, "entry")}</span><span>${count("public")} public</span><span>${count("internal")} internal</span><span class="status-fill">selection: <span id="project-status-selection">${text(selectedEntry.name)}</span></span></footer>`,
+    `          <footer class="app-statusline"><span>${plural(entries.length, "entry")}</span><span>${count("public")} public</span><span>${count("internal")} internal</span><span class="status-fill">selection: <span id="project-status-selection" data-project-selection>${text(selectedEntry.name)}</span></span></footer>`,
     `        </article>`,
     ``,
     `        <article class="window pane project-window" data-wm-window="projects-detail" data-wm-title="project detail" tabindex="0" aria-label="Project detail">`,
@@ -231,7 +231,7 @@ export const projects = (site) => {
     `            <p id="project-no-results" class="compact-state" hidden>No projects match this view.</p>`,
     ...details,
     `          </div>`,
-    `          <footer class="app-statusline"><span>detail</span><span class="status-fill">selection: ${text(selectedEntry.name)}</span></footer>`,
+    `          <footer class="app-statusline"><span>detail</span><span class="status-fill">selection: <span data-project-selection>${text(selectedEntry.name)}</span></span></footer>`,
     `        </article>`,
   ].join("\n");
 };
