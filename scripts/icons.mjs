@@ -14,6 +14,10 @@ import { chromium } from "@playwright/test";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const svg = await fs.readFile(path.join(repoRoot, "favicon.svg"), "utf8");
+const site = JSON.parse(await fs.readFile(path.join(repoRoot, "content", "site.json"), "utf8"));
+const escape = (value) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
+const cardName = escape(`${site.identity.name} / ${site.identity.alternateName} — ${site.identity.role.toLowerCase()}`);
+const cardHost = escape(site.site.origin.replace(/^https:\/\//, ""));
 const dataUrl = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
 
 const browser = await chromium.launch();
@@ -71,7 +75,7 @@ html,body{margin:0;width:1200px;height:630px;background:#0c0909;color:#e99499;fo
 .prompt{position:absolute;left:96px;bottom:54px;font-size:22px;color:#bd787d}
 .prompt i{font-style:normal;color:#ffa2a7}
 </style><div class="card"><div class="bar"><b>1:home</b><span>2:writing</span><span>3:projects</span><span>4:photography</span><span>5:books</span><span>6:elsewhere</span><span>7:about</span></div>
-<div class="mark">j3w1<span>-i3</span></div><div class="name">申杰 / j3w1 — writer · software engineer</div><div class="tag">a working i3 window manager, in the browser · j3w1.github.io</div>
+<div class="mark">j3w1<span>-i3</span></div><div class="name">${cardName}</div><div class="tag">a working i3 window manager, in the browser · ${cardHost}</div>
 <div class="prompt"><i>j3w1@manjaro</i> ~ $ whoami</div></div>`);
 await page.evaluate(() => document.fonts.ready);
 await fs.writeFile(path.join(repoRoot, "assets", "social", "default.png"), await page.screenshot({ type: "png", clip: { x: 0, y: 0, width: 1200, height: 630 } }));

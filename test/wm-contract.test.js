@@ -263,7 +263,7 @@ test("the cache token is bumped whenever a versioned asset changes", async () =>
   const token = html.match(/site\.css\?v=(\d{8}[a-z]?)/)?.[1];
   assert.ok(token, "index.html must version site.css with a dated token");
 
-  const versioned = ["assets/css", "assets/js", "index.html", "wiki/index.html"];
+  const versioned = ["assets/css", "assets/js", "index.html", "wiki/index.html", "404.html"];
   const git = (args) => execFileSync("git", args, { cwd: repoRoot, encoding: "utf8" }).trim();
   /* A shallow clone grafts its one commit as a root commit, so every file
      looks like it was added today; the ratchet needs real history. */
@@ -296,6 +296,21 @@ test("every shared-token asset, including dynamic imports and index.html, uses o
   assert.ok(uses.some((use) => use.startsWith("index.html → /assets/js/wm/boot.js")), "index.html must preload boot.js with the shared token");
   assert.ok(uses.some((use) => use.startsWith("assets/js/site.js → ./wm/boot.js")), "site.js must import boot.js with the shared token");
   assert.ok(uses.some((use) => use.startsWith("assets/js/wm/boot.js → ./greeter.js")), "dynamic imports must carry the shared token too");
+});
+
+test("404.html mirrors the workspace list and slug pattern it cannot import", async () => {
+  /* The rescue script runs before any module could load, so it carries its
+     own copies; these hold them to the originals. */
+  const notFound = await read("404.html");
+  const { WORKSPACES } = await import("../assets/js/route.js");
+  const { SLUG_PATTERN } = await import("../services/j3w1ctl-auth/src/content.js");
+  const workspaces = JSON.parse(notFound.match(/const workspaces = (\[[^\]]*\]);/)[1]);
+  assert.deepEqual(workspaces, [...WORKSPACES]);
+  const slug = notFound.match(/\/(\^[^/]*\$)\/\.test\(slug\)/)?.[1];
+  assert.equal(slug, SLUG_PATTERN.source, "404.html's slug pattern drifted from the content validator");
+  const html = await read("index.html");
+  const layers = [...html.matchAll(/data-wm-layer="([a-z]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(layers, [...WORKSPACES], "the workspace sections are not in route order");
 });
 
 test("the root package is development tooling only: the site has no runtime dependencies", async () => {

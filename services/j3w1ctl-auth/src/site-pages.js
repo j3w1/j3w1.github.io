@@ -15,10 +15,18 @@
 import { COLLECTIONS, SLUG_PATTERN, assertCollection } from "./content.js";
 import { escapeAttribute, escapeText, renderAstHtml } from "./html-renderer.js";
 
+/* The site's identity, mirrored from content/site.json: this package is
+   deployed on its own and cannot read the repository, so the root generator
+   checks that the two agree (`npm run check`). */
 export const SITE_ORIGIN = "https://j3w1.github.io";
 export const SITE_NAME = "j3w1";
 export const AUTHOR = { name: "申杰", alternateName: "j3w1", url: `${SITE_ORIGIN}/`, github: "https://github.com/j3w1" };
 export const DEFAULT_SOCIAL_IMAGE = `${SITE_ORIGIN}/assets/social/default.png`;
+/* The theme's canvas, which the browser chrome is asked to match. */
+export const THEME_COLOR = "#000000";
+/* The shared stylesheet with its cache token: a literal, because
+   scripts/bump-cache-token rewrites it with the rest of the shell. */
+export const STYLESHEET = "/assets/css/site.css?v=20260923";
 export const FEED_PATH = "feed.xml";
 export const SITEMAP_PATH = "sitemap.xml";
 export const GENERATED_PAGE_PATTERN = /^(writing|books|photography)\/(?:[a-z0-9]+(?:-[a-z0-9]+)*\/)?index\.html$/;
@@ -106,37 +114,19 @@ const entryJsonLd = (collection, entry) => {
   };
 };
 
-/* The same release the wiki uses: a scrolling document rather than the
-   fixed-viewport desktop, styled from site.css plus a few page rules. */
-const PAGE_STYLE = `
-    html, body { height: auto; overflow: visible; }
-    body { padding-bottom: 60px; font-size: 13px; line-height: 1.6; }
-    .page-bar { position: sticky; z-index: 20; top: 0; display: flex; height: var(--bar-height); align-items: center; gap: 10px; padding: 0 12px; border-bottom: 1px solid var(--border-active); background: var(--chrome-alt); white-space: nowrap; overflow-x: auto; }
-    .page-bar a { color: var(--muted); text-decoration: none; }
-    .page-bar a:hover { color: var(--prose); }
-    .page-bar .is-here { color: var(--prose); }
-    .page-bar .spacer { flex: 1 1 auto; }
-    .page-bar .desktop-link { color: var(--foreground-bright); }
-    .wrap { width: min(880px, calc(100% - 32px)); margin: 0 auto; padding-top: 30px; }
-    .content-detail-header h1 { margin: 0; color: var(--prose); font-size: 22px; line-height: 1.3; }
-    .rendered-content { max-width: 80ch; color: var(--prose); }
-    .rendered-content p, .rendered-content li { max-width: 80ch; }
-    .rendered-content pre { overflow-x: auto; padding: 10px 12px; border: 1px solid var(--border); background: var(--terminal); }
-    .photo-caption { max-width: 80ch; margin: 0 0 16px; color: var(--muted); }
-    .photo-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
-    .photo-thumb { display: block; text-decoration: none; }
-    .entry-list { padding: 0; margin: 20px 0 0; list-style: none; }
-    .entry-list li { padding: 12px 0; border-bottom: 1px solid var(--border); }
-    .entry-list a { color: var(--foreground-bright); text-decoration: none; font-size: 15px; }
-    .entry-list a:hover { text-decoration: underline; }
-    .entry-list p { margin: 4px 0 0; max-width: 80ch; color: var(--muted); }
-    .entry-list .content-meta { display: block; margin-top: 2px; }
-    .page-desktop { margin-top: 34px; padding: 12px 16px; border-left: 3px solid var(--focus); background: var(--surface-raised); color: var(--prose); }
-    .page-desktop a { color: var(--foreground-bright); }
-    .page-foot { padding-top: 22px; border-top: 1px solid var(--border); margin-top: 44px; color: var(--quiet); }
-    .page-foot a { color: var(--muted); }
-    @media (max-width: 640px) { .wrap { padding-top: 22px; } .content-detail-header h1 { font-size: 19px; } }
-`;
+/* The head lines every page of the site shares, from index.html to the
+   generated entry pages: the feed, the browser colour, the icons, the manifest
+   and the stylesheet. The site generator writes this same block into the
+   static pages. */
+export const renderSharedHead = () => [
+  `<link rel="alternate" type="application/atom+xml" title="${SITE_NAME}" href="/${FEED_PATH}">`,
+  `<meta name="theme-color" content="${THEME_COLOR}">`,
+  `<link rel="icon" href="/favicon.svg" type="image/svg+xml">`,
+  `<link rel="icon" href="/favicon.ico" sizes="32x32">`,
+  `<link rel="apple-touch-icon" href="/apple-touch-icon.png">`,
+  `<link rel="manifest" href="/site.webmanifest">`,
+  `<link rel="stylesheet" href="${STYLESHEET}">`,
+].map((line) => `  ${line}`).join("\n");
 
 const head = ({ title, description, canonical, ogType, image, published, noindex = false, ldJson }) => `<!doctype html>
 <html lang="en" class="no-js">
@@ -157,17 +147,12 @@ ${noindex ? '  <meta name="robots" content="noindex">\n' : ""}  <link rel="canon
   <meta name="twitter:title" content="${attr(title)}">
   <meta name="twitter:description" content="${attr(description)}">
   <meta name="twitter:image" content="${attr(image)}">
-${published ? `  <meta property="article:published_time" content="${attr(published)}">\n` : ""}  <link rel="alternate" type="application/atom+xml" title="${SITE_NAME}" href="/${FEED_PATH}">
-  <meta name="theme-color" content="#000000">
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="icon" href="/favicon.ico" sizes="32x32">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="manifest" href="/site.webmanifest">
-  <link rel="stylesheet" href="/assets/css/site.css">
-  <style>${PAGE_STYLE}  </style>
+${published ? `  <meta property="article:published_time" content="${attr(published)}">\n` : ""}${renderSharedHead()}
 ${ldJson ? `  <script type="application/ld+json">${jsonLd(ldJson)}</script>\n` : ""}</head>`;
 
-const bar = (crumbs, desktopHref) => `  <header class="wm-bar page-bar">
+/* The static pages' bar and footer, shared with the wiki and 404 through the
+   site generator. */
+export const renderPageBar = ({ crumbs, desktopHref }) => `  <header class="page-bar">
     <nav aria-label="Site navigation">
       <a href="/#home">← workstation</a>
 ${crumbs.map(({ href, label, here }) => `      <span aria-hidden="true">/</span> ${here ? `<span class="is-here" aria-current="page">${text(label)}</span>` : `<a href="${attr(href)}">${text(label)}</a>`}`).join("\n")}
@@ -176,7 +161,7 @@ ${crumbs.map(({ href, label, here }) => `      <span aria-hidden="true">/</span>
     <a class="desktop-link" data-desktop-link href="${attr(desktopHref)}">open in the workstation ↗</a>
   </header>`;
 
-const foot = () => `  <footer class="page-foot wrap">
+export const renderPageFoot = () => `  <footer class="page-foot page-wrap">
     <p><span lang="zh">${text(AUTHOR.name)}</span> / ${text(AUTHOR.alternateName)} · <a href="/${FEED_PATH}">feed</a> · <a href="${attr(AUTHOR.github)}" rel="me">GitHub</a> · <a href="/wiki/">wiki</a></p>
   </footer>`;
 
@@ -208,10 +193,10 @@ export const renderEntryPage = (collection, entry) => {
     published: entryDate(collection, entry),
     ldJson: entryJsonLd(collection, entry),
   })}
-<body>
+<body class="page">
   <a class="skip-link" href="#entry">Skip to the entry</a>
-${bar([{ href: collectionUrl(collection), label: COLLECTION_TITLES[collection] }, { label: entry.slug, here: true }], desktopHref)}
-  <main class="wrap">
+${renderPageBar({ crumbs: [{ href: collectionUrl(collection), label: COLLECTION_TITLES[collection] }, { label: entry.slug, here: true }], desktopHref })}
+  <main class="page-wrap">
     <article id="entry">
       <header class="content-detail-header">
         <h1>${text(entry.title)}</h1>
@@ -219,9 +204,9 @@ ${bar([{ href: collectionUrl(collection), label: COLLECTION_TITLES[collection] }
       </header>
 ${body}
     </article>
-    <p class="page-desktop">This entry also lives on the desktop: <a data-desktop-link href="${attr(desktopHref)}">open ${text(entry.slug)} in the workstation</a>, a working i3 window manager in the browser.</p>
+    <p class="callout page-desktop">This entry also lives on the desktop: <a data-desktop-link href="${attr(desktopHref)}">open ${text(entry.slug)} in the workstation</a>, a working i3 window manager in the browser.</p>
   </main>
-${foot()}
+${renderPageFoot()}
 </body>
 </html>
 `;
@@ -251,10 +236,10 @@ export const renderCollectionPage = (collection, entries) => {
       author: person(),
     },
   })}
-<body>
+<body class="page">
   <a class="skip-link" href="#entries">Skip to the entries</a>
-${bar([{ label: COLLECTION_TITLES[collection], here: true }], `/#${collection}`)}
-  <main class="wrap">
+${renderPageBar({ crumbs: [{ label: COLLECTION_TITLES[collection], here: true }], desktopHref: `/#${collection}` })}
+  <main class="page-wrap">
     <header class="content-detail-header">
       <h1>${text(COLLECTION_TITLES[collection])}</h1>
       <p class="content-meta">${text(COLLECTION_BLURBS[collection])}</p>
@@ -262,9 +247,9 @@ ${bar([{ label: COLLECTION_TITLES[collection], here: true }], `/#${collection}`)
     <ul id="entries" class="entry-list">
 ${items.length ? items.join("\n") : "      <li><p>Nothing published here yet.</p></li>"}
     </ul>
-    <p class="page-desktop">The same entries open on the desktop: <a data-desktop-link href="/#${collection}">open ${text(collection)} in the workstation</a>.</p>
+    <p class="callout page-desktop">The same entries open on the desktop: <a data-desktop-link href="/#${collection}">open ${text(collection)} in the workstation</a>.</p>
   </main>
-${foot()}
+${renderPageFoot()}
 </body>
 </html>
 `;

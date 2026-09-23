@@ -4,20 +4,24 @@
    current. GitHub Pages serves `main` verbatim, so generated files are
    committed; CI runs --check so they cannot drift.
 
-   Generators register here as they are added: fonts, the modulepreload list,
-   the content index and prerendered pages, the sitemap and feed. */
+   Generators register here as they are added: the site blocks (identity,
+   projects, links, about, the static pages' shell), fonts, the theme block,
+   the modulepreload list, the content index and prerendered pages, the
+   sitemap and feed. The site blocks go first: the font subsetter reads the
+   pages for the glyphs they use, so it must see them already written. */
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { fontsGenerator } from "./lib/fonts.mjs";
 import { pagesGenerator } from "./lib/pages.mjs";
 import { preloadsGenerator } from "./lib/preloads.mjs";
+import { siteGenerator } from "./lib/site.mjs";
 import { themeGenerator } from "./lib/theme.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const check = process.argv.includes("--check");
 
-const generators = [fontsGenerator, themeGenerator, preloadsGenerator, pagesGenerator];
+const generators = [siteGenerator, fontsGenerator, themeGenerator, preloadsGenerator, pagesGenerator];
 
 let failures = 0;
 for (const { name, run } of generators) {

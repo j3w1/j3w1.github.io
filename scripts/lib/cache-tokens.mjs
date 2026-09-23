@@ -1,26 +1,31 @@
 /* The site's cache-busting scheme, in one place.
 
-   Every asset that ships as part of the public shell — the stylesheets, site.js,
-   public-content.js, and every module under assets/js/wm/ — shares ONE dated
-   ?v= token that is bumped as a unit: pinning only boot.js would let a stale
-   cached layout.js load against a fresh tree.js. A few files are versioned on
-   their own and only re-published when they change: content-renderer.js,
-   photo-viewer.js, and everything under admin/. Fonts are content-hashed by
-   scripts/generate.mjs and never touched here. */
+   Every asset that ships as part of the public shell — the stylesheets and
+   every module under assets/js/ — shares ONE dated ?v= token that is bumped
+   as a unit: pinning only boot.js would let a stale cached layout.js load
+   against a fresh tree.js. A few files are versioned on their own and only
+   re-published when they change: content-renderer.js, photo-viewer.js, and
+   everything under admin/. Fonts are content-hashed by scripts/generate.mjs
+   and never touched here.
+
+   The page generator carries the stylesheet's token too, so the prerendered
+   entry pages are busted with the shell; after a bump, `npm run generate`
+   rewrites them and the service must be redeployed before the next browser
+   publish. */
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
 export const TOKEN_PATTERN = /([A-Za-z0-9_./-]+)\?v=([A-Za-z0-9]+)/g;
 
-/* Files that may reference a shared-token asset. */
+/* Pages and sources, beyond the scripts under assets/js, that reference a
+   shared-token asset. */
 export const VERSIONED_FILES = [
   "index.html",
   "wiki/index.html",
   "admin/index.html",
   "404.html",
-  "assets/js/site.js",
-  "assets/js/public-content.js",
+  "services/j3w1ctl-auth/src/site-pages.js",
 ];
 
 const INDEPENDENT = /(?:^|\/)(?:content-renderer\.js|photo-viewer\.js)$|(?:^|\/)admin\/|(?:^|\/)fonts\//;
@@ -38,7 +43,7 @@ const walk = async (directory) => {
 };
 
 export const versionedFiles = async (repoRoot) => {
-  const wm = await walk(path.join(repoRoot, "assets", "js", "wm"));
+  const scripts = await walk(path.join(repoRoot, "assets", "js"));
   const listed = [];
   for (const relative of VERSIONED_FILES) {
     const absolute = path.join(repoRoot, relative);
@@ -46,10 +51,10 @@ export const versionedFiles = async (repoRoot) => {
       await fs.access(absolute);
       listed.push(absolute);
     } catch {
-      /* Optional pages (the stubs) may be deleted; that is not an error. */
+      /* A listed page can be absent in a partial checkout; that is not an error. */
     }
   }
-  return [...listed, ...wm].map((absolute) => path.relative(repoRoot, absolute).replaceAll("\\", "/"));
+  return [...listed, ...scripts].map((absolute) => path.relative(repoRoot, absolute).replaceAll("\\", "/"));
 };
 
 /* Returns { shared: Map<token, [file:target]>, independent: Map<token, [file:target]> }. */

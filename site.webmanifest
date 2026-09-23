@@ -1,7 +1,7 @@
 {
   "name": "j3w1 workstation",
   "short_name": "j3w1",
-  "description": "The personal workstation of 申杰 / j3w1: a working i3 window manager in the browser.",
+  "description": "The personal workstation of 申杰 / j3w1 — a working i3 window manager in the browser, with writing, reading notes, and photography.",
   "start_url": "/#home",
   "display": "standalone",
   "background_color": "#000000",

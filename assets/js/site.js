@@ -18,6 +18,8 @@ const workspaceNames = [
 ];
 
 const HOME_PATH = "/home/j3w1";
+/* The generated <title> is the home workspace's; other workspaces prefix it. */
+const homeTitle = document.title;
 
 const workspaceNumbers = new Map(
   workspaceNames.map((name, index) => [name, index + 1]),
@@ -86,10 +88,7 @@ const activateWorkspace = (
   }
   if (skipLink) skipLink.setAttribute("href", `#${nextName}`);
 
-  document.title =
-    nextName === "home"
-      ? "j3w1 — Writer · Software Engineer"
-      : `${nextName} — j3w1`;
+  document.title = nextName === "home" ? homeTitle : `${nextName} — j3w1`;
 
   /* Reading the layer's size right after the display flip forces the synchronous
      layout the window manager needs; that is intentional here. */

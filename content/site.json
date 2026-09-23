@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "site": {
+    "name": "j3w1",
+    "origin": "https://j3w1.github.io",
+    "image": "/assets/social/default.png",
+    "themeColor": "#000000",
+    "description": "The personal workstation of 申杰 / j3w1 — a working i3 window manager in the browser, with writing, reading notes, and photography."
+  },
+  "identity": {
+    "name": "申杰",
+    "alternateName": "j3w1",
+    "role": "Writer · Software Engineer",
+    "description": "The personal workstation of 申杰 / j3w1 — writer and software engineer building business systems, developer tooling, and AI-assisted engineering workflows.",
+    "jobTitle": ["Writer", "Software Engineer"],
+    "github": "https://github.com/j3w1",
+    "sameAs": ["https://github.com/j3w1"]
+  },
+  "home": {
+    "readme": [
+      "I build the machinery behind dependable work: business platforms, developer environments, and delivery automation designed to be clear, secure, recoverable, and useful long after the first release.",
+      "My current work spans business systems, governed delivery, and developer tooling."
+    ],
+    "focus": [
+      { "name": "systems", "text": "business operations" },
+      { "name": "tooling", "text": "resumable developer environments" },
+      { "name": "practice", "text": "governed delivery and automation" }
+    ]
+  },
+  "about": {
+    "paragraphs": [
+      "I work on software that has to survive contact with real organizations: business systems, operational workflows, and the tools engineers use to build and maintain them.",
+      "My interests connect software architecture with writing and developer environments. I care about clear boundaries, recoverable workflows, evidence that can be checked, and systems that remain understandable after the original implementation context is gone.",
+      "Current work includes CE Systems, an internal operations platform for Casa Elida; CE Governed Delivery, an evidence-driven engineering-governance effort; and Metadata Reconciler, deterministic GitHub metadata operations.",
+      "Public work includes [j3w1zsh](https://github.com/j3w1/j3w1zsh), a portable, resumable Zsh workstation framework for Arch Linux, WSL, and Termux; [1688toCSV](https://github.com/j3w1/1688toCSV), a focused browser extension for practical order-data export; and [the source for this site](https://github.com/j3w1/j3w1.github.io)."
+    ],
+    "interests": [
+      { "label": "business systems", "text": "operational software, architecture, data, and organizational workflows" },
+      { "label": "engineering systems", "text": "developer tooling, automation, review evidence, and delivery controls" },
+      { "label": "writing environments", "text": "Linux, Arch, WSL, Termux, Neovim, tmux, and JetBrains tooling" },
+      { "label": "selected stack", "text": "Laravel, PHP, Vue, TypeScript, MariaDB, Redis, and GitHub Actions" }
+    ]
+  },
+  "elsewhere": {
+    "links": [
+      { "name": "wiki", "href": "/wiki/", "label": "how to use this workstation" },
+      { "name": "github", "href": "https://github.com/j3w1", "rel": "me" },
+      { "name": "site-source", "href": "https://github.com/j3w1/j3w1.github.io" },
+      { "name": "current-workstation", "href": "https://github.com/j3w1/j3w1zsh" },
+      { "name": "legacy-workstation", "href": "https://github.com/j3w1/1w3j" }
+    ],
+    "note": "GitHub is the only public profile linked from this site."
+  },
+  "projects": {
+    "selected": "j3w1zsh",
+    "entries": [
+      {
+        "id": "ce-systems",
+        "name": "CE Systems",
+        "stack": "Laravel · PHP · Vue",
+        "state": "Active",
+        "visibility": "internal",
+        "repository": null,
+        "summary": "An internal business operations platform for Casa Elida, covering retail, inventory, purchasing, imports and logistics, finance, and organizational workflows.",
+        "facts": [["Stack", "Laravel · PHP · Vue · TypeScript · MariaDB"], ["Context", "Business systems for real operations"]]
+      },
+      {
+        "id": "ce-gd",
+        "name": "CE Governed Delivery",
+        "stack": "Evidence · Review · Controls",
+        "state": "Active",
+        "visibility": "internal",
+        "repository": null,
+        "summary": "An isolated, evidence-driven engineering-governance initiative focused on bounded AI assistance, delivery control, and dependable human decision points.",
+        "facts": [["Practice", "Evidence · Review · Delivery controls"], ["Context", "Engineering governance"]]
+      },
+      {
+        "id": "metadata-reconciler",
+        "name": "Metadata Reconciler",
+        "stack": "GitHub · Metadata · Automation",
+        "state": "Active",
+        "visibility": "internal",
+        "repository": null,
+        "summary": "A deterministic GitHub metadata-operations project for reconciling repository metadata through explicit, reviewable automation.",
+        "facts": [["Practice", "GitHub automation · Metadata · Reconciliation"], ["Context", "Delivery operations"]]
+      },
+      {
+        "id": "j3w1zsh",
+        "name": "j3w1zsh",
+        "stack": "Shell · Zsh · Arch · WSL",
+        "state": "Maintained",
+        "visibility": "public",
+        "repository": "https://github.com/j3w1/j3w1zsh",
+        "summary": "A portable, resumable Zsh workstation framework for native Arch Linux, Arch WSL 2, and Termux, with presets, themes, project workspaces, migration, and remote-session support.",
+        "facts": [["Stack", "Shell · Zsh · Arch Linux · WSL · Termux"], ["Context", "Current public workstation framework"]]
+      },
+      {
+        "id": "1688tocsv",
+        "name": "1688toCSV",
+        "stack": "JavaScript · Chrome · CSV",
+        "state": "Current",
+        "visibility": "public",
+        "repository": "https://github.com/j3w1/1688toCSV",
+        "summary": "A compact Chrome extension that exports 1688.com order details into a clean CSV for practical downstream use.",
+        "facts": [["Stack", "JavaScript · Browser extension · CSV"], ["Context", "Focused order-data export"]]
+      },
+      {
+        "id": "website",
+        "name": "j3w1.github.io",
+        "stack": "HTML · CSS · JavaScript",
+        "state": "Active",
+        "visibility": "public",
+        "repository": "https://github.com/j3w1/j3w1.github.io",
+        "summary": "The dependency-free source for this personal site, published directly by GitHub Pages.",
+        "facts": [["Stack", "Semantic HTML · CSS · Vanilla JavaScript"], ["Context", "Personal website"]]
+      },
+      {
+        "id": "1w3j",
+        "name": "1w3j",
+        "stack": "Shell · dotfiles · themes",
+        "state": "Legacy",
+        "visibility": "public",
+        "repository": "https://github.com/j3w1/1w3j",
+        "summary": "An earlier generation of personal Linux workstation configuration, scripts, themes, package lists, and bootstrap tooling. j3w1zsh is the current public workstation framework.",
+        "facts": [["Period", "2017–2021"], ["Context", "Preserved workstation history"]]
+      },
+      {
+        "id": "ce-desktop",
+        "name": "CE Desktop",
+        "stack": "Java · JavaFX",
+        "state": "Historical",
+        "visibility": "public",
+        "repository": "https://github.com/j3w1/CEDesktop",
+        "summary": "An earlier JavaFX enterprise desktop application prototype, preserved as part of the public project history.",
+        "facts": [["Stack", "Java · JavaFX"], ["Context", "Enterprise desktop prototype"]]
+      }
+    ]
+  }
+}

@@ -13,11 +13,17 @@ import { element } from "../dom.js?v=20260923";
 
 const HOME = "/home/j3w1";
 
-const README = [
-  "I build the machinery behind dependable work: business platforms, developer",
-  "environments, and delivery automation designed to be clear, secure,",
-  "recoverable, and useful long after the first release.",
-];
+/* whoami and README are the home terminal's authored output, generated from
+   content/site.json; the shell reads them from the page rather than carrying
+   a copy. Captured on the first command, before `clear` can remove them. */
+let identity = null;
+const readIdentity = () => {
+  identity ??= {
+    whoami: [...document.querySelectorAll("[data-site-whoami] p")].map((line) => line.textContent.trim()),
+    readme: [...document.querySelectorAll("[data-site-readme] p")].map((line) => line.textContent.trim()),
+  };
+  return identity;
+};
 
 /* Two separate things, and conflating them was confusing: these are commands you
    type here, and those are keys you press anywhere on the desktop. */
@@ -121,7 +127,7 @@ const buildTree = async () => {
     Object.fromEntries(collection(name).map((entry) => [`${entry.slug}.md`, { kind: name, entry }]));
 
   return {
-    README: { kind: "text", lines: README },
+    README: { kind: "text", lines: readIdentity().readme },
     "about/": {
       kind: "dir",
       children: {
@@ -303,8 +309,9 @@ export const createShell = ({ body, statusline, wm, close, title }) => {
     logout: () => wm.logout(),
     pwd: () => print(cwd.length ? `${HOME}/${cwd.map((segment) => segment.replace(/\/$/, "")).join("/")}` : HOME),
     whoami: () => {
-      print("申杰 / j3w1", "terminal-output identity-output");
-      print("writer · software engineer");
+      const [name, ...rest] = readIdentity().whoami;
+      print(name, "terminal-output identity-output");
+      rest.forEach((line) => print(line));
     },
     clear: () => {
       [...buffer.children].forEach((child) => {
