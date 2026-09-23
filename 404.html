@@ -6,20 +6,24 @@
   <title>Page not found — j3w1</title>
   <meta name="description" content="The requested page could not be found.">
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#0c0909">
+  <!-- @generated-site:head-shared:start -->
+  <link rel="alternate" type="application/atom+xml" title="j3w1" href="/feed.xml">
+  <meta name="theme-color" content="#000000">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/css/site.css">
-  <style>
-    /* A scrolling document, unlike the fixed-viewport desktop. */
-    html, body { height: auto; overflow: visible; }
-    .terminal-output a { color: var(--foreground-bright); }
-  </style>
+  <link rel="icon" href="/favicon.ico" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="stylesheet" href="/assets/css/site.css?v=20260923">
+  <!-- @generated-site:head-shared:end -->
   <script>
   /* GitHub Pages serves this for every unknown path. A path that looks like a
-     workspace or an entry — /writing/foo, /Photography/Slug.html, the old
-     /about/ and /projects/ stubs — is a deep link into the desktop, so it is
-     forwarded to the hash route instead of dead-ending here. Real entries have
-     real pages at /<collection>/<slug>/ and never reach this. */
+     workspace or an entry — /writing/foo, /Photography/Slug.html, /about/ or
+     /projects/ (workspaces with no page of their own) — is a deep link into
+     the desktop, so it is forwarded to the hash route instead of dead-ending
+     here. Real entries have real pages at /<collection>/<slug>/ and never
+     reach this. The workspace list mirrors assets/js/route.js and the slug
+     pattern mirrors the content validator; test/wm-contract.test.js holds
+     both in step. */
   (() => {
     const workspaces = ["home", "writing", "projects", "photography", "books", "elsewhere", "about"];
     const parts = location.pathname.toLowerCase().replace(/\.html?$/, "").split("/").filter(Boolean);
@@ -30,27 +34,36 @@
   })();
   </script>
 </head>
-<body>
+<body class="page">
   <a class="skip-link" href="#error-content">Skip to error</a>
-  <header class="wm-bar">
-    <nav class="workspace-strip" aria-label="Site navigation"><a class="workspace-link is-active" href="/#home"><span aria-hidden="true">1:</span>home</a></nav>
-    <div class="system-status" aria-label="Error status"><span id="status-workspace">404</span><span>path:not-found</span></div>
+  <!-- @generated-site:page-bar:start -->
+  <header class="page-bar">
+    <nav aria-label="Site navigation">
+      <a href="/#home">← workstation</a>
+      <span aria-hidden="true">/</span> <span class="is-here" aria-current="page">404</span>
+    </nav>
+    <span class="spacer"></span>
+    <a class="desktop-link" data-desktop-link href="/#home">open in the workstation ↗</a>
   </header>
-  <main id="error-content" class="desktop-shell">
-    <section class="workspace is-active" aria-labelledby="error-title">
-      <article class="window terminal-window elsewhere-window is-focused">
-        <header class="window-titlebar"><span>j3w1@manjaro: error</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
-        <div class="terminal-buffer">
-          <p class="terminal-line"><span class="shell-prompt agnoster"><span class="prompt-path">~</span><span class="prompt-mark" aria-hidden="true">&#xe0b0;</span><span class="prompt-space"> </span></span><span class="command">open requested-path</span></p>
-          <div class="terminal-output readable-output">
-            <h1 id="error-title">404: no such file or workspace</h1>
-            <p>The address may be incorrect or the content may have moved into the single-page workstation.</p>
-            <p><a href="/#home">Return to 1:home</a> · <a href="/writing/">writing</a> · <a href="/photography/">photography</a> · <a href="/books/">books</a> · <a href="/wiki/">wiki</a></p>
-          </div>
+  <!-- @generated-site:page-bar:end -->
+  <main id="error-content" class="page-wrap">
+    <article class="window terminal-window elsewhere-window is-focused">
+      <header class="window-titlebar"><span>j3w1@manjaro: error</span><span class="window-marks" aria-hidden="true">─ □ ×</span></header>
+      <div class="terminal-buffer">
+        <p class="terminal-line"><span class="shell-prompt agnoster"><span class="prompt-path">~</span><span class="prompt-mark" aria-hidden="true">&#xe0b0;</span><span class="prompt-space"> </span></span><span class="command">open requested-path</span></p>
+        <div class="terminal-output readable-output">
+          <h1 id="error-title">404: no such file or workspace</h1>
+          <p>The address may be incorrect, or the content may have moved into the single-page workstation.</p>
         </div>
-        <footer class="terminal-statusline"><span>ERROR</span><span class="status-fill">exit 404</span></footer>
-      </article>
-    </section>
+      </div>
+      <footer class="terminal-statusline"><span>ERROR</span><span class="status-fill">exit 404</span></footer>
+    </article>
+    <p class="callout page-desktop">Return to <a href="/#home">1:home</a>, or open <a href="/writing/">writing</a> · <a href="/photography/">photography</a> · <a href="/books/">books</a> · <a href="/wiki/">wiki</a>.</p>
   </main>
+  <!-- @generated-site:page-foot:start -->
+  <footer class="page-foot page-wrap">
+    <p><span lang="zh">申杰</span> / j3w1 · <a href="/feed.xml">feed</a> · <a href="https://github.com/j3w1" rel="me">GitHub</a> · <a href="/wiki/">wiki</a></p>
+  </footer>
+  <!-- @generated-site:page-foot:end -->
 </body>
 </html>

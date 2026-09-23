@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import {
   COLLECTIONS,
+  CONTENT_SOURCE_PATTERN,
   LIMITS,
   assertCollection,
   buildIndex,
@@ -9,13 +10,10 @@ import {
   mediaPath,
   normalizeEntry,
   serializeEntry,
-  stringifyIndex,
   validateWebp,
 } from "./content.js";
 import { AppError, badRequest, conflict, notFound, preconditionRequired, publicationUnknown } from "./errors.js";
-import { GENERATED_PAGE_PATTERN, generateSitePages } from "./site-pages.js";
-
-const INDEX_PATH = "assets/data/content-index.json";
+import { generateArtifacts, INDEX_PATH } from "./site-pages.js";
 
 const gitBlobSha = (content) => {
   const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content);
@@ -29,7 +27,7 @@ const publicationMatches = (snapshot, additions, deletions) =>
 const sourceCollections = (files) => {
   const result = Object.fromEntries(COLLECTIONS.map((collection) => [collection, []]));
   for (const [filePath, file] of files) {
-    const match = filePath.match(/^content\/(writing|books|photography)\/([a-z0-9]+(?:-[a-z0-9]+)*)\.md$/);
+    const match = filePath.match(CONTENT_SOURCE_PATTERN);
     if (match && typeof file.source === "string") {
       result[match[1]].push({ path: filePath, source: file.source });
     }
@@ -180,21 +178,16 @@ export const createRepositoryService = (github) => {
         }
       }
 
-      const index = buildIndex(sources);
-      additions.push({ path: INDEX_PATH, content: Buffer.from(stringifyIndex(index), "utf8") });
-
-      /* The prerendered pages, sitemap and feed land in the same commit as
-         the index, so a browser publish can never leave them behind. Only
-         files whose bytes change are sent; generated entry pages that no
-         longer have an entry are removed. */
-      const generated = generateSitePages(index);
-      for (const [filePath, content] of generated) {
+      /* The index, the prerendered pages, the sitemap and the feed land in the
+         same commit, so a browser publish can never leave them behind. The
+         index is always sent; the rest only when their bytes change, and
+         generated entry pages that no longer have an entry are removed. */
+      const { files, orphans } = generateArtifacts(buildIndex(sources));
+      for (const [filePath, content] of files) {
         const buffer = Buffer.from(content, "utf8");
-        if (snapshot.files.get(filePath)?.sha !== gitBlobSha(buffer)) additions.push({ path: filePath, content: buffer });
+        if (filePath === INDEX_PATH || snapshot.files.get(filePath)?.sha !== gitBlobSha(buffer)) additions.push({ path: filePath, content: buffer });
       }
-      for (const filePath of snapshot.files.keys()) {
-        if (GENERATED_PAGE_PATTERN.test(filePath) && !generated.has(filePath)) deletions.push(filePath);
-      }
+      deletions.push(...orphans(snapshot.files.keys()));
       const uniqueDeletions = [...new Set(deletions)];
       let result;
       try {

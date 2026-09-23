@@ -214,9 +214,6 @@ const fallbackCss = (metrics) => {
   }).join("\n\n");
 };
 
-export const fallbackStack = () =>
-  [`"${FAMILY}"`, ...FALLBACKS.map(({ name }) => `"${FAMILY} fallback ${name}"`), "monospace"].join(", ");
-
 /* Builds every face in memory. Returns { files: Map<relativePath, Buffer>,
    css: string, tokens: { text, icons, wordmark }, report }. */
 export const buildFonts = async (repoRoot) => {

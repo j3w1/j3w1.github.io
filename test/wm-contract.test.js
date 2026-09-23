@@ -9,6 +9,8 @@ import path from "node:path";
 import test from "node:test";
 
 import { collectTokens } from "../scripts/lib/cache-tokens.mjs";
+import { COLLECTIONS } from "../assets/js/content-index.js";
+import { WORKSPACES } from "../assets/js/route.js";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const read = (...parts) => fs.readFile(path.join(repoRoot, ...parts), "utf8");
@@ -85,7 +87,7 @@ test("every declared window exists, is focusable, and has a tab title", async ()
 
 test("every workspace has a layer, a decoration surface, and an empty state", async () => {
   const html = await read("index.html");
-  const names = ["home", "writing", "projects", "photography", "books", "elsewhere", "about"];
+  const names = WORKSPACES;
   for (const name of names) {
     assert.match(html, new RegExp(`data-wm-layer="${name}"`), `${name} has no layer`);
   }
@@ -97,7 +99,7 @@ test("every workspace has a layer, a decoration surface, and an empty state", as
 
 test("content hooks stay unique so the renderer cannot target two windows", async () => {
   const html = await read("index.html");
-  for (const collection of ["writing", "books", "photography"]) {
+  for (const collection of COLLECTIONS) {
     for (const hook of ["data-content-list", "data-content-detail"]) {
       const count = (html.match(new RegExp(`${hook}="${collection}"`, "g")) ?? []).length;
       assert.equal(count, 1, `${hook}="${collection}" appears ${count} times; expected 1`);
@@ -126,7 +128,10 @@ test("the pre-paint decision script and session.js agree on storage keys", async
 test("the fallback path covers no-JS and a failed boot", async () => {
   const css = await read("assets", "css", "desktop.css");
   assert.match(css, /html:not\(\.wm-active\)/, "missing the unified fallback selector");
-  assert.match(css, /html\[data-wm="off"\] body/, "a failed boot must restore document scrolling");
+  /* Document mode lives in site.css so the static pages, which never load
+     desktop.css, share it. */
+  const siteCss = await read("assets", "css", "site.css");
+  assert.match(siteCss, /html\[data-wm="off"\] body/, "a failed boot must restore document scrolling");
 
   /* Plain mode was removed: it is not an i3 feature. The stacked layout survives
      only as the no-JS and boot-failure fallback, never as a mode anyone selects. */
@@ -138,7 +143,6 @@ test("the fallback path covers no-JS and a failed boot", async () => {
   assert.match(html, /id="power-menu"/, "the session menu replaces it");
 
   /* The old ad-hoc mobile tabs are gone; nothing may hide a window by that name. */
-  const siteCss = await read("assets", "css", "site.css");
   assert.doesNotMatch(siteCss, /is-mobile-active/, "stale mobile pane rules remain");
   assert.doesNotMatch(siteCss, /mobile-buffer-tabs/, "stale buffer tab rules remain");
 });
@@ -261,7 +265,7 @@ test("the cache token is bumped whenever a versioned asset changes", async () =>
   const token = html.match(/site\.css\?v=(\d{8}[a-z]?)/)?.[1];
   assert.ok(token, "index.html must version site.css with a dated token");
 
-  const versioned = ["assets/css", "assets/js", "index.html", "wiki/index.html"];
+  const versioned = ["assets/css", "assets/js", "index.html", "wiki/index.html", "404.html"];
   const git = (args) => execFileSync("git", args, { cwd: repoRoot, encoding: "utf8" }).trim();
   /* A shallow clone grafts its one commit as a root commit, so every file
      looks like it was added today; the ratchet needs real history. */
@@ -293,7 +297,8 @@ test("every shared-token asset, including dynamic imports and index.html, uses o
   const uses = [...shared.values()].flat();
   assert.ok(uses.some((use) => use.startsWith("index.html → /assets/js/wm/boot.js")), "index.html must preload boot.js with the shared token");
   assert.ok(uses.some((use) => use.startsWith("assets/js/site.js → ./wm/boot.js")), "site.js must import boot.js with the shared token");
-  assert.ok(uses.some((use) => use.startsWith("assets/js/wm/boot.js → ./greeter.js")), "dynamic imports must carry the shared token too");
+  assert.ok(uses.some((use) => use.startsWith("assets/js/wm/curtains.js → ./greeter.js")), "dynamic imports must carry the shared token too");
+  assert.ok(uses.some((use) => use.startsWith("assets/js/wm/boot.js → ./touch.js")), "boot.js's own dynamic imports carry it as well");
 });
 
 test("the root package is development tooling only: the site has no runtime dependencies", async () => {
@@ -419,10 +424,9 @@ test("the raster icons and the social card exist at the sizes their consumers ex
   assert.ok(ico.subarray(22, 26).equals(png), "favicon.ico wraps a PNG");
 });
 
-test("the generated pages, sitemap and feed are committed and current", async () => {
-  const { checkGenerated } = await import("../services/j3w1ctl-auth/src/generate.js");
-  const result = await checkGenerated(repoRoot);
-  assert.deepEqual({ stale: result.stale, orphans: result.orphans }, { stale: [], orphans: [] }, "run npm run generate");
+/* Whether the generated files are current is `npm run check`'s job (CI runs
+   it); this holds what they must contain. */
+test("the generated pages carry crawlable URLs and a way back to the desktop", async () => {
   const sitemap = await read("sitemap.xml");
   assert.match(sitemap, /<loc>https:\/\/j3w1\.github\.io\/photography\/we-were-werewolves\/<\/loc>/, "every entry has a crawlable URL");
   const page = await read("photography", "we-were-werewolves", "index.html");

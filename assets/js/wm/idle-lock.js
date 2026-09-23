@@ -8,8 +8,8 @@
    asks for no password, and — like the greeter — is aria-hidden and inert, so it
    never moves focus in or out and <main> is untouched throughout. */
 
-import { LOCK_THRESHOLDS, media, prefs } from "./session.js?v=20260907";
-import { throttle } from "./dom.js?v=20260907";
+import { LOCK_THRESHOLDS, media, prefs } from "./session.js?v=20260923";
+import { listen, throttle } from "./dom.js?v=20260923";
 
 /* Activity that counts as "still here" for the idle timer. Dismissing the
    lock is deliberately narrower — see onUnlockKey. */
@@ -94,9 +94,11 @@ export const installIdleLock = ({ node, isBusy, onLock, onUnlock }) => {
     if (document.visibilityState !== "visible" && timer) clearTimeout(timer);
   };
 
-  ACTIVITY.forEach((name) => document.addEventListener(name, onActivity, { passive: true }));
-  document.addEventListener("keydown", onUnlockKey, true);
-  document.addEventListener("visibilitychange", onVisibility);
+  const cleanup = [
+    ...ACTIVITY.map((name) => listen(document, name, onActivity, { passive: true })),
+    listen(document, "keydown", onUnlockKey, true),
+    listen(document, "visibilitychange", onVisibility),
+  ];
   schedule();
 
   return {
@@ -107,9 +109,7 @@ export const installIdleLock = ({ node, isBusy, onLock, onUnlock }) => {
     destroy: () => {
       if (timer) clearTimeout(timer);
       if (clock) clearInterval(clock);
-      ACTIVITY.forEach((name) => document.removeEventListener(name, onActivity));
-      document.removeEventListener("keydown", onUnlockKey, true);
-      document.removeEventListener("visibilitychange", onVisibility);
+      for (const remove of cleanup) remove();
       unlock();
     },
   };

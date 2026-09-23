@@ -3,6 +3,10 @@ export const TARGET_REPOSITORY = "j3w1.github.io";
 export const TARGET_BRANCH = "main";
 export const TARGET_REPOSITORY_WITH_OWNER = `${TARGET_OWNER}/${TARGET_REPOSITORY}`;
 
+/* The public site: the only origin a production session may come from, the
+   base that classifies content links, and the origin of every generated URL. */
+export const SITE_ORIGIN = "https://j3w1.github.io";
+
 export const J3W1CTL_API_PROTOCOL = 1;
 export const SESSION_SCHEMA_VERSION = 1;
 export const SESSION_TTL_SECONDS = 60 * 60;

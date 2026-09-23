@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "site": {
+    "name": "j3w1",
+    "origin": "https://j3w1.github.io",
+    "image": "/assets/social/default.png",
+    "themeColor": "#000000",
+    "description": "The personal workstation of 申杰 / j3w1 — a working i3 window manager in the browser, with writing, reading notes, and photography."
+  },
+  "identity": {
+    "name": "申杰",
+    "alternateName": "j3w1",
+    "role": "Writer · Software Engineer",
+    "description": "The personal workstation of 申杰 / j3w1 — writer and software engineer building governed execution tooling, business platforms, developer environments, and design systems.",
+    "jobTitle": ["Writer", "Software Engineer"],
+    "github": "https://github.com/j3w1",
+    "sameAs": ["https://github.com/j3w1"]
+  },
+  "home": {
+    "readme": [
+      "I build calm, dependable software for real work: governed execution tooling, business platforms, developer environments, and design systems — with clear contracts, useful evidence, and foundations meant to last.",
+      "Building now: pod, CE Systems, and CE Metadata. Public work: theme, j3w1zsh, and this site."
+    ],
+    "focus": [
+      { "name": "systems", "text": "business platforms for real operations" },
+      { "name": "tooling", "text": "agent coordination and developer environments" },
+      { "name": "design", "text": "one design system, machine-readable" },
+      { "name": "practice", "text": "governed delivery, evidence, verification" }
+    ]
+  },
+  "about": {
+    "paragraphs": [
+      "I work on software that has to survive contact with real organizations: business systems, operational workflows, and the tools engineers use to build and maintain them.",
+      "My interests connect software architecture with writing and developer environments. I care about clear contracts, recoverable workflows, evidence that can be checked, and systems that remain understandable after the original implementation context is gone.",
+      "Current work includes [pod](https://github.com/j3w1/pod), which turns an Orca coding session into the coordinator of a pod of agents; CE Systems, Casa Elida's modular enterprise platform; CE Governed Delivery, a credential-isolated controller for governed review, merge, and delivery; and CE Metadata, a deterministic control plane for GitHub metadata.",
+      "Public work includes [theme](https://github.com/j3w1/theme), the canonical j3w1 design system this site is dressed in; [j3w1zsh](https://github.com/j3w1/j3w1zsh), a portable, resumable workstation framework for Arch Linux, Arch WSL 2, and Termux; [ce-signage](https://github.com/j3w1/ce-signage), digital signage for Casa Elida's cashier PCs; [1688toCSV](https://github.com/j3w1/1688toCSV), a focused browser extension for order-data export; and [the source for this site](https://github.com/j3w1/j3w1.github.io)."
+    ],
+    "interests": [
+      { "label": "business systems", "text": "operational software, architecture, data, and organizational workflows" },
+      { "label": "engineering systems", "text": "governed execution, agent coordination, developer tooling, review evidence, and delivery controls" },
+      { "label": "design systems", "text": "tokens, components, accessibility rules, and machine-readable exports" },
+      { "label": "writing environments", "text": "Linux, Arch, WSL, Termux, Neovim, tmux, and JetBrains tooling" },
+      { "label": "working with", "text": "Python, TypeScript, JavaScript, Laravel, Vue, Shell, GitHub Actions, and testing and verification" }
+    ]
+  },
+  "elsewhere": {
+    "links": [
+      { "name": "wiki", "href": "/wiki/", "label": "how to use this workstation" },
+      { "name": "github", "href": "https://github.com/j3w1", "rel": "me" },
+      { "name": "site-source", "href": "https://github.com/j3w1/j3w1.github.io" },
+      { "name": "theme", "href": "https://j3w1.github.io/theme/", "label": "the j3w1 design system" },
+      { "name": "pod", "href": "https://github.com/j3w1/pod" },
+      { "name": "current-workstation", "href": "https://github.com/j3w1/j3w1zsh" },
+      { "name": "legacy-workstation", "href": "https://github.com/j3w1/1w3j" }
+    ],
+    "note": "GitHub is the only public profile linked from this site."
+  },
+  "projects": {
+    "selected": "j3w1zsh",
+    "entries": [
+      {
+        "id": "pod",
+        "name": "pod",
+        "stack": "Python · Agent skills · Orca",
+        "state": "Active",
+        "visibility": "public",
+        "repository": "https://github.com/j3w1/pod",
+        "summary": "Turns the Codex or Claude Code session already open in Orca into the coordinator of a pod of agents: it plans the objective, chooses direct work or workers in isolated worktrees, and binds every result to its evidence.",
+        "facts": [["Install", "npx skills add j3w1/pod --skill pod"], ["Context", "Agent coordination"]]
+      },
+      {
+        "id": "ce-systems",
+        "name": "CE Systems",
+        "stack": "Laravel · Vue · TypeScript",
+        "state": "Active",
+        "visibility": "internal",
+        "repository": null,
+        "summary": "Casa Elida's modular enterprise platform for retail, inventory, purchasing, logistics, finance, people operations, ecommerce, and reporting.",
+        "facts": [["Stack", "Laravel · PHP · Vue · TypeScript"], ["Context", "Business systems for real operations"]]
+      },
+      {
+        "id": "ce-gd",
+        "name": "CE Governed Delivery",
+        "stack": "Controller · Review · Reconciliation",
+        "state": "Active",
+        "visibility": "internal",
+        "repository": null,
+        "summary": "A credential-isolated controller for governed CE Systems review, correction, merge, and delivery reconciliation, keeping AI assistance bounded and human decision points dependable.",
+        "facts": [["Practice", "Governed review · Bounded merge · Delivery reconciliation"], ["Context", "Engineering governance"]]
+      },
+      {
+        "id": "ce-metadata",
+        "name": "CE Metadata",
+        "stack": "GitHub · Metadata · Control plane",
+        "state": "Active",
+        "visibility": "internal",
+        "repository": null,
+        "summary": "A deterministic control plane for GitHub metadata, with reviewable plans, bounded writes, and exact readback.",
+        "facts": [["Practice", "Reviewable plans · Bounded writes · Exact readback"], ["Context", "Delivery operations"]]
+      },
+      {
+        "id": "theme",
+        "name": "theme",
+        "stack": "Design tokens · Components · Accessibility",
+        "state": "Active",
+        "visibility": "public",
+        "repository": "https://github.com/j3w1/theme",
+        "summary": "The canonical j3w1 design system: tokens, components, accessibility rules, ports, and machine-readable exports. This site consumes its approved default profile as a pinned CSS-variable export.",
+        "facts": [["Portal", "https://j3w1.github.io/theme/"], ["Context", "Design system"]]
+      },
+      {
+        "id": "j3w1zsh",
+        "name": "j3w1zsh",
+        "stack": "Shell · Zsh · Arch · WSL · Termux",
+        "state": "Maintained",
+        "visibility": "public",
+        "repository": "https://github.com/j3w1/j3w1zsh",
+        "summary": "A portable, resumable Zsh workstation framework for native Arch Linux, Arch WSL 2, and Termux, with presets, themes, project workspaces, migration, and remote-session support.",
+        "facts": [["Stack", "Shell · Zsh · Arch Linux · WSL · Termux"], ["Context", "Current public workstation framework"]]
+      },
+      {
+        "id": "website",
+        "name": "j3w1.github.io",
+        "stack": "HTML · CSS · JavaScript",
+        "state": "Active",
+        "visibility": "public",
+        "repository": "https://github.com/j3w1/j3w1.github.io",
+        "summary": "The dependency-free source for this site: a working i3 window manager in the browser, published verbatim by GitHub Pages.",
+        "facts": [["Stack", "Semantic HTML · CSS · Vanilla JavaScript"], ["Context", "Personal website"]]
+      },
+      {
+        "id": "ce-signage",
+        "name": "ce-signage",
+        "stack": "PowerShell · FFmpeg · VLC",
+        "state": "Current",
+        "visibility": "public",
+        "repository": "https://github.com/j3w1/ce-signage",
+        "summary": "Digital signage for Casa Elida's Windows 10 cashier PCs: cashiers drop images and videos into a folder, and a controller validates them with FFmpeg, rebuilds a randomized playlist, and plays it fullscreen on the second monitor.",
+        "facts": [["Stack", "PowerShell · FFmpeg · VLC · Windows 10"], ["Context", "Retail operations"]]
+      },
+      {
+        "id": "1688tocsv",
+        "name": "1688toCSV",
+        "stack": "JavaScript · Chrome · CSV",
+        "state": "Current",
+        "visibility": "public",
+        "repository": "https://github.com/j3w1/1688toCSV",
+        "summary": "A compact Chrome extension that exports 1688.com order details into a clean CSV for practical downstream use.",
+        "facts": [["Stack", "JavaScript · Browser extension · CSV"], ["Context", "Focused order-data export"]]
+      },
+      {
+        "id": "1w3j",
+        "name": "1w3j",
+        "stack": "Shell · dotfiles · themes",
+        "state": "Legacy",
+        "visibility": "public",
+        "repository": "https://github.com/j3w1/1w3j",
+        "summary": "An earlier generation of personal Linux workstation configuration, scripts, themes, package lists, and bootstrap tooling. j3w1zsh is the current public workstation framework, and this site's desktop is its reinterpretation.",
+        "facts": [["Period", "2017–2021"], ["Context", "Preserved workstation history"]]
+      },
+      {
+        "id": "ce-desktop",
+        "name": "CE Desktop",
+        "stack": "Java · JavaFX",
+        "state": "Historical",
+        "visibility": "public",
+        "repository": "https://github.com/j3w1/CEDesktop",
+        "summary": "An earlier JavaFX prototype for a Material Design Casa Elida enterprise desktop application, preserved as part of the public project history.",
+        "facts": [["Stack", "Java · JavaFX"], ["Context", "Enterprise desktop prototype"]]
+      }
+    ]
+  }
+}

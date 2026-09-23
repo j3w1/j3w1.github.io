@@ -11,7 +11,7 @@
     "start": "node src/server.js",
     "test": "node --test test/*.test.js",
     "test:browser": "playwright test --config playwright.config.mjs",
-    "test:browser-fixture": "node test/browser-fixture-server.mjs",
+    "test:browser-fixture": "node ../../test/browser-fixture-server.mjs",
     "client:bundle": "node bin/build-client-bundle.mjs",
     "client:check": "node bin/build-client-bundle.mjs --check",
     "deploy:preflight": "node bin/deploy-preflight.mjs",

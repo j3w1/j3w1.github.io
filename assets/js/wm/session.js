@@ -32,13 +32,17 @@ const writeLocal = (key, value) => {
   }
 };
 
-export const removeLocal = (key) => {
+const removeLocal = (key) => {
   try {
     localStorage.removeItem(key);
   } catch {
     /* private mode: preferences simply do not persist */
   }
 };
+
+/* The one place storage is touched: every read, write and removal survives
+   private mode and a full quota. */
+export const storage = Object.freeze({ read: readLocal, write: writeLocal, remove: removeLocal });
 
 export const prefs = {
   get boot() {

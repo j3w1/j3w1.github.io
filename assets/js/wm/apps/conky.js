@@ -8,17 +8,12 @@
    the device memory bucket plus the JavaScript heap where the browser reports
    one. Nothing is invented — see wm-architecture.md §10. */
 
-import { element } from "../dom.js?v=20260907";
+import { element } from "../dom.js?v=20260923";
+import { formatUptime } from "../bar.js?v=20260923";
+import { USER_AT_HOST } from "../defaults.js?v=20260923";
 
 const value = (candidate, suffix = "") =>
   candidate === null || candidate === undefined || candidate === "" ? null : `${candidate}${suffix}`;
-
-const formatUptime = (ms) => {
-  const total = Math.floor(ms / 1000);
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  return hours ? `${hours}h ${minutes}m` : `${minutes}m ${total % 60}s`;
-};
 
 export const createConky = ({ body, wm }) => {
   const view = element("div", "conky");
@@ -69,7 +64,7 @@ export const createConky = ({ body, wm }) => {
 
     foot.replaceChildren(
       line("conky-foot-line", "Manjaro Linux"),
-      line("conky-foot-line conky-strong", "j3w1@manjaro"),
+      line("conky-foot-line conky-strong", USER_AT_HOST),
       row("uptime", formatUptime(performance.now())),
       row("kernel", "j3w1.github.io"),
     );

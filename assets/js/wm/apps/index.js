@@ -2,19 +2,14 @@
    window-manager owned, holding no authored site content, and therefore safe to
    create and destroy at will. */
 
-import { createShell } from "./shell.js?v=20260907";
+import { createShell } from "./shell.js?v=20260923";
+import { element } from "../dom.js?v=20260923";
+import { USER_AT_HOST } from "../defaults.js?v=20260923";
 
 /* Only the shell is in the boot graph: it drives the home terminal at first
    paint. Everything else is fetched the first time it is launched, so a visitor
    who never runs htop never downloads it. */
 const lazy = (load, pick) => async (context) => pick(await load())(context);
-
-const element = (tag, className, text) => {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-};
 
 /* A spawned window's chrome: title bar, body, status line. The title bar's
    marks are upgraded to real buttons by the caller, like authored windows. */
@@ -38,7 +33,7 @@ export const buildAppWindow = (id, spec) => {
 export const APPS = Object.freeze({
   urxvt: {
     label: "terminal",
-    title: "j3w1@manjaro: ~",
+    title: `${USER_AT_HOST}: ~`,
     className: "terminal-window",
     status: ["URxvt", "zsh", "utf-8"],
     body: () => {
@@ -51,31 +46,31 @@ export const APPS = Object.freeze({
   },
   neofetch: {
     label: "neofetch",
-    title: "neofetch — j3w1@manjaro",
+    title: `neofetch — ${USER_AT_HOST}`,
     className: "neofetch-window",
     status: ["neofetch", "local only"],
-    create: lazy(() => import("./neofetch.js?v=20260907"), (m) => m.createNeofetch),
+    create: lazy(() => import("./neofetch.js?v=20260923"), (m) => m.createNeofetch),
   },
   htop: {
     label: "htop",
-    title: "htop — j3w1@manjaro",
+    title: `htop — ${USER_AT_HOST}`,
     className: "htop-window",
     status: ["htop", "browser metrics"],
-    create: lazy(() => import("./htop.js?v=20260907"), (m) => m.createHtop),
+    create: lazy(() => import("./htop.js?v=20260923"), (m) => m.createHtop),
   },
   cmatrix: {
     label: "cmatrix",
     title: "cmatrix",
     className: "cmatrix-window",
     status: ["cmatrix"],
-    create: lazy(() => import("./cmatrix.js?v=20260907"), (m) => m.createMatrix),
+    create: lazy(() => import("./cmatrix.js?v=20260923"), (m) => m.createMatrix),
   },
   feh: {
     label: "feh",
     title: "feh — wallpaper",
     className: "feh-window",
     status: ["feh", "CSS wallpapers"],
-    create: lazy(() => import("./feh.js?v=20260907"), (m) => m.createFeh),
+    create: lazy(() => import("./feh.js?v=20260923"), (m) => m.createFeh),
   },
   conky: {
     label: "conky",
@@ -87,7 +82,7 @@ export const APPS = Object.freeze({
     floating: { w: 300, h: 420, anchor: "top-right", gap: { x: 25, y: 13 } },
     sticky: true,
     border: "none",
-    create: lazy(() => import("./conky.js?v=20260907"), (m) => m.createConky),
+    create: lazy(() => import("./conky.js?v=20260923"), (m) => m.createConky),
   },
 });
 

@@ -1,14 +1,16 @@
+# Dependencies, in either package
 node_modules/
-services/j3w1ctl-auth/node_modules/
-services/j3w1ctl-auth/.env
-services/j3w1ctl-auth/.env.*
-!services/j3w1ctl-auth/.env.example
-services/j3w1ctl-auth/.vercel/
-services/j3w1ctl-auth/test-results/
-services/j3w1ctl-auth/playwright-report/
-/test-results/
-/playwright-report/
+
+# Playwright output, in either package
+test-results/
+playwright-report/
+
+# Local and deployment secrets (the example stays tracked)
+.env
+.env.*
+!.env.example
+.vercel/
+
+# Disposable caches and logs
 /.cache/
 *.log
-/.vercel/
-/.env.local

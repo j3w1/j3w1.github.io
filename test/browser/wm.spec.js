@@ -208,6 +208,7 @@ test("Alt+dragging a title bar floats a window and keeps it on screen", async ({
 test("an ordinary click still selects a project row rather than starting a drag", async ({ page }) => {
   await open(page, "/#projects");
   await page.locator('[data-project-row="1688tocsv"] .project-selector').click();
+  await expect(page.locator("[data-project-selection]")).toHaveText(["1688toCSV", "1688toCSV"]);
   await expect(page.locator('[data-project-detail="1688tocsv"]')).toHaveClass(/is-selected/);
   await expect(page.locator("#project-status-selection")).toHaveText("1688toCSV");
 });

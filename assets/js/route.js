@@ -21,3 +21,25 @@ export const parseRoute = (hash) => {
     slug: slug || null,
   };
 };
+
+/* One listener for every consumer of the route: the workspace switcher and the
+   content reader subscribe here instead of each parsing the hash on its own.
+   Handlers run in subscription order, on hashchange and popstate alike; the
+   listener is installed on first use, so importing this module stays free of
+   side effects (and loadable in node). */
+const handlers = new Set();
+let listening = false;
+
+export const onRouteChange = (handler) => {
+  handlers.add(handler);
+  if (!listening) {
+    listening = true;
+    const dispatch = () => {
+      const route = parseRoute(location.hash);
+      for (const each of handlers) each(route);
+    };
+    addEventListener("hashchange", dispatch);
+    addEventListener("popstate", dispatch);
+  }
+  return () => handlers.delete(handler);
+};

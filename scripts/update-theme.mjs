@@ -3,7 +3,7 @@
    integration command that uses the network; generate and check consume the
    validated local copy. Usage:
 
-     npm run update-theme -- v0.1.0
+     npm run update-theme -- v1.1.0
      npm run update-theme -- <full-commit>
 */
 
@@ -12,9 +12,13 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
+  INTEGRATION_ID,
+  INTEGRATION_VERSION,
   normalizeThemeText,
   THEME_EXPORT,
   THEME_LOCK_FILE,
+  THEME_REVISION_PATTERN as REVISION_PATTERN,
+  THEME_TAG_PATTERN as TAG_PATTERN,
   THEME_VENDOR_FILE,
   themeDigest,
   validateThemeLock,
@@ -23,8 +27,6 @@ import {
 const REPOSITORY = "j3w1/theme";
 const API_BASE = "https://api.github.com/repos/" + REPOSITORY;
 const RAW_BASE = "https://raw.githubusercontent.com/" + REPOSITORY;
-const TAG_PATTERN = /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
-const REVISION_PATTERN = /^[0-9a-f]{40}$/;
 
 export const parseThemeRef = (value) => {
   if (typeof value !== "string" || (!TAG_PATTERN.test(value) && !REVISION_PATTERN.test(value))) {
@@ -131,8 +133,8 @@ export const fetchPinnedTheme = async (
     revision,
     profile: "default",
     integration: {
-      id: "j3w1-site-legacy-css-vars",
-      version: "1",
+      id: INTEGRATION_ID,
+      version: INTEGRATION_VERSION,
       kind: "css-vars",
     },
     resolvedAt,

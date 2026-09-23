@@ -1,5 +1,7 @@
 import { renderAst } from "/assets/js/content-renderer.js?v=20260824";
-import { ActivityGate, buildPhotographyPreviewItems, MutationGate, ObjectUrlRegistry, protocolCompatibility, publicationTarget, shortCommit } from "/admin/j3w1ctl-core.js?v=20260831";
+import { ActivityGate, apiOrigin, buildPhotographyPreviewItems, MutationGate, ObjectUrlRegistry, protocolCompatibility, publicationTarget, shortCommit } from "/admin/j3w1ctl-core.js?v=20260923";
+import { draftOperation } from "/admin/j3w1ctl-drafts.js?v=20260923";
+import { field, node } from "/admin/j3w1ctl-ui.js?v=20260923";
 import { EXAMPLES } from "/admin/j3w1ctl-examples.js?v=20260825";
 import { IMAGE_ACCEPT, IMAGE_LIMITS, generatedImageBytes, normalizePhotograph } from "/admin/j3w1ctl-images.js?v=20260825";
 
@@ -16,79 +18,17 @@ const COLLECTIONS = ["writing", "books", "photography"];
 const STATES = new Set(["locked", "authenticating", "authenticated", "loading", "clean", "modified", "local draft", "publishing", "deleting", "published", "conflict", "error", "offline"]);
 let controller;
 
-const node = (tag, className, text) => {
-  const value = document.createElement(tag);
-  if (className) value.className = className;
-  if (text !== undefined) value.textContent = text;
-  return value;
-};
-
 const ensureStyle = () => {
   if (document.querySelector("#j3w1ctl-style")) return;
   const link = document.createElement("link");
   link.id = "j3w1ctl-style";
   link.rel = "stylesheet";
-  link.href = "/admin/j3w1ctl.css?v=20260831";
+  link.href = "/admin/j3w1ctl.css?v=20260923";
   document.head.append(link);
 };
 
-const apiOrigin = (value) => {
-  try {
-    const url = new URL(value);
-    if (url.pathname !== "/" || url.search || url.hash || url.username || url.password) return "";
-    if (url.protocol === "https:" || (url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) return url.origin;
-  } catch {}
-  return "";
-};
-
-const openDraftDb = () => new Promise((resolve, reject) => {
-  const request = indexedDB.open("j3w1ctl", 1);
-  request.onupgradeneeded = () => request.result.createObjectStore("drafts", { keyPath: "key" });
-  request.onerror = () => reject(request.error);
-  request.onsuccess = () => resolve(request.result);
-});
-
-const draftOperation = async (mode, value) => {
-  const db = await openDraftDb();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction("drafts", ["get", "list"].includes(mode) ? "readonly" : "readwrite");
-    const store = transaction.objectStore("drafts");
-    const request = mode === "put" ? store.put(value) : mode === "delete" ? store.delete(value) : mode === "clear" ? store.clear() : mode === "list" ? store.getAll() : store.get(value);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-    transaction.oncomplete = () => db.close();
-  });
-};
-
-const field = (label, name, { type = "text", value = "", options, required = false, maxLength, className = "", controlClassName = "", rows, help } = {}) => {
-  const wrapper = node("label", `ctl-field${className ? ` ${className}` : ""}`);
-  wrapper.append(node("span", "", label));
-  let control;
-  if (type === "textarea") control = node("textarea");
-  else if (type === "select") {
-    control = node("select");
-    options.forEach(([optionValue, text]) => {
-      const option = node("option", "", text);
-      option.value = optionValue;
-      option.selected = optionValue === value;
-      control.append(option);
-    });
-  } else {
-    control = node("input");
-    control.type = type;
-  }
-  control.name = name;
-  if (controlClassName) control.className = controlClassName;
-  control.value = value ?? "";
-  control.required = required;
-  if (maxLength) control.maxLength = maxLength;
-  if (rows && control instanceof HTMLTextAreaElement) control.rows = rows;
-  wrapper.append(control);
-  if (help) wrapper.append(node("small", "ctl-field-help", help));
-  return wrapper;
-};
-
-const normalizeTags = (value) => value.split(",").map((tag) => tag.trim()).filter(Boolean);
+/* The form's comma-separated tag field, as a list. */
+const parseTagList = (value) => value.split(",").map((tag) => tag.trim()).filter(Boolean);
 
 class J3w1ctl {
   constructor({ mount, launcher, direct }) {
@@ -530,8 +470,8 @@ class J3w1ctl {
     if (validate && !this.form.reportValidity()) throw new Error("Complete the required fields before continuing.");
     const data = Object.fromEntries(new FormData(this.form));
     const common = { title: data.title, slug: data.slug };
-    if (this.collection === "writing") return { ...common, date: data.date, summary: data.summary, tags: normalizeTags(data.tags), body: data.body };
-    if (this.collection === "books") return { ...common, author: data.author, year: Number(data.year), status: data.status, ...(data.rating ? { rating: Number(data.rating) } : {}), ...(data.started ? { started: data.started } : {}), ...(data.finished ? { finished: data.finished } : {}), tags: normalizeTags(data.tags), body: data.body };
+    if (this.collection === "writing") return { ...common, date: data.date, summary: data.summary, tags: parseTagList(data.tags), body: data.body };
+    if (this.collection === "books") return { ...common, author: data.author, year: Number(data.year), status: data.status, ...(data.rating ? { rating: Number(data.rating) } : {}), ...(data.started ? { started: data.started } : {}), ...(data.finished ? { finished: data.finished } : {}), tags: parseTagList(data.tags), body: data.body };
     this.syncPhotoInputs();
     const images = []; const files = [];
     for (const item of this.photoItems) {

@@ -2,9 +2,10 @@
    ?wm=selftest. Costs nothing when the flag is absent, adds no dependency, and
    mirrors the node test suite so the browser and the CI runner agree. */
 
-import * as tree from "./tree.js?v=20260907";
-import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260907";
-import { defaultState, defaultWindowIds, WORKSPACES } from "./defaults.js?v=20260907";
+import * as tree from "./tree.js?v=20260923";
+import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260923";
+import { defaultState, defaultWindowIds, WORKSPACES } from "./defaults.js?v=20260923";
+import { COLLECTIONS } from "../content-index.js?v=20260923";
 
 const BOUNDS = { x: 0, y: 0, w: 1200, h: 800 };
 
@@ -96,7 +97,7 @@ export const runSelfTest = () => {
   });
 
   check("content hooks resolve to exactly one element", () => {
-    for (const collection of ["writing", "books", "photography"]) {
+    for (const collection of COLLECTIONS) {
       assert(
         document.querySelectorAll(`[data-content-list="${collection}"]`).length === 1,
         `${collection} list is not unique`,
@@ -109,8 +110,12 @@ export const runSelfTest = () => {
   });
 
   const failed = results.filter((result) => !result.ok);
+  /* The console cannot resolve CSS variables, so the badge takes the theme's
+     success colours as computed values. */
+  const cssValue = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const badge = `background:${cssValue("--color-status-success-text")};color:${cssValue("--color-status-neutral-on-fill")}`;
   results.forEach((result) => {
-    if (result.ok) console.log(`%c PASS %c ${result.name}`, "background:#2f7d32;color:#fff", "");
+    if (result.ok) console.log(`%c PASS %c ${result.name}`, badge, "");
     else console.error(`FAIL ${result.name}: ${result.error}`);
   });
   console.log(`[wm] selftest: ${results.length - failed.length}/${results.length} passed`);

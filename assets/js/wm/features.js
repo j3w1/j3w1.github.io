@@ -5,10 +5,10 @@
    through `ctx`, and are spread into the facade there; keeping them here
    keeps boot.js the small core it is meant to be. */
 
-import { clampFloating } from "./layout.js?v=20260907";
-import { readGaps } from "./dom.js?v=20260907";
-import * as tree from "./tree.js?v=20260907";
-import * as extra from "./tree-extras.js?v=20260907";
+import { clampFloating } from "./layout.js?v=20260923";
+import { readGaps } from "./dom.js?v=20260923";
+import * as tree from "./tree.js?v=20260923";
+import * as extra from "./tree-extras.js?v=20260923";
 
 export const installFeatures = (ctx) => {
   const { workspaces, onWorkspaceRequest, windows, paint, focusedTitle, dunst, announce, root, renderer, save, bar, bounds, stickyIds } = ctx;
@@ -72,7 +72,7 @@ export const installFeatures = (ctx) => {
       const css = readGaps();
       const current = state().gaps[which] ?? css[which];
       const next = verb === "set" ? value : current + (verb === "plus" ? value : -value);
-      state().gaps[which] = Math.max(which === "inner" ? 0 : -20, Math.min(next, 80));
+      state().gaps[which] = tree.clamp(next, which === "inner" ? 0 : -20, 80);
       wm().applyGaps();
       paint({ announceText: `${which} gaps ${state().gaps[which]}`, toast: { text: `gaps ${which} ${state().gaps[which]}`, key: "gaps" } });
       return true;

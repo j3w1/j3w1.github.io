@@ -11,8 +11,8 @@
    workstation's config defined — the system menu on 0, and the gaps modes on
    Shift+G. Each mode is a table; the bar shows the mode's prompt verbatim. */
 
-import { isEditable } from "./dom.js?v=20260907";
-import { announce } from "./a11y.js?v=20260907";
+import { isEditable } from "./dom.js?v=20260923";
+import { announce } from "./a11y.js?v=20260923";
 
 const DIRECTIONS = Object.freeze({
   h: "left",
@@ -26,7 +26,7 @@ const DIRECTIONS = Object.freeze({
 });
 
 /* The prompt i3 shows in the bar for each mode, from the original config. */
-export const MODE_PROMPTS = Object.freeze({
+const MODE_PROMPTS = Object.freeze({
   resize: "resize",
   system: "(l)ock, (e)xit, switch_(u)ser, (s)uspend, (h)ibernate, (r)eboot, (Shift+s)hutdown",
   gaps: "Gaps: (o) outer, (i) inner",

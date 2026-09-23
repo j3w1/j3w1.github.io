@@ -3,11 +3,15 @@
 
 let conCounter = 0;
 
-export const seedConCounter = (value) => {
+const seedConCounter = (value) => {
   conCounter = Number.isFinite(value) && value > conCounter ? value : conCounter;
 };
 
 const nextConId = () => `c${(conCounter += 1)}`;
+
+/* value held to [lo, hi]; with hi < lo, hi wins, exactly as the inline
+   Math.min(Math.max(…)) it replaces. */
+export const clamp = (value, lo, hi) => Math.min(Math.max(value, lo), hi);
 
 export const makeLeaf = (id, percent = 1) => ({ id, type: "win", percent });
 
@@ -25,7 +29,7 @@ export const axisOf = (layout) => (layout === "splith" || layout === "tabbed" ? 
 
 export const isTabular = (layout) => layout === "tabbed" || layout === "stacked";
 
-export const eachLeaf = (root, visit) => {
+const eachLeaf = (root, visit) => {
   const walk = (node, parent, index) => {
     if (node.type === "win") return visit(node, parent, index);
     node.children.forEach((child, childIndex) => walk(child, node, childIndex));
@@ -142,7 +146,7 @@ export const normalize = (root) => {
       return child;
     });
     renormalize(node.children);
-    node.focus = Math.min(Math.max(node.focus ?? 0, 0), Math.max(node.children.length - 1, 0));
+    node.focus = clamp(node.focus ?? 0, 0, Math.max(node.children.length - 1, 0));
     return node;
   };
   walk(root);
@@ -160,7 +164,7 @@ export const insertChild = (con, node, index = con.children.length) => {
   return node;
 };
 
-export const removeChild = (con, index) => {
+const removeChild = (con, index) => {
   const [removed] = con.children.splice(index, 1);
   renormalize(con.children);
   con.focus = Math.min(con.focus ?? 0, Math.max(con.children.length - 1, 0));
@@ -344,8 +348,8 @@ export const toggleFullscreen = (ws, id) => {
 };
 
 const centredRect = (rect, bounds) => {
-  const width = Math.round(Math.min(bounds.w * 0.66, Math.max(rect?.w ?? 0, 320)));
-  const height = Math.round(Math.min(bounds.h * 0.66, Math.max(rect?.h ?? 0, 220)));
+  const width = Math.round(clamp(rect?.w ?? 0, 320, bounds.w * 0.66));
+  const height = Math.round(clamp(rect?.h ?? 0, 220, bounds.h * 0.66));
   return {
     x: Math.round(bounds.x + (bounds.w - width) / 2),
     y: Math.round(bounds.y + (bounds.h - height) / 2),
@@ -420,7 +424,7 @@ export const restoreKilled = (ws) => {
   return true;
 };
 
-export const attachLeaf = (ws, node) => {
+const attachLeaf = (ws, node) => {
   delete node.floating;
   delete node.floatRect;
   insertChild(ws.root, node, ws.root.children.length);

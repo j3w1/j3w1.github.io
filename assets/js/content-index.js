@@ -7,11 +7,14 @@
    than pinned. */
 
 const INDEX_URL = "/assets/data/content-index.json";
-const COLLECTIONS = ["writing", "books", "photography"];
+/* The Git-managed collections, in the order the desktop lists them. The
+   service keeps its own copy (it deploys alone); test/shared-constants.test.js
+   holds the two equal. */
+export const COLLECTIONS = Object.freeze(["writing", "books", "photography"]);
 
 let promise = null;
 
-export const isContentIndex = (candidate) =>
+const isContentIndex = (candidate) =>
   Boolean(candidate) &&
   candidate.schemaVersion === 1 &&
   Boolean(candidate.collections) &&

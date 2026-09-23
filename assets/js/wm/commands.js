@@ -9,6 +9,8 @@
    executes those against the facade and answers with "" for success or a
    short reason, the way i3-msg prints its result. */
 
+import { LAYOUTS } from "./tree.js?v=20260923";
+
 export const parseCommand = (text) =>
   String(text ?? "")
     .split(";")
@@ -20,7 +22,6 @@ export const parseCommand = (text) =>
     });
 
 const DIRECTIONS = new Set(["left", "right", "up", "down"]);
-const LAYOUTS = new Set(["splith", "splitv", "tabbed", "stacked"]);
 
 /* Each handler returns "" on success or a reason. `ctx` carries what the
    commands need beyond the facade: the keys module (for modes), the workspace

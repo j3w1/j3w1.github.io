@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ActivityGate, buildPhotographyPreviewItems, J3W1CTL_SUPPORTED_PROTOCOLS, MutationGate, ObjectUrlRegistry, protocolCompatibility, publicationTarget, shortCommit } from "../../../admin/j3w1ctl-core.js";
+import { ActivityGate, apiOrigin, buildPhotographyPreviewItems, J3W1CTL_SUPPORTED_PROTOCOLS, MutationGate, ObjectUrlRegistry, protocolCompatibility, publicationTarget, shortCommit } from "../../../admin/j3w1ctl-core.js";
 import { EXAMPLES } from "../../../admin/j3w1ctl-examples.js";
 import { IMAGE_ACCEPT, IMAGE_LIMITS, acceptedImageType, fitWithin } from "../../../admin/j3w1ctl-images.js";
 
@@ -16,6 +16,25 @@ test("mutation gate rejects concurrent publish, update, and delete attempts", ()
     assert.equal(gate.inFlight, false);
     assert.equal(gate.enter(action), true);
   }
+});
+
+test("the API origin must be a bare https origin, or http on the loopback", () => {
+  assert.equal(apiOrigin("https://api.example.com/"), "https://api.example.com");
+  assert.equal(apiOrigin("https://api.example.com"), "https://api.example.com");
+  assert.equal(apiOrigin("http://localhost:8011"), "http://localhost:8011");
+  assert.equal(apiOrigin("http://127.0.0.1:8011/"), "http://127.0.0.1:8011");
+  for (const refused of ["http://api.example.com", "https://api.example.com/v1", "https://api.example.com/?x=1", "https://api.example.com/#x", "https://user:pw@api.example.com", "javascript:alert(1)", "", "not a url"]) {
+    assert.equal(apiOrigin(refused), "", refused);
+  }
+});
+
+test("a mutation gate is an activity gate that needs no ownership token", () => {
+  const gate = new MutationGate();
+  assert.ok(gate instanceof ActivityGate);
+  assert.equal(gate.enter("publish"), true);
+  assert.equal(gate.action, "publish");
+  assert.equal(gate.leave(), true);
+  assert.equal(gate.leave(), false, "leaving twice is a no-op");
 });
 
 test("activity gate gives one foreground read explicit ownership", () => {

@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { LIMITS, entryPath, mediaPath, validateWebp } from "./content.js";
+import { IMAGE_ID_PATTERN, LIMITS, entryPath, mediaPath, validateWebp } from "./content.js";
 import {
   STAGING_PREFIX,
   UPLOAD_BATCH_SCHEMA_VERSION,
@@ -8,7 +8,6 @@ import {
 import { badRequest, conflict, forbidden, notFound, unauthorized } from "./errors.js";
 
 export const STAGING_RETENTION_SECONDS = 6 * 60 * 60;
-const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const BATCH_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
 const VERSION_PATTERN = /^"[0-9a-f]{40,64}"$/i;
 
@@ -57,7 +56,7 @@ export const createUploadBatchManager = ({ store, blobStore, repository, now = (
     if (!['create', 'update'].includes(action)) throw badRequest("invalid_action", "The upload action is invalid.");
     if (action === "create" && ifNoneMatch !== "*") throw conflict("A create upload batch requires If-None-Match: *.");
     if (action === "update" && !VERSION_PATTERN.test(String(ifMatch ?? "").trim())) throw conflict("An update upload batch requires the exact current ETag.");
-    if (!Array.isArray(imageIds) || imageIds.length > LIMITS.images || imageIds.some((id) => !ID_PATTERN.test(id))) {
+    if (!Array.isArray(imageIds) || imageIds.length > LIMITS.images || imageIds.some((id) => !IMAGE_ID_PATTERN.test(id))) {
       throw badRequest("invalid_image", `Upload batches accept at most ${LIMITS.images} valid image IDs.`);
     }
     const uniqueIds = [...new Set(imageIds)];

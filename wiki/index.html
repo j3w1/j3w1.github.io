@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="no-js">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,122 +13,32 @@
   <meta property="og:site_name" content="j3w1">
   <meta property="og:image" content="https://j3w1.github.io/assets/social/default.png">
   <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="/assets/fonts/sauce-code-pro-text.woff2?v=db62d388" as="font" type="font/woff2" crossorigin>
+  <!-- @generated-site:head-shared:start -->
   <link rel="alternate" type="application/atom+xml" title="j3w1" href="/feed.xml">
-  <meta name="theme-color" content="#0c0909">
+  <meta name="theme-color" content="#000000">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
-  <link rel="preload" href="/assets/fonts/sauce-code-pro-text.woff2?v=db62d388" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/css/site.css?v=20260907">
-  <style>
-    /* A scrolling document, unlike the fixed-viewport desktop, so the shared
-       stylesheet's full-height/no-scroll rules are released here. */
-    html, body { height: auto; overflow: visible; }
-    body { padding-bottom: 60px; font-size: 13px; line-height: 1.6; }
-
-    .wiki-bar {
-      position: sticky;
-      z-index: 20;
-      top: 0;
-      display: flex;
-      height: var(--bar-height);
-      align-items: center;
-      gap: 10px;
-      padding: 0 12px;
-      border-bottom: 1px solid var(--border-active);
-      background: var(--chrome-alt);
-      white-space: nowrap;
-    }
-    .wiki-bar a { color: var(--muted); text-decoration: none; }
-    .wiki-bar a:hover { color: var(--prose); background: transparent; }
-    .wiki-bar .is-here { color: var(--prose); }
-    .wiki-bar .spacer { flex: 1 1 auto; }
-
-    .wrap { width: min(880px, calc(100% - 32px)); margin: 0 auto; }
-
-    header.hero { padding: 44px 0 26px; }
-    header.hero h1 { margin: 0 0 10px; color: var(--prose); font-size: 27px; line-height: 1.25; }
-    header.hero p { max-width: 78ch; margin: 0; color: var(--muted); }
-
-    nav.toc {
-      padding: 14px 16px;
-      border: 1px solid var(--border);
-      margin-bottom: 34px;
-      background: var(--surface);
-    }
-    nav.toc p { margin: 0 0 8px; color: var(--foreground-bright); }
-    nav.toc ul { display: flex; flex-wrap: wrap; padding: 0; margin: 0; gap: 6px 16px; list-style: none; }
-    nav.toc a { color: var(--muted); }
-
-    section { margin-bottom: 40px; scroll-margin-top: calc(var(--bar-height) + 12px); }
-    h2 { margin: 0 0 6px; color: var(--foreground-bright); font-size: 19px; }
-    h3 { margin: 26px 0 8px; color: var(--prose); font-size: 15px; }
-    .lede { max-width: 80ch; margin: 0 0 18px; color: var(--muted); }
-    p { max-width: 80ch; }
-
-    .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-    .card { padding: 14px 16px; border: 1px solid var(--border); background: var(--surface); }
-    .card h3 { margin: 0 0 6px; color: var(--foreground-bright); font-size: 14px; }
-    .card p { margin: 0; color: var(--muted); }
-
-    table { width: 100%; border-collapse: collapse; margin: 10px 0 0; }
-    caption { padding-bottom: 6px; color: var(--quiet); text-align: left; }
-    th, td { padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
-    th { background: var(--selection-dark); color: var(--prose); }
-    td:first-child { width: 34%; white-space: nowrap; }
-    tbody tr:hover { background: var(--chrome-alt); }
-    .scroller { overflow-x: auto; }
-
-    kbd {
-      display: inline-block;
-      padding: 1px 6px;
-      border: 1px solid var(--border-strong);
-      background: var(--terminal);
-      color: var(--foreground-bright);
-      font: inherit;
-      white-space: nowrap;
-    }
-    code { color: var(--foreground-bright); }
-
-    .note {
-      padding: 12px 16px;
-      border-left: 3px solid var(--focus);
-      background: var(--surface-raised);
-      color: var(--prose);
-    }
-    .note p { margin: 0; }
-    .note + .note { margin-top: 10px; }
-
-    ol.steps { padding-left: 20px; }
-    ol.steps li { margin-bottom: 9px; }
-
-    footer.wiki-foot {
-      padding-top: 22px;
-      border-top: 1px solid var(--border);
-      margin-top: 44px;
-      color: var(--quiet);
-    }
-
-    @media (max-width: 640px) {
-      td:first-child { width: auto; white-space: normal; }
-      header.hero { padding-top: 30px; }
-      header.hero h1 { font-size: 22px; }
-    }
-  </style>
+  <link rel="stylesheet" href="/assets/css/site.css?v=20260923">
+  <!-- @generated-site:head-shared:end -->
 </head>
-<body>
+<body class="page page-wiki">
   <a class="skip-link" href="#start">Skip to the guide</a>
-
-  <nav class="wiki-bar" aria-label="Site">
-    <a href="/#home">← back to the workstation</a>
+  <!-- @generated-site:page-bar:start -->
+  <header class="page-bar">
+    <nav aria-label="Site navigation">
+      <a href="/#home">← workstation</a>
+      <span aria-hidden="true">/</span> <span class="is-here" aria-current="page">wiki</span>
+    </nav>
     <span class="spacer"></span>
-    <span class="is-here">📖 wiki</span>
-    <a href="https://github.com/j3w1/j3w1.github.io">source ↗</a>
-  </nav>
+    <a class="desktop-link" data-desktop-link href="/#home">open in the workstation ↗</a>
+  </header>
+  <!-- @generated-site:page-bar:end -->
 
-  <div class="wrap">
-    <header class="hero">
+  <main class="page-wrap">
+    <header class="page-hero">
       <h1>🖥️ The j3w1 workstation — user guide</h1>
       <p>
         This site is a working <a href="https://i3wm.org/">i3</a> window manager rebuilt in a browser.
@@ -137,7 +47,7 @@
       </p>
     </header>
 
-    <nav class="toc" aria-label="On this page">
+    <nav class="page-toc" aria-label="On this page">
       <p>On this page</p>
       <ul>
         <li><a href="#start">🚀 Quick start</a></li>
@@ -151,26 +61,28 @@
         <li><a href="#settings">⚙️ Settings</a></li>
         <li><a href="#privacy">🔒 Privacy</a></li>
         <li><a href="#trouble">🩹 Troubleshooting</a></li>
+        <li><a href="#a11y">♿ Accessibility</a></li>
+        <li><a href="#docs">📖 Documentation</a></li>
       </ul>
     </nav>
 
     <section id="start">
       <h2>🚀 Quick start</h2>
       <p class="lede">Thirty seconds, and you can read everything on the site.</p>
-      <div class="cards">
-        <div class="card">
+      <div class="page-cards">
+        <div class="page-card">
           <h3>1️⃣ Just want to read?</h3>
           <p>Click the workspace names in the top bar, or press <kbd>1</kbd>–<kbd>7</kbd>. That is the whole navigation.</p>
         </div>
-        <div class="card">
+        <div class="page-card">
           <h3>2️⃣ Prefer typing?</h3>
           <p>Press <kbd>/</kbd> for the launcher and type what you want — <code>open about</code>, <code>exec neofetch</code>.</p>
         </div>
-        <div class="card">
+        <div class="page-card">
           <h3>3️⃣ Forgot a key?</h3>
           <p>Press <kbd>?</kbd> for the live key map, generated from the real bindings.</p>
         </div>
-        <div class="card">
+        <div class="page-card">
           <h3>📂 Where is this page?</h3>
           <p>In the file manager on <strong>1:home</strong>, under <em>Places → Wiki</em>. The launcher’s <code>open wiki</code> works from anywhere.</p>
         </div>
@@ -185,35 +97,35 @@
         <li>Press <kbd>f</kbd> to fullscreen a reader — the nicest way to read a long entry.</li>
       </ol>
 
-      <div class="note">
+      <div class="callout">
         <p>🛟 <strong>Nothing here can be broken permanently.</strong> Closed windows are only hidden, never deleted, and reloading always restores the full desktop. If a layout ever looks wrong, press <kbd>Shift</kbd>+<kbd>R</kbd>.</p>
       </div>
     </section>
 
     <section id="keypoints">
       <h2>💡 Key points</h2>
-      <div class="cards">
-        <div class="card">
+      <div class="page-cards">
+        <div class="page-card">
           <h3>🪟 It is a real window manager</h3>
           <p>A live layout tree per workspace: split, tabbed and stacked containers, floating windows, gaps, fullscreen and a scratchpad.</p>
         </div>
-        <div class="card">
+        <div class="page-card">
           <h3>⌨️ Keys work bare</h3>
           <p>No modifier needed for most bindings. <kbd>Alt</kbd>+key works too where the browser allows it. Shortcuts pause while you type.</p>
         </div>
-        <div class="card">
+        <div class="page-card">
           <h3>🖱️ Everything has a click</h3>
           <p>Every action is in the launcher (<kbd>/</kbd>), so you never need a shortcut you do not know.</p>
         </div>
-        <div class="card">
+        <div class="page-card">
           <h3>📱 Phones get real i3 tabs</h3>
           <p>Each workspace becomes an i3 <em>tabbed</em> container — what i3 does when a screen is too narrow to tile.</p>
         </div>
-        <div class="card">
+        <div class="page-card">
           <h3>🧾 The status bar is honest</h3>
           <p>Values your browser does not expose are simply absent, never invented. Nothing is transmitted.</p>
         </div>
-        <div class="card">
+        <div class="page-card">
           <h3>♿ Readable without any of it</h3>
           <p>Every window is reachable with <kbd>Tab</kbd> alone, and with JavaScript off the site renders as one plain stacked page.</p>
         </div>
@@ -321,7 +233,7 @@
         </table>
       </div>
 
-      <div class="note">
+      <div class="callout">
         <p>💡 <kbd>Space</kbd> is only bound together with <kbd>Alt</kbd>, on purpose — binding it bare would break using the space bar to scroll.</p>
       </div>
     </section>
@@ -355,7 +267,7 @@
           </tbody>
         </table>
       </div>
-      <div class="note">
+      <div class="callout">
         <p>⚠️ Desktop shortcuts are <em>not</em> shell commands. Typing <code>/</code> or <code>?</code> at the prompt will say so — press them outside the terminal, or type <code>dmenu</code> and <code>keys</code>.</p>
       </div>
     </section>
@@ -363,13 +275,13 @@
     <section id="apps">
       <h2>📦 Applications</h2>
       <p class="lede">Launch any of these from the launcher (<kbd>/</kbd> then <code>exec &lt;name&gt;</code>) or by typing the name in the terminal.</p>
-      <div class="cards">
-        <div class="card"><h3>🧊 neofetch</h3><p>System information read from your own browser. Anything it cannot see prints <code>unknown</code>.</p></div>
-        <div class="card"><h3>📊 htop</h3><p>The open windows as processes, with real frame timing and heap figures.</p></div>
-        <div class="card"><h3>🖼️ feh</h3><p>Pick between three wallpapers, drawn entirely in CSS — black by default, carrying the <strong>j3w1-i3</strong> wordmark. Remembered.</p></div>
-        <div class="card"><h3>🟩 cmatrix</h3><p>A toy. Static if you have reduced motion enabled.</p></div>
-        <div class="card"><h3>⌨️ urxvt</h3><p>Another terminal — <kbd>Alt</kbd>+<kbd>Enter</kbd>.</p></div>
-        <div class="card"><h3>📅 conky</h3><p>The original desk's panel: the date in Chinese, CPU threads, the open windows, memory, uptime. Floating and sticky at the top right, like its config said. <code>exec conky</code>.</p></div>
+      <div class="page-cards">
+        <div class="page-card"><h3>🧊 neofetch</h3><p>System information read from your own browser. Anything it cannot see prints <code>unknown</code>.</p></div>
+        <div class="page-card"><h3>📊 htop</h3><p>The open windows as processes, with real frame timing and heap figures.</p></div>
+        <div class="page-card"><h3>🖼️ feh</h3><p>Pick between three wallpapers, drawn entirely in CSS — black by default, carrying the <strong>j3w1-i3</strong> wordmark. Remembered.</p></div>
+        <div class="page-card"><h3>🟩 cmatrix</h3><p>A toy. Static if you have reduced motion enabled.</p></div>
+        <div class="page-card"><h3>⌨️ urxvt</h3><p>Another terminal — <kbd>Alt</kbd>+<kbd>Enter</kbd>.</p></div>
+        <div class="page-card"><h3>📅 conky</h3><p>The original desk's panel: the date in Chinese, CPU threads, the open windows, memory, uptime. Floating and sticky at the top right, like its config said. <code>exec conky</code>.</p></div>
       </div>
     </section>
 
@@ -403,7 +315,7 @@
         already filled in; the password is decorative bullets and no password value exists anywhere in the page.
         Press <kbd>Enter</kbd>, or click <strong>Log In</strong>. Nothing else logs you in — a click on the desktop behind the panel is ignored.
       </p>
-      <div class="note">
+      <div class="callout">
         <p>🔁 <strong>Logging in is remembered.</strong> Come back tomorrow and the desktop appears immediately, with no boot and no login, until you log out.</p>
       </div>
       <div class="scroller">
@@ -456,7 +368,7 @@
 
     <section id="privacy">
       <h2>🔒 Privacy</h2>
-      <div class="note">
+      <div class="callout">
         <p>The status bar and <code>neofetch</code> read your CPU thread count, memory, connection type, battery, screen size, language and time zone <strong>from your own browser</strong>. None of it is transmitted, stored or logged — this site has no analytics and no backend for the public page.</p>
       </div>
       <p>
@@ -496,15 +408,22 @@
       </ul>
     </section>
 
-    <footer class="wiki-foot">
-      <p>
-        📖 Technical documentation lives in the repository:
-        <a href="https://github.com/j3w1/j3w1.github.io/blob/main/docs/wm-architecture.md">architecture</a>,
-        <a href="https://github.com/j3w1/j3w1.github.io/blob/main/docs/wm-accessibility.md">accessibility contract</a>,
-        <a href="https://github.com/j3w1/j3w1.github.io/blob/main/docs/wm-development.md">development</a>.
-      </p>
-      <p><a href="/#home">← back to the workstation</a></p>
-    </footer>
-  </div>
+    <section id="docs">
+      <h2>📖 Documentation</h2>
+      <p class="lede">The technical documentation lives in <a href="https://github.com/j3w1/j3w1.github.io">the repository</a>.</p>
+      <ul>
+        <li><a href="https://github.com/j3w1/j3w1.github.io/blob/main/docs/wm-usage.md">wm-usage.md</a> — this guide, as Markdown.</li>
+        <li><a href="https://github.com/j3w1/j3w1.github.io/blob/main/docs/wm-architecture.md">wm-architecture.md</a> — how the window manager is built and why.</li>
+        <li><a href="https://github.com/j3w1/j3w1.github.io/blob/main/docs/wm-accessibility.md">wm-accessibility.md</a> — the rules the implementation must obey.</li>
+        <li><a href="https://github.com/j3w1/j3w1.github.io/blob/main/docs/wm-development.md">wm-development.md</a> — running it, testing it, extending it.</li>
+        <li><a href="https://github.com/j3w1/j3w1.github.io/blob/main/docs/j3w1ctl-architecture.md">j3w1ctl-architecture.md</a> — the content management client and its backend.</li>
+      </ul>
+    </section>
+  </main>
+  <!-- @generated-site:page-foot:start -->
+  <footer class="page-foot page-wrap">
+    <p><span lang="zh">申杰</span> / j3w1 · <a href="/feed.xml">feed</a> · <a href="https://github.com/j3w1" rel="me">GitHub</a> · <a href="/wiki/">wiki</a></p>
+  </footer>
+  <!-- @generated-site:page-foot:end -->
 </body>
 </html>

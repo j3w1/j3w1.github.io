@@ -1,30 +1,3 @@
-export class MutationGate {
-  constructor() {
-    this.inFlight = false;
-    this.action = "";
-  }
-
-  enter(action) {
-    if (this.inFlight) return false;
-    this.inFlight = true;
-    this.action = action;
-    return true;
-  }
-
-  leave() {
-    this.inFlight = false;
-    this.action = "";
-  }
-}
-
-export const J3W1CTL_SUPPORTED_PROTOCOLS = Object.freeze([1]);
-export const FIXED_PUBLICATION_TARGET = Object.freeze({ owner: "j3w1", name: "j3w1.github.io", branch: "main" });
-
-export const protocolCompatibility = (value) => ({
-  protocolVersion: value,
-  compatible: Number.isInteger(value) && J3W1CTL_SUPPORTED_PROTOCOLS.includes(value),
-});
-
 export class ActivityGate {
   constructor() {
     this.inFlight = false;
@@ -53,6 +26,38 @@ export class ActivityGate {
     return true;
   }
 }
+
+/* The publish/update/delete lock: an activity gate whose holder never needs to
+   prove ownership, so entering answers yes or no and leaving takes no token. */
+export class MutationGate extends ActivityGate {
+  enter(action) {
+    return super.enter(action) !== null;
+  }
+
+  leave() {
+    return super.leave(this.owner);
+  }
+}
+
+/* The j3w1ctl API origin from configuration: https anywhere, http only on the
+   loopback, and nothing but an origin (no path, query, fragment or
+   credentials). Anything else is refused as "". */
+export const apiOrigin = (value) => {
+  try {
+    const url = new URL(value);
+    if (url.pathname !== "/" || url.search || url.hash || url.username || url.password) return "";
+    if (url.protocol === "https:" || (url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) return url.origin;
+  } catch {}
+  return "";
+};
+
+export const J3W1CTL_SUPPORTED_PROTOCOLS = Object.freeze([1]);
+export const FIXED_PUBLICATION_TARGET = Object.freeze({ owner: "j3w1", name: "j3w1.github.io", branch: "main" });
+
+export const protocolCompatibility = (value) => ({
+  protocolVersion: value,
+  compatible: Number.isInteger(value) && J3W1CTL_SUPPORTED_PROTOCOLS.includes(value),
+});
 
 export class ObjectUrlRegistry {
   constructor(urlApi = URL) {

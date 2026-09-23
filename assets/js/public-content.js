@@ -1,18 +1,11 @@
 import { renderAst } from "./content-renderer.js?v=20260824";
 import { closePhotoViewer, isPhotoViewerBackdropClick } from "./photo-viewer.js?v=20260825b";
-import { loadContentIndex } from "./content-index.js?v=20260907";
-import { parseRoute } from "./route.js?v=20260907";
+import { COLLECTIONS as collections, loadContentIndex } from "./content-index.js?v=20260923";
+import { onRouteChange, parseRoute } from "./route.js?v=20260923";
+import { element } from "./wm/dom.js?v=20260923";
 
-const collections = ["writing", "books", "photography"];
 let index;
 let photoReturnFocus = null;
-
-const element = (tag, className, text) => {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-};
 
 const setState = (collection, message, unavailable = false) => {
   document.querySelectorAll(`[data-content-status="${collection}"]`).forEach((target) => { target.textContent = message; });
@@ -25,9 +18,13 @@ const setState = (collection, message, unavailable = false) => {
   detail?.replaceChildren();
 };
 
-const hashRoute = () => {
-  const { workspace, slug } = parseRoute(location.hash);
-  return { collection: workspace, slug };
+/* The line under an entry's title, exactly as the entry's own page prints it
+   (services/j3w1ctl-auth/src/site-pages.js); test/browser/prerender.spec.js
+   holds the two equal. */
+const metaLine = (collection, entry) => {
+  if (collection === "writing") return [entry.date, ...(entry.tags ?? [])].filter(Boolean).join(" · ");
+  if (collection === "photography") return [entry.date, entry.location, entry.camera].filter(Boolean).join(" · ");
+  return [entry.author, entry.year, entry.status, entry.rating ? `${entry.rating}/5` : null].filter(Boolean).join(" · ");
 };
 
 /* Ask the window manager to surface the reader without depending on it: with no
@@ -39,9 +36,8 @@ const openMobileDetail = (collection) => {
   }));
 };
 
-const selectRoute = () => {
+const selectRoute = ({ workspace: collection, slug } = parseRoute(location.hash)) => {
   if (!index) return;
-  const { collection, slug } = hashRoute();
   if (!collections.includes(collection)) return;
   const entries = index.collections[collection];
   document.querySelectorAll(`[data-content-entry="${collection}"]`).forEach((row) => {
@@ -63,9 +59,8 @@ const selectRoute = () => {
   const permalink = element("a", "content-permalink", "permalink");
   permalink.href = `/${collection}/${target.slug}/`;
   header.append(permalink);
-  if (collection === "writing") header.append(element("p", "", `${target.date} · ${target.summary}`));
-  if (collection === "books") header.append(element("p", "", `${target.author} · ${target.year} · ${target.status}`));
-  if (collection === "photography") header.append(element("p", "", [target.date, target.location, target.camera].filter(Boolean).join(" · ")));
+  header.append(element("p", "content-meta", metaLine(collection, target)));
+  if (collection === "writing") header.append(element("p", "content-summary", target.summary));
   detail.append(header);
   if (collection === "writing") renderAst(target.blocks, detail.appendChild(element("div", "rendered-content")));
   if (collection === "books") renderAst(target.notes, detail.appendChild(element("div", "rendered-content")));
@@ -171,8 +166,7 @@ document.addEventListener("keydown", (event) => {
     closePhoto();
   }
 }, true);
-window.addEventListener("hashchange", selectRoute);
-window.addEventListener("popstate", selectRoute);
+onRouteChange(selectRoute);
 
 const candidate = await loadContentIndex();
 if (candidate) {

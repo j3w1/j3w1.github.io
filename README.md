@@ -20,6 +20,10 @@ routes are how the desktop shows the same entries. `sitemap.xml` and the Atom `f
 generated with them, and a path-shaped link that has no page (`/about/`, a mistyped slug) is
 forwarded by `404.html` into the desktop.
 
+Identity, the projects table, the link list and the about buffers are data too:
+[`content/site.json`](content/site.json) is authoritative, and `npm run generate` writes the marked
+regions of `index.html`, `wiki/index.html` and `404.html` from it, counts included.
+
 Writing, reading notes, and photography are Git-managed. Authoritative Markdown lives in
 [`content/`](content/README.md); `assets/data/content-index.json`, the entry pages, the sitemap and
 the feed are deterministic generated output, committed and checked by `npm run check`; the safe DOM
@@ -49,7 +53,7 @@ colours, conky, an agnoster prompt, and the dotfiles themselves readable in the 
 
 The palette's current contract is defined by
 [`j3w1/theme`](https://github.com/j3w1/theme), not by this repository. This site is a pinned
-CSS-variable consumer of `j3w1/theme@v0.1.0`: it commits the verified export and generates its
+CSS-variable consumer of `j3w1/theme@v1.1.0`: it commits the verified export and generates its
 legacy variable names from that copy. It never imports a moving branch, and there is no
 synchronisation from the site back into the theme.
 
@@ -102,11 +106,12 @@ the OFL license is included alongside. See `docs/wm-architecture.md` §8.
 
 ## Asset versioning
 
-Cache busting is manual `?v=` query strings. **Every asset of the public shell — the stylesheets,
-`site.js`, `public-content.js`, and every module under `assets/js/wm/` — shares one token and is
-bumped as a unit** — pinning only `boot.js` would let a stale cached `layout.js` load against a fresh
-`tree.js`. `npm run bump-cache-token` rewrites every reference (including dynamic imports and
-`wiki/` and `admin/` pages); the contract test fails on a mixed set. `content-renderer.js`,
+Cache busting is manual `?v=` query strings. **Every asset of the public shell — the stylesheets and
+every script under `assets/js/` — shares one token and is bumped as a unit** — pinning only
+`boot.js` would let a stale cached `layout.js` load against a fresh `tree.js`.
+`npm run bump-cache-token` rewrites every reference (including dynamic imports, the `wiki/`,
+`admin/` and 404 pages, and the page generator); follow it with `npm run generate`, and redeploy
+j3w1ctl-auth before the next browser publish. The contract test fails on a mixed set. `content-renderer.js`,
 `photo-viewer.js`, and `admin/j3w1ctl.js` keep their own tokens and are bumped only when they change;
 the j3w1ctl token in `assets/js/site.js` must always equal the one in `admin/index.html`.
 

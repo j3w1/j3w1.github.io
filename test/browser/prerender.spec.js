@@ -48,11 +48,29 @@ test("the server-side HTML renderer matches the browser renderer byte for byte",
   expect(renderAstHtml(PARITY_AST, { origin: fixture.frontendOrigin })).toBe(browserHtml);
 });
 
+test("both renderers refuse the same unsafe link", async ({ page }) => {
+  const unsafe = [{ type: "paragraph", children: [{ type: "link", href: "javascript:alert(1)", children: [{ type: "text", value: "x" }] }] }];
+  await page.goto(`${fixture.frontendOrigin}/#home`);
+  const browserError = await page.evaluate(async (ast) => {
+    const { renderAst } = await import("/assets/js/content-renderer.js");
+    try {
+      renderAst(ast, document.createElement("div"));
+      return null;
+    } catch (error) {
+      return error.message;
+    }
+  }, unsafe);
+  expect(browserError).not.toBeNull();
+  expect(() => renderAstHtml(unsafe, { origin: fixture.frontendOrigin })).toThrow();
+});
+
 test("a prerendered entry page renders the content and opens the desktop at the same entry", async ({ page }) => {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`${fixture.frontendOrigin}/writing/fixture-essay/`);
   await expect(page.locator("h1")).toHaveText("Browser fixture essay");
+  const pageMeta = await page.locator(".content-detail-header .content-meta").textContent();
+  const pageSummary = await page.locator(".content-detail-header .content-summary").textContent();
   await expect(page.locator(".rendered-content")).toContainText("Rendered from the same restricted AST.");
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://j3w1.github.io/writing/fixture-essay/");
   expect(await page.evaluate(() => getComputedStyle(document.body).overflowY)).not.toBe("hidden");
@@ -66,12 +84,26 @@ test("a prerendered entry page renders the content and opens the desktop at the 
   await expect(page.locator("#greeter")).toBeHidden();
   await expect(page.locator('[data-content-detail="writing"] h3')).toHaveText("Browser fixture essay");
   await expect(page.locator('[data-content-detail="writing"] .content-permalink')).toHaveAttribute("href", "/writing/fixture-essay/");
+  /* The desktop reader and the entry's own page describe it the same way. */
+  await expect(page.locator('[data-content-detail="writing"] .content-meta')).toHaveText(pageMeta);
+  await expect(page.locator('[data-content-detail="writing"] .content-summary')).toHaveText(pageSummary);
+});
+
+test("the book and photograph headers match between the page and the desktop", async ({ page }) => {
+  for (const [collection, slug] of [["books", "fixture-book"], ["photography", "fixture-photographs"]]) {
+    await page.goto(`${fixture.frontendOrigin}/${collection}/${slug}/`);
+    const pageMeta = await page.locator(".content-detail-header .content-meta").textContent();
+    await page.goto(`${fixture.frontendOrigin}/#${collection}/${slug}`);
+    await page.waitForFunction(() => document.documentElement.classList.contains("wm-active"));
+    await expect(page.locator(`[data-content-detail="${collection}"] .content-meta`)).toHaveText(pageMeta);
+  }
 });
 
 test("a photography page lists its images with real dimensions and a gallery card", async ({ page }) => {
   await page.goto(`${fixture.frontendOrigin}/photography/fixture-photographs/`);
   await expect(page.locator(".photo-grid img")).toHaveCount(2);
   await expect(page.locator(".photo-grid img").nth(1)).toHaveAttribute("height", "640");
+  await expect(page.locator(".photo-grid img").nth(1)).toHaveAttribute("srcset", /512w.*1122w/);
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", /fixture\.webp$/);
   const ld = JSON.parse(await page.locator('script[type="application/ld+json"]').textContent());
   expect(ld["@type"]).toBe("ImageGallery");

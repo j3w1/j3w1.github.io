@@ -136,6 +136,7 @@ tell you so rather than silently failing.
 | `help` | Commands and keys, listed separately |
 | `keys` | Just the window manager keyboard shortcuts |
 | `dmenu` | Open the command launcher (same as pressing `/`) |
+| `wiki` | Open the formatted guide in a new tab |
 | `neofetch`, `htop`, `cmatrix`, `feh`, `conky` | Launch an application |
 | `i3-msg <command>` | Run a window manager command (`i3-msg layout tabbed`; `;` chains) |
 | `i3exit <action>`, `reboot`, `poweroff`, `systemctl …` | The session and power actions |

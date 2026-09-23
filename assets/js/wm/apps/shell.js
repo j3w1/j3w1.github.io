@@ -1,23 +1,19 @@
-/* An interactive URxvt shell over a virtual filesystem projected from the real
-   site: the content index, the project table, and the link list are the same
-   data the workspaces render, just addressed as paths.
+/* An interactive URxvt shell over the site's virtual filesystem (vfs.js): the
+   content index, the project table, and the link list are the same data the
+   workspaces render, just addressed as paths. This module is the command
+   table and the line editor.
 
    All output is written with textContent. Markdown bodies are handed to the
    existing restricted-AST renderer rather than to innerHTML, so the shell adds
    no new way for content to reach the DOM as markup. */
 
 import { renderAst } from "../../content-renderer.js?v=20260824";
-import { loadContentIndex } from "../../content-index.js?v=20260907";
-import { BOOT_BANNER, BOOT_LOG } from "../console.js?v=20260907";
-import { element } from "../dom.js?v=20260907";
+import { BOOT_BANNER, BOOT_LOG } from "../console.js?v=20260923";
+import { element } from "../dom.js?v=20260923";
+import { IDENTITY, USER_AT_HOST } from "../defaults.js?v=20260923";
+import { buildTree, readDotfile, readIdentity, WORKSPACE_FOR_DIR } from "./vfs.js?v=20260923";
 
-const HOME = "/home/j3w1";
-
-const README = [
-  "I build the machinery behind dependable work: business platforms, developer",
-  "environments, and delivery automation designed to be clear, secure,",
-  "recoverable, and useful long after the first release.",
-];
+const HOME = IDENTITY.home;
 
 /* Two separate things, and conflating them was confusing: these are commands you
    type here, and those are keys you press anywhere on the desktop. */
@@ -61,104 +57,8 @@ const WM_KEYS = [
   ["?", "the full key map"],
 ];
 
-const loadIndex = loadContentIndex;
-
-const readProjects = () =>
-  [...document.querySelectorAll("[data-project-row]")].map((row) => ({
-    slug: row.dataset.projectRow,
-    name: row.cells[1]?.textContent.trim() ?? row.dataset.projectRow,
-    stack: row.cells[2]?.textContent.trim() ?? "",
-    state: row.cells[3]?.textContent.trim() ?? "",
-    repository: row.cells[4]?.textContent.trim() ?? "",
-  }));
-
-const readLinks = () =>
-  [...document.querySelectorAll(".link-list li")].map((item) => ({
-    name: item.querySelector("a")?.textContent.trim() ?? "link",
-    href: item.querySelector("a")?.getAttribute("href") ?? "",
-  }));
-
-/* The tree is rebuilt on demand so published content appears without a reload. */
-const HOSTNAME = "manjaro";
-const KERNEL = "6.12.4-1-MANJARO";
-
-/* The original machine's dotfiles, trimmed, served as plain files and fetched
-   the first time one is read. */
-const DOTFILES = {
-  ".Xresources": "Xresources",
-  ".dmenurc": "dmenurc",
-  ".config/i3/config": "i3-config",
-  ".config/i3/i3status.conf": "i3status.conf",
-  ".config/dunst/dunstrc": "dunstrc",
-  ".screenlayout/j3w1-obsidian.sh": "screenlayout.sh",
-};
-const dotfileCache = new Map();
-const readDotfile = async (name) => {
-  if (!dotfileCache.has(name)) {
-    dotfileCache.set(name, fetch(`/assets/data/dotfiles/${name}`).then((response) => (response.ok ? response.text() : null)).catch(() => null));
-  }
-  return dotfileCache.get(name);
-};
-
-const dotfileTree = () => {
-  const root = {};
-  for (const [path, file] of Object.entries(DOTFILES)) {
-    const parts = path.split("/");
-    let node = root;
-    parts.slice(0, -1).forEach((segment) => {
-      node[`${segment}/`] ??= { kind: "dir", children: {} };
-      node = node[`${segment}/`].children;
-    });
-    node[parts.at(-1)] = { kind: "dotfile", file, path: `~/${path}` };
-  }
-  return root;
-};
-
-const buildTree = async () => {
-  const index = await loadIndex();
-  const collection = (name) => index?.collections?.[name] ?? [];
-  const entries = (name) =>
-    Object.fromEntries(collection(name).map((entry) => [`${entry.slug}.md`, { kind: name, entry }]));
-
-  return {
-    README: { kind: "text", lines: README },
-    "about/": {
-      kind: "dir",
-      children: {
-        "about.md": { kind: "dom", selector: "[data-wm-window='about-editor'] .vim-buffer" },
-        "interests.md": { kind: "dom", selector: "[data-wm-window='about-interests'] .vim-buffer" },
-      },
-    },
-    "writing/": { kind: "dir", children: entries("writing") },
-    "books/": { kind: "dir", children: entries("books") },
-    "photography/": {
-      kind: "dir",
-      children: Object.fromEntries(
-        collection("photography").map((entry) => [`${entry.slug}/`, { kind: "photos", entry }]),
-      ),
-    },
-    "projects/": {
-      kind: "dir",
-      children: Object.fromEntries(
-        readProjects().map((project) => [`${project.slug}.md`, { kind: "project", project }]),
-      ),
-    },
-    "elsewhere/": {
-      kind: "dir",
-      children: Object.fromEntries(readLinks().map((link) => [link.name, { kind: "link", link }])),
-    },
-    ...dotfileTree(),
-  };
-};
-
-const WORKSPACE_FOR_DIR = {
-  "writing/": "writing",
-  "books/": "books",
-  "photography/": "photography",
-  "projects/": "projects",
-  "elsewhere/": "elsewhere",
-  "about/": "about",
-};
+const HOSTNAME = IDENTITY.host;
+const KERNEL = IDENTITY.kernel;
 
 export const createShell = ({ body, statusline, wm, close, title }) => {
   const buffer = body.querySelector(".terminal-buffer") ?? body;
@@ -303,8 +203,9 @@ export const createShell = ({ body, statusline, wm, close, title }) => {
     logout: () => wm.logout(),
     pwd: () => print(cwd.length ? `${HOME}/${cwd.map((segment) => segment.replace(/\/$/, "")).join("/")}` : HOME),
     whoami: () => {
-      print("申杰 / j3w1", "terminal-output identity-output");
-      print("writer · software engineer");
+      const [name, ...rest] = readIdentity().whoami;
+      print(name, "terminal-output identity-output");
+      rest.forEach((line) => print(line));
     },
     clear: () => {
       [...buffer.children].forEach((child) => {
@@ -564,7 +465,7 @@ export const createShell = ({ body, statusline, wm, close, title }) => {
   const updateStatus = () => {
     const fill = statusline?.querySelector(".status-fill");
     if (fill) fill.textContent = promptPath();
-    if (title) title.textContent = `j3w1@manjaro: ${promptPath()}`;
+    if (title) title.textContent = `${USER_AT_HOST}: ${promptPath()}`;
   };
 
   const onBufferClick = (event) => {

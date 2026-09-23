@@ -54,17 +54,22 @@ test("an entry page carries canonical metadata, the content, and the desktop lin
   assert.match(page, /<meta property="og:type" content="article">/);
   assert.match(page, /<meta property="article:published_time" content="2026-08-24">/);
   assert.match(page, /data-desktop-link href="\/#writing\/note"/);
+  assert.match(page, /<p class="content-meta">2026-08-24 · systems<\/p>\n        <p class="content-summary">Summary\.<\/p>/);
+  assert.match(page, /<body class="page">/);
+  assert.match(page, /<link rel="stylesheet" href="\/assets\/css\/site\.css\?v=[0-9a-z]+">/);
+  assert.doesNotMatch(page, /<style>/, "page rules live in site.css");
   assert.match(page, /<h2>Heading<\/h2><p>A <strong>safe<\/strong> <a href="https:\/\/example\.com\/" rel="noopener noreferrer">link<\/a> and a <a href="\/wiki\/">home link<\/a>\.<\/p>/);
   assert.equal(ldOf(page)["@type"], "Article");
   assert.equal(ldOf(page).datePublished, "2026-08-24");
 
   const gallery = renderEntryPage("photography", index().collections.photography[0]);
   assert.match(gallery, /<meta property="og:image" content="https:\/\/j3w1\.github\.io\/assets\/photography\/set\/image-01\.webp">/);
-  assert.match(gallery, /<img src="\/assets\/photography\/set\/image-01-thumb\.webp" alt="Alt" width="640" height="480" loading="lazy" decoding="async">/);
+  assert.match(gallery, /<img src="\/assets\/photography\/set\/image-01-thumb\.webp" alt="Alt" width="640" height="480" srcset="\/assets\/photography\/set\/image-01-thumb\.webp 640w, \/assets\/photography\/set\/image-01\.webp 1448w" sizes="[^"]+" loading="lazy" decoding="async">/);
   assert.equal(ldOf(gallery)["@type"], "ImageGallery");
   assert.equal(ldOf(gallery).image[0].width, 1448);
 
   const review = renderEntryPage("books", index().collections.books[0]);
+  assert.match(review, /<p class="content-meta">Someone · 2020 · finished · 4\/5<\/p>/);
   assert.equal(ldOf(review).about["@type"], "Book");
   assert.equal(ldOf(review).reviewRating.ratingValue, 4);
 });

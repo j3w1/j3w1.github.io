@@ -4,10 +4,16 @@ import path from "node:path";
 import MarkdownIt from "markdown-it";
 import YAML from "yaml";
 import { badRequest } from "./errors.js";
+import { SITE_ORIGIN } from "./constants.js";
+import { SAFE_LINK_PROTOCOLS } from "./html-renderer.js";
 
 export const COLLECTIONS = Object.freeze(["writing", "books", "photography"]);
-export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-export const IMAGE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+/* Lowercase words joined by single hyphens: every slug and image id. */
+export const SLUG_SOURCE = "[a-z0-9]+(?:-[a-z0-9]+)*";
+export const SLUG_PATTERN = new RegExp(`^${SLUG_SOURCE}$`);
+export const IMAGE_ID_PATTERN = SLUG_PATTERN;
+/* content/<collection>/<slug>.md */
+export const CONTENT_SOURCE_PATTERN = new RegExp(`^content/(${COLLECTIONS.join("|")})/(${SLUG_SOURCE})\\.md$`);
 export const BOOK_STATUSES = Object.freeze([
   "want-to-read",
   "reading",
@@ -35,7 +41,7 @@ const markdown = new MarkdownIt({
   breaks: false,
 });
 
-const allowedProtocols = new Set(["http:", "https:", "mailto:"]);
+const allowedProtocols = new Set(SAFE_LINK_PROTOCOLS);
 
 const fail = (code, message, details) => {
   throw badRequest(code, message, details);
@@ -292,7 +298,7 @@ export const normalizeEntry = (collection, metadata, body = "") => {
 
 const safeHref = (href) => {
   try {
-    const url = new URL(href, "https://j3w1.github.io/");
+    const url = new URL(href, `${SITE_ORIGIN}/`);
     if (!allowedProtocols.has(url.protocol)) fail("unsafe_markdown", "Markdown contains an unsafe link.");
     if (href.startsWith("/") || href.startsWith("#")) return href;
     return url.href;

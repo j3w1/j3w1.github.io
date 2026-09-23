@@ -106,35 +106,46 @@ instead — which is what makes tab children reachable from the keyboard.
 
 | File | Responsibility |
 | --- | --- |
-| `tree.js` | Pure tree operations. No DOM, no imports. |
+| `tree.js` | Pure tree operations, and the `clamp` the other pure modules share. No DOM, no imports. |
 | `layout.js` | Pure rect arithmetic. Imports only `tree.js`. |
-| `defaults.js` | Default layouts; percents match the CSS grid fractions of the fallback. |
+| `defaults.js` | Default layouts (percents match the CSS grid fractions of the fallback), the wallpapers, and the machine's `IDENTITY`; re-exports `route.js`'s `WORKSPACES`. |
 | `render.js` | The only module that writes geometry. Reconciles tab bars and grips. |
 | `pointer.js` | Click-to-focus, title-bar drag, floating resize, gutter drag. |
 | `keys.js` | Keymap and binding modes. |
 | `touch.js` | Swipe and long-press. Loaded only on coarse pointers. |
-| `bar.js` | i3status blocks, mode indicator, workspace counts and urgency. |
+| `bar.js` | i3status blocks, mode indicator, workspace counts and urgency; `formatUptime`, shared with conky. |
 | `notify.js` | dunst toasts. Visual only. |
 | `a11y.js` | The announcer and the focus fallback chain. |
-| `session.js` | Preferences, capability detection, named media queries. |
-| `store.js` | `localStorage` persistence. |
+| `session.js` | Preferences, capability detection, named media queries, and the one `storage` wrapper. |
+| `store.js` | Layout persistence through `session.storage`. |
 | `dom.js` | Shared helpers: `element`, `listen`, `readPx`, `rafBatch`, `throttle`, `isEditable`. |
-| `greeter.js`, `idle-lock.js`, `touch.js`, `selftest.js` | Loaded on demand: the session curtains, coarse-pointer gestures, and the console assertions. |
-| `apps/` | `shell` (in the boot graph — it drives the home terminal), and `neofetch`, `htop`, `cmatrix`, `feh`, `conky`, loaded on first launch. |
+| `curtains.js` | The session's switchboard: LightDM's greeter, the i3exit power sequences, i3lock, logout and the session menu. Spread into the facade by `boot.js`, like `features.js`. |
+| `greeter.js`, `power.js`, `idle-lock.js`, `touch.js`, `selftest.js` | Loaded on demand: the curtains themselves, coarse-pointer gestures, and the console assertions. |
+| `apps/` | `shell` and `vfs` (in the boot graph — they drive the home terminal: the command table and line editor, and the virtual filesystem projected from the page and the content index), and `neofetch`, `htop`, `cmatrix`, `feh`, `conky`, loaded on first launch. |
 | `commands.js` | The i3-msg command language: a pure parser with `;` chaining, the handlers, and the launcher catalogue generated from the same table. |
 | `chrome.js` | Title-bar buttons, the nagbar, the restore link, tablist keys, resize plumbing — every document-level handler, torn down as one. |
 | `console.js` | The boot, shutdown and resume logs, and the time-driven player the greeter, the power sequences and `journalctl -b` share. |
 | `features.js` | The facade methods the original config brought: back-and-forth, borders, gaps, bar modes, reload, container focus, sticky, marks. Spread into the facade by `boot.js`. |
 | `tree-extras.js` | Pure tree operations for those: container focus, marks, swaps, floating setters. Imports only `tree.js`. |
-| `power.js` | i3exit: reboot, shutdown, suspend, hibernate. Loaded on demand; borrows the greeter's screen. |
-| `boot.js` | The facade, and the only file that knows about all of the above. |
+| `power.js` | i3exit: reboot, shutdown, suspend, hibernate. Loaded on demand by `curtains.js`; borrows the greeter's screen. |
+| `boot.js` | The facade's core (layout, windows, spawning, persistence), and the only file that knows about all of the above. |
+
+Outside `wm/`, beside `site.js`:
+
+| File | Responsibility |
+| --- | --- |
+| `route.js` | Hash routes normalised in one place, the `WORKSPACES` list, and `onRouteChange`, the one route listener `site.js` and `public-content.js` subscribe to. |
+| `content-index.js` | The published content index, fetched once, and the `COLLECTIONS` list. |
+| `launcher.js` | dmenu: ranking, selection, and handing unmatched input to i3-msg. |
+| `projects.js` | The projects application: filters, row selection, the detail window. |
+| `public-content.js` | Renders the content index into the writing, photography and books windows. |
 
 Dependency direction is strictly one way: `site.js → wm/*`. The window manager never imports
 `site.js`; it receives `onWorkspaceRequest`, `isBlocked`, and `openLauncher` as injected callbacks,
 so it knows nothing about routing, the launcher, or the help dialog.
 
-`site.js` keeps hash routing, the launcher, the help dialog, the projects application, and the
-j3w1ctl button. It imports `wm/boot.js` **statically**: a dynamic import would resolve after first
+`site.js` keeps hash routing, the help dialog, the key dispatcher and the j3w1ctl button, and wires
+in `launcher.js` and `projects.js`. It imports `wm/boot.js` **statically**: a dynamic import would resolve after first
 paint and guarantee a visible reflow from the fallback grid to the window manager's layout.
 
 ## 5. Boot and the fallback path
@@ -159,8 +170,9 @@ Two flags, deliberately separate:
   never runs at all (a 404 anywhere in the static module graph fails the whole script).
 - `html.wm-active` is the **fact**, added only after a successful synchronous boot.
 
-**All fallback CSS keys off `html:not(.wm-active)`**, which covers no-JS, plain mode, and a failed
-boot in one selector. The fallback grid fractions equal the window manager's default percents, so
+**All fallback CSS keys off `html:not(.wm-active)`**, which covers no-JS and a failed boot in one
+selector. The stacked document itself (scrolling body, sticky bar, every workspace shown) is one
+section of `site.css` keyed on `.no-js` and `html[data-wm="off"]`, where the static pages share it. The fallback grid fractions equal the window manager's default percents, so
 the handoff is sub-pixel.
 
 There is deliberately **no opacity curtain**: an `opacity: 0` that never clears because a script
@@ -226,7 +238,7 @@ The password field is decoration: a fixed run of bullets filled by a timer. No p
 in the source and nothing is checked.
 
 It is skipped entirely for a stored session, a deep link (a shared link must never land on a login
-screen), automation, `boot off`, Save-Data, and plain mode. Reduced motion skips the *animation*, not
+screen), automation, `boot off`, and Save-Data. Reduced motion skips the *animation*, not
 the login, and the panel appears immediately.
 
 ### The power sequences
@@ -299,10 +311,17 @@ the visible text; the screen-reader label is English either way.
 
 ## 11. Cache busting
 
-Every module under `assets/js/wm/` shares **one** `?v=` token, bumped as a unit — pinning only
-`boot.js` would let a stale cached `layout.js` load against a fresh `tree.js`.
-`wm-contract.test.js` enforces this.
+The stylesheets and every script under `assets/js/` (dynamic imports included) share **one** `?v=`
+token, bumped as a unit — pinning only `boot.js` would let a stale cached `layout.js` load against a
+fresh `tree.js`. The pages that reference them carry it too: `index.html`, `wiki/index.html`,
+`admin/index.html`, `404.html`, and `services/j3w1ctl-auth/src/site-pages.js`, which stamps it into
+every generated entry page. `wm-contract.test.js` enforces one token and a token no older than the
+last change.
 
-Files outside the tree keep their own tokens and are bumped only when they change:
-`content-renderer.js`, `photo-viewer.js`, and `admin/j3w1ctl.js`. The j3w1ctl token in `site.js`
-**must** equal the one in `admin/index.html`; `security-static.test.js` asserts it.
+Because the page generator carries the token, a bump is followed by `npm run generate`, and the
+j3w1ctl service must be redeployed before the next browser publish: an older deployment would
+commit entry pages with the old token, and CI's drift check would fail on `main`.
+
+Files outside the shared set keep their own tokens and are bumped only when they change:
+`content-renderer.js`, `photo-viewer.js`, and everything under `admin/`. The j3w1ctl token in
+`site.js` **must** equal the one in `admin/index.html`; `security-static.test.js` asserts it.

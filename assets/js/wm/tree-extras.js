@@ -3,9 +3,9 @@
    rect setters. Kept out of tree.js so the core stays within its budget and
    its tests stay focused. No DOM, imports only tree.js. */
 
-import { findCon, findLeaf, floatingNode, leafIds, pathTo, setFocus } from "./tree.js?v=20260907";
+import { findCon, findLeaf, floatingNode, leafIds, pathTo } from "./tree.js?v=20260923";
 
-export const MARK_PATTERN = /^[a-z0-9_-]{1,32}$/;
+const MARK_PATTERN = /^[a-z0-9_-]{1,32}$/;
 
 /* focus parent: from the focused leaf, the nearest container; from a focused
    container, its parent; stops at the root. Returns the container now focused,
@@ -126,5 +126,3 @@ export const centreFloating = (ws, id, bounds) => {
 
 /* The number of windows a container holds, for the announcement. */
 export const conSize = (con) => leafIds(con).length;
-
-export { setFocus };

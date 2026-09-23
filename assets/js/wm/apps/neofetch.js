@@ -1,7 +1,8 @@
 /* neofetch. Every field is read from this browser; anything it does not expose
    prints "unknown" rather than a plausible-looking invention. */
 
-import { element } from "../dom.js?v=20260907";
+import { element } from "../dom.js?v=20260923";
+import { USER_AT_HOST } from "../defaults.js?v=20260923";
 
 const LOGO = [
   "██████████████████  ████████",
@@ -46,8 +47,8 @@ export const createNeofetch = ({ body }) => {
   art.setAttribute("aria-hidden", "true");
 
   const rows = [
-    ["", "j3w1@manjaro"],
-    ["", "------------"],
+    ["", USER_AT_HOST],
+    ["", "-".repeat(USER_AT_HOST.length)],
     ["OS", "Manjaro Linux (i3 community edition)"],
     ["Host", value(platform())],
     ["Kernel", "j3w1.github.io"],
