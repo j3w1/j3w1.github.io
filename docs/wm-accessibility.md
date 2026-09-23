@@ -1,7 +1,7 @@
 # Accessibility contract
 
 The rules the window manager must obey. Items marked **enforced** are asserted by
-`services/j3w1ctl-auth/test/wm-contract.test.js` or the browser suite; the rest are review
+`test/wm-contract.test.js` or the browser suite; the rest are review
 obligations.
 
 A tiling window manager is an unusually easy thing to make inaccessible: it hides content behind
@@ -55,7 +55,7 @@ Any operation that hides the focused element must first move focus, in this orde
 3. `#main-content`.
 
 Never `<body>`. This applies to kill, workspace switch, tab switch, float, fullscreen, scratchpad,
-and the plain-mode toggle. `a11y.js` implements the chain; the browser suite asserts it after a kill.
+and every curtain (greeter, lock, session menu) as it closes. `a11y.js` implements the chain; the browser suite asserts it after a kill.
 
 ## 6. One live region in the chrome — **enforced**
 
@@ -102,8 +102,8 @@ different things, and skipping the login would quietly change what the visitor i
 0.01ms duration and such handlers stop firing reliably. All sequencing is driven by timers or
 `requestAnimationFrame`.
 
-`prefers-reduced-motion` does **not** force plain mode. Disliking animation and wanting a different
-layout are independent choices.
+`prefers-reduced-motion` does **not** change the layout: it skips animation, not the window
+manager. Disliking animation and wanting a different layout are independent choices.
 
 The power sequences follow the same rule: a reboot under reduced motion still ends the session,
 closes spawned windows and lands on the login panel; a shutdown still halts; suspend still locks.
@@ -123,12 +123,11 @@ foundation left unchanged, so the floor survived the upgrade:
 | `--quiet` (`#ad7175`) | 4.92:1 | passes — the darkest colour permitted for ordinary text |
 | `--inactive` (`#7d1310`) | 1.80:1 | disabled/decorative treatment only; **never** for ordinary text |
 
-Known outstanding issue: the pre-existing `.line-number`, `.link-list .permissions`,
-`.prose-line::before`, and `.content-number` rules still use `--inactive` for ordinary text. The
-pinned theme adoption deliberately does not rewrite selectors, so that semantic correction remains
-separate work. The former suggestion of raising the palette value to `#a8403a` was not viable: it
-reaches only 3.15–3.31:1 on these surfaces and would conflate disabled-border and text roles. A
-future fix should move those four rules to the subtle-text role instead.
+`--inactive` is used for disabled and decorative treatment only. The link list's permission
+column, the Vim line numbers and the content list's entry numbers used it for ordinary text until
+the v1.1.0 upgrade; they are on `--quiet` (the subtle-text role) now, and the unused `.line-number`
+rule is gone. No authored rule paints a colour the theme did not resolve: `test/theme.test.js`
+fails on any hex or `rgb()` literal outside the generated block.
 
 ### The Xresources palette, and where it is not followed
 

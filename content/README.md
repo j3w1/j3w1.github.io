@@ -44,3 +44,23 @@ a missing one, or a page whose entry was deleted all fail it. Never edit generat
 - Photography requires `title`, `slug`, `date`, `caption`, and an ordered image list. Location, camera, and per-image captions are optional; every image requires an ID, derived full/thumbnail filename, and meaningful alt text. Pixel dimensions (`width`/`height` for the full file, `thumbnailWidth`/`thumbnailHeight` for the thumbnail) are optional but strongly recommended: with them both the desktop grid and the entry's own page reserve each image's real box before it loads and serve the right file via `srcset`; j3w1ctl records them automatically.
 - An entry may contain at most 12 photograph pairs. Full files are limited to 2 MiB, thumbnails to 256 KiB, and the entry to 28 MiB total. The validator reads each RIFF/WEBP signature rather than trusting its name.
 - Markdown is limited to headings, paragraphs, lists, blockquotes, code blocks, text, emphasis, strong text, inline code, and safe links. Raw HTML is not rendered.
+
+## Site identity and projects
+
+`content/site.json` holds everything the desktop says about its owner: the name and role, the
+descriptions used in the page head and JSON-LD, the home terminal's README and focus lines, the
+projects table, the elsewhere links, and the about and interests buffers. `npm run generate` writes
+them into the marked `@generated-site` regions of `index.html` (and the shared head, bar and footer
+into `wiki/index.html` and `404.html`); never edit inside those markers by hand.
+
+- Counts are derived: the project and link totals, the filter counts, `ls -l`'s total, the Vim line
+  numbers and cursor. Add or remove an entry and every count follows.
+- A project is `public` with an https `repository`, or `internal` with `repository: null`; `facts`
+  are `[label, value]` pairs, and an https value renders as a link. `projects.selected` is the row
+  selected on load.
+- About paragraphs may contain `[label](href)` links to https or site-absolute URLs; every other
+  string is plain text.
+- The generator refuses unknown keys, duplicate ids, non-https URLs, and a `selected` that names no
+  project, and `npm run check` fails when `site.webmanifest` or the page generator's constants in
+  `services/j3w1ctl-auth/src/site-pages.js` disagree with the data.
+- `npm run icons` re-renders the social card from the same data.

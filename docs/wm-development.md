@@ -21,21 +21,29 @@ Useful URLs while developing:
 
 ```powershell
 npm ci                       # once: Playwright and the generators (development tooling only)
-npm test                     # node: tree maths, contract, static security
+npm test                     # node: tree maths, contract, parity, site data, theme, static security
 npm run test:browser         # playwright; PW_CHANNEL=msedge to run in Edge instead of bundled Chromium
 ```
 
 | Suite (repository root) | Covers |
 | --- | --- |
 | `test/wm-tree.test.js` | The pure tree and rect maths — every direction × layout combination, seam-free tiling, focus bookkeeping, `validate` reconciliation |
+| `test/wm-extras.test.js` | Container focus, marks, swaps and the floating setters |
+| `test/wm-commands.test.js` | The i3-msg parser, dispatch, and directional focus |
 | `test/wm-contract.test.js` | Structure and accessibility invariants asserted against the source, byte budgets, cache tokens |
-| `test/security-static.test.js` | Credentials, the project table columns, the j3w1ctl cache key |
+| `test/shared-constants.test.js` | Copies that cannot be imports held to their originals: 404.html's routes, the service's and j3w1ctl's collections, the renderers' link schemes, both packages' Playwright |
+| `test/site.test.js` | `content/site.json`: validation, escaping, derived counts, no copies of the identity in the scripts |
+| `test/theme.test.js` | The theme pin, the generated block, and that no colour literal survives outside it |
+| `test/security-static.test.js` | Credentials, the j3w1ctl cache key and mutation locks |
 | `test/public-photo-viewer.test.js` | The photo viewer's route-neutral close |
 | `test/browser/wm.spec.js` | The real thing in a browser: tiling geometry, keys, tabs, drag, shell, boot, mobile |
+| `test/browser/prerender.spec.js` | The two content renderers byte for byte, the entry pages against the desktop, the 404 rescue |
 
 `test/browser-fixture-server.mjs` serves the repository with a synthetic content index and a fake
-auth service; the backend's own Playwright spec imports the same fixture. The backend suite stays
-under `services/j3w1ctl-auth/`. `.github/workflows/ci.yml` runs all of it on every push.
+auth service (`npm --prefix services/j3w1ctl-auth run test:browser-fixture` starts it on its own);
+the backend's own Playwright spec imports the same fixture, and both configs share
+`playwright.shared.mjs`. The backend suite stays under `services/j3w1ctl-auth/`.
+`.github/workflows/ci.yml` runs all of it on every push.
 
 The tree and layout modules are pure and DOM-free specifically so they can be tested in node without
 a browser or a DOM shim — `tree-extras.js` and `commands.js` too. Keep them that way; `session.js`
@@ -48,13 +56,17 @@ creates its media queries lazily for the same reason.
 
 | Artifact | Derived from | Generator |
 | --- | --- | --- |
+| the `@generated-site` blocks in `index.html` (head, JSON-LD, the home terminal and folders, projects, elsewhere, about) and in `wiki/index.html` and `404.html` (shared head, page bar and footer) | `content/site.json`, and the page shell in `services/j3w1ctl-auth/src/site-pages.js` | `scripts/lib/site.mjs` |
 | `assets/fonts/*.woff2`, the `@generated-fonts` block in `site.css`, the font preload tokens | the pinned Nerd Fonts and Noto CJK sources, and every icon and Han character found in the sources | `scripts/lib/fonts.mjs` |
 | the 37 legacy aliases and the canonical pass-through tokens in the `@generated-theme` block in `site.css` | `vendor/j3w1-theme/exports/tokens.css`, verified by `theme.lock.json` | `scripts/lib/theme.mjs` |
 | the `modulepreload` list in `index.html` | the static import graph from `site.js` and `public-content.js` | `scripts/lib/preloads.mjs` |
 | `assets/data/content-index.json`, `writing/**`, `photography/**`, `books/**`, `sitemap.xml`, `feed.xml` | `content/**` | `services/j3w1ctl-auth/src/generate.js` |
 
-Adding an icon, a Chinese label, or a static import is therefore a two-step change: edit the source,
-then `npm run generate` and commit what it wrote. `npm run icons` re-renders the raster icons and
+Adding an icon, a Chinese label, a static import or a project is therefore a two-step change: edit
+the source, then `npm run generate` and commit what it wrote. Editing inside a generated block by
+hand fails `npm run check` with the block's name; the site generator also fails when the page
+generator's constants, `site.webmanifest` or the theme's canvas disagree with `content/site.json`.
+The site blocks are written first so the font subsetter sees their glyphs. `npm run icons` re-renders the raster icons and
 the social card (committed, checked by shape rather than byte).
 
 ### Updating the theme pin
@@ -96,7 +108,7 @@ The help dialog is generated from `wm.bindings()`; update the tables in `docs/wm
 command in `wm/commands.js` — a handler in `HANDLERS` and an entry in `commandList` — so the action
 is reachable without a keyboard and from `i3-msg` in the terminal; see the gesture-parity rule in
 [wm-accessibility.md](wm-accessibility.md). Binding modes are tables in `keys.js` with their i3
-prompt in `MODE_PROMPTS`.
+prompts in the table beside them.
 
 Before choosing a key: bare letters are the primary scheme, `Alt`+letter is an accepted alias.
 `Alt`+arrow is browser history and must stay unbound. Bare `Space` must stay unbound or space-to-
@@ -140,31 +152,33 @@ Do not hard-code a pixel size in `layout.js` that a breakpoint needs to change.
 
 ## Cache busting
 
-Every asset of the public shell (`site.css`, `desktop.css`, `site.js`, `public-content.js`, and every
-module under `assets/js/wm/`, dynamic imports included) shares one `?v=` token, bumped as a unit:
+Every asset of the public shell (`site.css`, `desktop.css`, and every script under `assets/js/`,
+dynamic imports included) shares one `?v=` token, bumped as a unit:
 
 ```powershell
 npm run bump-cache-token            # today's date, or the next letter suffix if already today
 npm run bump-cache-token -- --check # list every token in use; fails on a mixed shared set
 ```
 
-The script rewrites `index.html`, `wiki/index.html`, `admin/index.html`, `404.html`, `site.js`,
-`public-content.js`, and `assets/js/wm/**`. It never touches `content-renderer.js`, `photo-viewer.js`,
-or `admin/j3w1ctl*.js` — those are versioned independently and only when they change — nor font
-URLs, which `npm run generate` content-hashes. `scripts/lib/cache-tokens.mjs` is the single
-definition of the shared set, and the contract test uses the same definition.
+The script rewrites `index.html`, `wiki/index.html`, `admin/index.html`, `404.html`,
+`services/j3w1ctl-auth/src/site-pages.js` and `assets/js/**`. Run `npm run generate` after it (the
+entry pages carry the page generator's token), and redeploy the j3w1ctl service before the next
+browser publish. It never touches `content-renderer.js`, `photo-viewer.js`, or `admin/*` targets —
+those are versioned independently and only when they change — nor font URLs, which
+`npm run generate` content-hashes. `scripts/lib/cache-tokens.mjs` is the single definition of the
+shared set, and the contract test uses the same definition.
 
 ## The wiki
 
 **The public wiki is `wiki/index.html`, served at <https://j3w1.github.io/wiki/>.** It is a hand-
-authored page rather than a generated one, styled from `site.css` plus a small inline `<style>` block
-so it cannot affect the desktop's stylesheet budget.
+authored page; its head, bar and footer are the generated page shell it shares with `404.html` and
+the entry pages, and its styles are the `body.page` rules in `site.css`.
 
 It is deliberately part of the site rather than a GitHub wiki: GitHub only creates a repository's
 wiki git remote after the first page is made in the web UI and there is no API for that first page,
 so a GitHub wiki could never be created or kept current from here.
 
-The site points at it from five places, all asserted by `wm-contract.test.js`:
+The site points at it from six places, all asserted by `wm-contract.test.js`:
 
 - the file manager's *Places → Wiki* entry (the i3bar tray is for status, not destinations),
 - the `?` help dialog,
@@ -208,7 +222,11 @@ git add -A && git commit -m "docs: publish window manager documentation" && git 
 - **`[hidden]` is `display: none !important` in `site.css`.** You cannot override it with a
   `display` rule; do not set `hidden` on something you intend to show with CSS.
 - **`.no-js` and `html:not(.wm-active)` are different things.** The first means "no JavaScript"; the
-  second also covers plain mode and a failed boot, and is the one most fallback rules should use.
+  second also covers a failed boot, and is the one most fallback rules should use. The stacked
+  document pairs `.no-js` with `html[data-wm="off"]` explicitly, in `site.css`.
+- **A re-export must be two statements.** The preload list and the eager-graph budget follow lines
+  that start with `import`, so `export { X } from "…"` escapes both; write
+  `import { X } from "…"; export { X };`.
 
 ### On the CI runner
 
@@ -230,8 +248,10 @@ git add -A && git commit -m "docs: publish window manager documentation" && git 
   repository root and `services/j3w1ctl-auth` carry independent lockfiles, so a dependency update
   can move one without the other. Installing Chromium through only one package leaves the other
   asking for an executable a clean runner never downloaded; a development machine hides it because
-  earlier runs populated the Playwright cache. CI installs for both package contexts, which is the
-  defensive form of the rule; the alternative is to enforce version parity between them explicitly.
+  earlier runs populated the Playwright cache. `test/shared-constants.test.js` enforces that both
+  lockfiles resolve the same build, so CI installs Chromium once. Share settings between the two
+  configs through `playwright.shared.mjs`, never by importing one config from the other: that loads
+  a second Playwright from the other package, which Playwright refuses.
 - **Geometry lands on a `requestAnimationFrame`.** A measurement taken straight after the input
   that causes a relayout can still read the layout that was there before it. Wait for the rendering
   boundary the assertion actually depends on — `awaitFullscreen` waits for the window to fill its
