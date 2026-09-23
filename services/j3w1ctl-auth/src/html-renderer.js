@@ -7,6 +7,11 @@
    contain the real content as HTML for crawlers and link previews, and the
    browser renderer cannot run without a DOM. */
 
+/* The link schemes content may use; content.js validates Markdown against the
+   same list, and test/shared-constants.test.js holds the browser renderer's
+   copy to it. */
+export const SAFE_LINK_PROTOCOLS = Object.freeze(["http:", "https:", "mailto:"]);
+
 const ELEMENTS = Object.freeze({
   paragraph: "p",
   blockquote: "blockquote",
@@ -41,7 +46,7 @@ const renderNode = (node, origin) => {
   if (node.type === "link") {
     const href = String(node.href ?? "");
     const url = new URL(href, origin);
-    if (!["http:", "https:", "mailto:"].includes(url.protocol)) throw new TypeError("Unsafe link");
+    if (!SAFE_LINK_PROTOCOLS.includes(url.protocol)) throw new TypeError("Unsafe link");
     const rel = url.origin !== origin && url.protocol !== "mailto:" ? ' rel="noopener noreferrer"' : "";
     return `<a href="${escapeAttribute(href)}"${rel}>${renderChildren(node.children, origin)}</a>`;
   }

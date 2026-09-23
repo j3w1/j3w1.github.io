@@ -301,20 +301,6 @@ test("every shared-token asset, including dynamic imports and index.html, uses o
   assert.ok(uses.some((use) => use.startsWith("assets/js/wm/boot.js → ./touch.js")), "boot.js's own dynamic imports carry it as well");
 });
 
-test("404.html mirrors the workspace list and slug pattern it cannot import", async () => {
-  /* The rescue script runs before any module could load, so it carries its
-     own copies; these hold them to the originals. */
-  const notFound = await read("404.html");
-  const { SLUG_PATTERN } = await import("../services/j3w1ctl-auth/src/content.js");
-  const workspaces = JSON.parse(notFound.match(/const workspaces = (\[[^\]]*\]);/)[1]);
-  assert.deepEqual(workspaces, [...WORKSPACES]);
-  const slug = notFound.match(/\/(\^[^/]*\$)\/\.test\(slug\)/)?.[1];
-  assert.equal(slug, SLUG_PATTERN.source, "404.html's slug pattern drifted from the content validator");
-  const html = await read("index.html");
-  const layers = [...html.matchAll(/data-wm-layer="([a-z]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(layers, [...WORKSPACES], "the workspace sections are not in route order");
-});
-
 test("the root package is development tooling only: the site has no runtime dependencies", async () => {
   const manifest = JSON.parse(await read("package.json"));
   assert.equal(manifest.dependencies, undefined, "the public site must not acquire npm runtime dependencies");
@@ -438,10 +424,9 @@ test("the raster icons and the social card exist at the sizes their consumers ex
   assert.ok(ico.subarray(22, 26).equals(png), "favicon.ico wraps a PNG");
 });
 
-test("the generated pages, sitemap and feed are committed and current", async () => {
-  const { checkGenerated } = await import("../services/j3w1ctl-auth/src/generate.js");
-  const result = await checkGenerated(repoRoot);
-  assert.deepEqual({ stale: result.stale, orphans: result.orphans }, { stale: [], orphans: [] }, "run npm run generate");
+/* Whether the generated files are current is `npm run check`'s job (CI runs
+   it); this holds what they must contain. */
+test("the generated pages carry crawlable URLs and a way back to the desktop", async () => {
   const sitemap = await read("sitemap.xml");
   assert.match(sitemap, /<loc>https:\/\/j3w1\.github\.io\/photography\/we-were-werewolves\/<\/loc>/, "every entry has a crawlable URL");
   const page = await read("photography", "we-were-werewolves", "index.html");

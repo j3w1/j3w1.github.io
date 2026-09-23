@@ -12,13 +12,14 @@
    generator runs from the CLI or inside the Vercel function that commits a
    browser publish, or the two would drift. */
 
-import { COLLECTIONS, SLUG_PATTERN, assertCollection } from "./content.js";
+import { COLLECTIONS, SLUG_PATTERN, SLUG_SOURCE, assertCollection, stringifyIndex } from "./content.js";
+import { SITE_ORIGIN } from "./constants.js";
 import { escapeAttribute, escapeText, renderAstHtml } from "./html-renderer.js";
 
 /* The site's identity, mirrored from content/site.json: this package is
    deployed on its own and cannot read the repository, so the root generator
    checks that the two agree (`npm run check`). */
-export const SITE_ORIGIN = "https://j3w1.github.io";
+export { SITE_ORIGIN };
 export const SITE_NAME = "j3w1";
 export const AUTHOR = { name: "申杰", alternateName: "j3w1", url: `${SITE_ORIGIN}/`, github: "https://github.com/j3w1" };
 export const DEFAULT_SOCIAL_IMAGE = `${SITE_ORIGIN}/assets/social/default.png`;
@@ -27,9 +28,11 @@ export const THEME_COLOR = "#000000";
 /* The shared stylesheet with its cache token: a literal, because
    scripts/bump-cache-token rewrites it with the rest of the shell. */
 export const STYLESHEET = "/assets/css/site.css?v=20260923";
+export const INDEX_PATH = "assets/data/content-index.json";
 export const FEED_PATH = "feed.xml";
 export const SITEMAP_PATH = "sitemap.xml";
-export const GENERATED_PAGE_PATTERN = /^(writing|books|photography)\/(?:[a-z0-9]+(?:-[a-z0-9]+)*\/)?index\.html$/;
+/* <collection>/index.html and <collection>/<slug>/index.html */
+export const GENERATED_PAGE_PATTERN = new RegExp(`^(${COLLECTIONS.join("|")})/(?:${SLUG_SOURCE}/)?index\\.html$`);
 
 const COLLECTION_TITLES = { writing: "writing", books: "books", photography: "photography" };
 const COLLECTION_BLURBS = {
@@ -321,6 +324,16 @@ export const renderFeed = (index) => {
 ${entries.join("\n")}
 </feed>
 `;
+};
+
+/* Everything an index produces: the index file itself and every page, keyed by
+   repository path, plus which existing paths are generated pages that no
+   longer belong. The CLI generator (generate.js) and the browser-publish commit
+   (repository.js) both come here, so "what should be on disk" has one answer. */
+export const generateArtifacts = (index) => {
+  const files = new Map([[INDEX_PATH, stringifyIndex(index)], ...generateSitePages(index)]);
+  const orphans = (paths) => [...paths].filter((relative) => GENERATED_PAGE_PATTERN.test(relative) && !files.has(relative));
+  return { files, orphans };
 };
 
 /* Every generated file for an index, keyed by repository path, sorted. */

@@ -7,40 +7,37 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { buildLocalIndex, stringifyIndex } from "./content.js";
-import { GENERATED_PAGE_PATTERN, generateSitePages } from "./site-pages.js";
+import { buildLocalIndex, COLLECTIONS } from "./content.js";
+import { generateArtifacts, INDEX_PATH } from "./site-pages.js";
 
-export const INDEX_PATH = "assets/data/content-index.json";
+export { INDEX_PATH };
 
 export const collectGenerated = async (repoRoot) => {
   const index = await buildLocalIndex(repoRoot);
-  const files = new Map([[INDEX_PATH, stringifyIndex(index)], ...generateSitePages(index)]);
-  return { index, files };
+  return { index, ...generateArtifacts(index) };
 };
 
-/* Generated entry directories that no longer correspond to an entry. */
-const orphanPages = async (repoRoot, files) => {
-  const orphans = [];
-  for (const collection of ["writing", "books", "photography"]) {
-    const directory = path.join(repoRoot, collection);
+/* Generated entry directories on disk that no longer correspond to an entry. */
+const orphanPages = async (repoRoot, orphans) => {
+  const candidates = [];
+  for (const collection of COLLECTIONS) {
     let entries;
     try {
-      entries = await fs.readdir(directory, { withFileTypes: true });
+      entries = await fs.readdir(path.join(repoRoot, collection), { withFileTypes: true });
     } catch {
       continue;
     }
     for (const entry of entries) {
-      const relative = entry.isDirectory() ? `${collection}/${entry.name}/index.html` : `${collection}/${entry.name}`;
-      if (GENERATED_PAGE_PATTERN.test(relative) && !files.has(relative)) orphans.push(relative);
+      candidates.push(entry.isDirectory() ? `${collection}/${entry.name}/index.html` : `${collection}/${entry.name}`);
     }
   }
-  return orphans;
+  return orphans(candidates);
 };
 
 const normalize = (value) => value.replaceAll("\r\n", "\n");
 
 export const checkGenerated = async (repoRoot) => {
-  const { files } = await collectGenerated(repoRoot);
+  const { files, orphans } = await collectGenerated(repoRoot);
   const stale = [];
   for (const [relative, content] of files) {
     let current = null;
@@ -51,12 +48,12 @@ export const checkGenerated = async (repoRoot) => {
     }
     if (current === null || normalize(current) !== content) stale.push(relative);
   }
-  const orphans = await orphanPages(repoRoot, files);
-  return { stale, orphans, ok: stale.length === 0 && orphans.length === 0 };
+  const orphaned = await orphanPages(repoRoot, orphans);
+  return { stale, orphans: orphaned, ok: stale.length === 0 && orphaned.length === 0 };
 };
 
 export const writeGenerated = async (repoRoot) => {
-  const { files } = await collectGenerated(repoRoot);
+  const { files, orphans } = await collectGenerated(repoRoot);
   const written = [];
   for (const [relative, content] of files) {
     const absolute = path.join(repoRoot, relative);
@@ -72,7 +69,7 @@ export const writeGenerated = async (repoRoot) => {
     written.push(relative);
   }
   const removed = [];
-  for (const relative of await orphanPages(repoRoot, files)) {
+  for (const relative of await orphanPages(repoRoot, orphans)) {
     await fs.rm(path.join(repoRoot, path.dirname(relative)), { recursive: true, force: true });
     removed.push(relative);
   }

@@ -16,7 +16,9 @@ updates:
       minor-and-patch:
         patterns: ["*"]
         update-types: [minor, patch]
+  # The composite setup action pins setup-node too; list its directory so it
+  # is bumped with the workflows.
   - package-ecosystem: github-actions
-    directory: /
+    directories: ["/", "/.github/actions/setup"]
     schedule:
       interval: weekly

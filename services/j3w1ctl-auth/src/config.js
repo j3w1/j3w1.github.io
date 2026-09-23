@@ -1,3 +1,4 @@
+import { SITE_ORIGIN } from "./constants.js";
 import { unavailable } from "./errors.js";
 import {
   PRODUCTION_REQUIRED_NAMES,
@@ -47,7 +48,7 @@ export const loadConfig = (environment = process.env) => {
   const production = environmentName === "production";
   const preview = environmentName === "preview";
   const parsedSiteOrigin = parseOrigin(clean(environment.CMS_SITE_ORIGIN));
-  const siteOrigin = production && parsedSiteOrigin !== "https://j3w1.github.io" ? "" : parsedSiteOrigin;
+  const siteOrigin = production && parsedSiteOrigin !== SITE_ORIGIN ? "" : parsedSiteOrigin;
   const callback = parseCallback(clean(environment.GITHUB_CALLBACK_URL), { production });
   const developmentOrigins = production || preview
     ? []

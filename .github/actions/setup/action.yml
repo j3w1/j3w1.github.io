@@ -1,0 +1,19 @@
+name: setup
+description: Node 24 with both packages' dependencies installed from their lockfiles.
+
+# Checkout stays in each job: a local action cannot be read before the
+# repository is on disk.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 24
+        cache: npm
+        cache-dependency-path: |
+          package-lock.json
+          services/j3w1ctl-auth/package-lock.json
+    - run: npm ci
+      shell: bash
+    - run: npm --prefix services/j3w1ctl-auth ci
+      shell: bash
