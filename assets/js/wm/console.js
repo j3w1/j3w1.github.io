@@ -91,7 +91,7 @@ export const RESUME_LOG = [
 
 export const TIMING = Object.freeze({ bannerMs: 320, lineMs: 108, settleMs: 420, shutdownLineMs: 90 });
 
-export const renderLine = ([kind, text]) => {
+const renderLine = ([kind, text]) => {
   const item = document.createElement("li");
   item.className = `greeter-line greeter-line-${kind}`;
   if (kind === "ok" || kind === "start") {

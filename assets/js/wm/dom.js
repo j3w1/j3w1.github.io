@@ -31,8 +31,6 @@ export const readPx = (name, fallback) => {
   return Number.isFinite(value) ? value : fallback;
 };
 
-export const readGap = () => readPx("--gap", 3);
-
 /* i3-gaps: inner between tiles, outer added at the workspace edge. */
 export const readGaps = () => ({ inner: readPx("--gaps-inner", 14), outer: readPx("--gaps-outer", -2) });
 

@@ -72,7 +72,7 @@ export const installFeatures = (ctx) => {
       const css = readGaps();
       const current = state().gaps[which] ?? css[which];
       const next = verb === "set" ? value : current + (verb === "plus" ? value : -value);
-      state().gaps[which] = Math.max(which === "inner" ? 0 : -20, Math.min(next, 80));
+      state().gaps[which] = tree.clamp(next, which === "inner" ? 0 : -20, 80);
       wm().applyGaps();
       paint({ announceText: `${which} gaps ${state().gaps[which]}`, toast: { text: `gaps ${which} ${state().gaps[which]}`, key: "gaps" } });
       return true;

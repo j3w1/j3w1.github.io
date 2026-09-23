@@ -5,10 +5,11 @@
    percentage, because a fabricated number sitting three inches above a portfolio
    costs more credibility than the widget is worth. */
 
-import { element } from "../dom.js?v=20260923";
+import { element, listen } from "../dom.js?v=20260923";
+import { clamp } from "../tree.js?v=20260923";
 
 const bar = (ratio, width = 20) => {
-  const filled = Math.max(0, Math.min(width, Math.round(ratio * width)));
+  const filled = clamp(Math.round(ratio * width), 0, width);
   return `[${"|".repeat(filled)}${" ".repeat(width - filled)}]`;
 };
 
@@ -97,13 +98,13 @@ export const createHtop = ({ body, wm }) => {
       raf = 0;
     }
   };
-  document.addEventListener("visibilitychange", onVisibility);
+  const unlisten = listen(document, "visibilitychange", onVisibility);
 
   return {
     destroy: () => {
       clearInterval(timer);
       if (raf) cancelAnimationFrame(raf);
-      document.removeEventListener("visibilitychange", onVisibility);
+      unlisten();
       view.remove();
     },
   };

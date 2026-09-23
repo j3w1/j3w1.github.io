@@ -2,19 +2,18 @@
    uses, so the handoff from fallback layout to window manager is sub-pixel. */
 
 import { makeCon, makeLeaf, normalize } from "./tree.js?v=20260923";
+import { WORKSPACES } from "../route.js?v=20260923";
+
+/* The workspace list is route.js's; it is re-exported so the window manager
+   keeps one import for its defaults. (A bare `export … from` would escape the
+   preload list and the eager-graph budget, which follow import lines.) */
+export { WORKSPACES };
 
 export const STATE_VERSION = 3;
 
-export const WORKSPACES = Object.freeze([
-  "home",
-  "writing",
-  "projects",
-  "photography",
-  "books",
-  "elsewhere",
-  "about",
-]);
-
+/* Who the desktop belongs to, as the machine's own tools print it. */
+export const IDENTITY = Object.freeze({ user: "j3w1", host: "manjaro", home: "/home/j3w1", kernel: "6.12.4-1-MANJARO" });
+export const USER_AT_HOST = `${IDENTITY.user}@${IDENTITY.host}`;
 
 /* Index 0 is the default: a plain black desktop, with the j3w1-i3 wordmark. */
 export const WALLPAPERS = Object.freeze(["black", "ember", "ridge"]);
@@ -32,9 +31,6 @@ const LAYOUTS = Object.freeze({
 
 export const defaultWindowIds = () =>
   WORKSPACES.flatMap((name) => LAYOUTS[name][1].map(([id]) => id));
-
-export const homeWorkspaceFor = (id) =>
-  WORKSPACES.find((name) => LAYOUTS[name][1].some(([candidate]) => candidate === id)) ?? "home";
 
 const buildWorkspace = (name, { mobile }) => {
   const [layout, windows] = LAYOUTS[name];
@@ -68,7 +64,7 @@ export const defaultState = ({ mobile = false } = {}) => ({
 });
 
 /* The root layout a workspace gets by default at this viewport. */
-export const defaultLayoutFor = (name, { mobile }) => {
+const defaultLayoutFor = (name, { mobile }) => {
   const [layout, windows] = LAYOUTS[name];
   return mobile && windows.length > 1 ? "tabbed" : layout;
 };

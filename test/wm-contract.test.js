@@ -9,6 +9,8 @@ import path from "node:path";
 import test from "node:test";
 
 import { collectTokens } from "../scripts/lib/cache-tokens.mjs";
+import { COLLECTIONS } from "../assets/js/content-index.js";
+import { WORKSPACES } from "../assets/js/route.js";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const read = (...parts) => fs.readFile(path.join(repoRoot, ...parts), "utf8");
@@ -85,7 +87,7 @@ test("every declared window exists, is focusable, and has a tab title", async ()
 
 test("every workspace has a layer, a decoration surface, and an empty state", async () => {
   const html = await read("index.html");
-  const names = ["home", "writing", "projects", "photography", "books", "elsewhere", "about"];
+  const names = WORKSPACES;
   for (const name of names) {
     assert.match(html, new RegExp(`data-wm-layer="${name}"`), `${name} has no layer`);
   }
@@ -97,7 +99,7 @@ test("every workspace has a layer, a decoration surface, and an empty state", as
 
 test("content hooks stay unique so the renderer cannot target two windows", async () => {
   const html = await read("index.html");
-  for (const collection of ["writing", "books", "photography"]) {
+  for (const collection of COLLECTIONS) {
     for (const hook of ["data-content-list", "data-content-detail"]) {
       const count = (html.match(new RegExp(`${hook}="${collection}"`, "g")) ?? []).length;
       assert.equal(count, 1, `${hook}="${collection}" appears ${count} times; expected 1`);
@@ -302,7 +304,6 @@ test("404.html mirrors the workspace list and slug pattern it cannot import", as
   /* The rescue script runs before any module could load, so it carries its
      own copies; these hold them to the originals. */
   const notFound = await read("404.html");
-  const { WORKSPACES } = await import("../assets/js/route.js");
   const { SLUG_PATTERN } = await import("../services/j3w1ctl-auth/src/content.js");
   const workspaces = JSON.parse(notFound.match(/const workspaces = (\[[^\]]*\]);/)[1]);
   assert.deepEqual(workspaces, [...WORKSPACES]);

@@ -26,7 +26,7 @@ const DIRECTIONS = Object.freeze({
 });
 
 /* The prompt i3 shows in the bar for each mode, from the original config. */
-export const MODE_PROMPTS = Object.freeze({
+const MODE_PROMPTS = Object.freeze({
   resize: "resize",
   system: "(l)ock, (e)xit, switch_(u)ser, (s)uspend, (h)ibernate, (r)eboot, (Shift+s)hutdown",
   gaps: "Gaps: (o) outer, (i) inner",

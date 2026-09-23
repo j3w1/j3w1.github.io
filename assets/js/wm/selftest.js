@@ -5,6 +5,7 @@
 import * as tree from "./tree.js?v=20260923";
 import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260923";
 import { defaultState, defaultWindowIds, WORKSPACES } from "./defaults.js?v=20260923";
+import { COLLECTIONS } from "../content-index.js?v=20260923";
 
 const BOUNDS = { x: 0, y: 0, w: 1200, h: 800 };
 
@@ -96,7 +97,7 @@ export const runSelfTest = () => {
   });
 
   check("content hooks resolve to exactly one element", () => {
-    for (const collection of ["writing", "books", "photography"]) {
+    for (const collection of COLLECTIONS) {
       assert(
         document.querySelectorAll(`[data-content-list="${collection}"]`).length === 1,
         `${collection} list is not unique`,

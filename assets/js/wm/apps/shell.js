@@ -10,8 +10,9 @@ import { renderAst } from "../../content-renderer.js?v=20260824";
 import { loadContentIndex } from "../../content-index.js?v=20260923";
 import { BOOT_BANNER, BOOT_LOG } from "../console.js?v=20260923";
 import { element } from "../dom.js?v=20260923";
+import { IDENTITY, USER_AT_HOST } from "../defaults.js?v=20260923";
 
-const HOME = "/home/j3w1";
+const HOME = IDENTITY.home;
 
 /* whoami and README are the home terminal's authored output, generated from
    content/site.json; the shell reads them from the page rather than carrying
@@ -67,8 +68,6 @@ const WM_KEYS = [
   ["?", "the full key map"],
 ];
 
-const loadIndex = loadContentIndex;
-
 const readProjects = () =>
   [...document.querySelectorAll("[data-project-row]")].map((row) => ({
     slug: row.dataset.projectRow,
@@ -85,8 +84,8 @@ const readLinks = () =>
   }));
 
 /* The tree is rebuilt on demand so published content appears without a reload. */
-const HOSTNAME = "manjaro";
-const KERNEL = "6.12.4-1-MANJARO";
+const HOSTNAME = IDENTITY.host;
+const KERNEL = IDENTITY.kernel;
 
 /* The original machine's dotfiles, trimmed, served as plain files and fetched
    the first time one is read. */
@@ -121,7 +120,7 @@ const dotfileTree = () => {
 };
 
 const buildTree = async () => {
-  const index = await loadIndex();
+  const index = await loadContentIndex();
   const collection = (name) => index?.collections?.[name] ?? [];
   const entries = (name) =>
     Object.fromEntries(collection(name).map((entry) => [`${entry.slug}.md`, { kind: name, entry }]));
@@ -571,7 +570,7 @@ export const createShell = ({ body, statusline, wm, close, title }) => {
   const updateStatus = () => {
     const fill = statusline?.querySelector(".status-fill");
     if (fill) fill.textContent = promptPath();
-    if (title) title.textContent = `j3w1@manjaro: ${promptPath()}`;
+    if (title) title.textContent = `${USER_AT_HOST}: ${promptPath()}`;
   };
 
   const onBufferClick = (event) => {

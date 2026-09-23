@@ -1,18 +1,11 @@
 import { renderAst } from "./content-renderer.js?v=20260824";
 import { closePhotoViewer, isPhotoViewerBackdropClick } from "./photo-viewer.js?v=20260825b";
-import { loadContentIndex } from "./content-index.js?v=20260923";
-import { parseRoute } from "./route.js?v=20260923";
+import { COLLECTIONS as collections, loadContentIndex } from "./content-index.js?v=20260923";
+import { onRouteChange, parseRoute } from "./route.js?v=20260923";
+import { element } from "./wm/dom.js?v=20260923";
 
-const collections = ["writing", "books", "photography"];
 let index;
 let photoReturnFocus = null;
-
-const element = (tag, className, text) => {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-};
 
 const setState = (collection, message, unavailable = false) => {
   document.querySelectorAll(`[data-content-status="${collection}"]`).forEach((target) => { target.textContent = message; });
@@ -34,11 +27,6 @@ const metaLine = (collection, entry) => {
   return [entry.author, entry.year, entry.status, entry.rating ? `${entry.rating}/5` : null].filter(Boolean).join(" · ");
 };
 
-const hashRoute = () => {
-  const { workspace, slug } = parseRoute(location.hash);
-  return { collection: workspace, slug };
-};
-
 /* Ask the window manager to surface the reader without depending on it: with no
    window manager present the event is simply unobserved. */
 const openMobileDetail = (collection) => {
@@ -48,9 +36,8 @@ const openMobileDetail = (collection) => {
   }));
 };
 
-const selectRoute = () => {
+const selectRoute = ({ workspace: collection, slug } = parseRoute(location.hash)) => {
   if (!index) return;
-  const { collection, slug } = hashRoute();
   if (!collections.includes(collection)) return;
   const entries = index.collections[collection];
   document.querySelectorAll(`[data-content-entry="${collection}"]`).forEach((row) => {
@@ -179,8 +166,7 @@ document.addEventListener("keydown", (event) => {
     closePhoto();
   }
 }, true);
-window.addEventListener("hashchange", selectRoute);
-window.addEventListener("popstate", selectRoute);
+onRouteChange(selectRoute);
 
 const candidate = await loadContentIndex();
 if (candidate) {

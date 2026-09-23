@@ -2,7 +2,7 @@
    rect, returns where everything goes. No DOM, no measurement, no side effects
    beyond caching each node's rect for hit-testing. */
 
-import { isTabular, representativeLeaf } from "./tree.js?v=20260923";
+import { clamp, isTabular, representativeLeaf } from "./tree.js?v=20260923";
 
 export const GEOMETRY = Object.freeze({
   tabHeight: 23,
@@ -47,7 +47,7 @@ function layoutCon(con, rect, out, geometry) {
   con.rect = rect;
   const children = con.children;
   if (!children || !children.length) return;
-  const focus = Math.min(Math.max(con.focus ?? 0, 0), children.length - 1);
+  const focus = clamp(con.focus ?? 0, 0, children.length - 1);
 
   if (isTabular(con.layout)) {
     const tabbed = con.layout === "tabbed";
@@ -112,11 +112,13 @@ function layoutCon(con, rect, out, geometry) {
 }
 
 export const clampFloating = (rect, bounds, minVisible = 48) => {
+  /* The floor wins over the bound here (a window never shrinks below 160×96,
+     even in a narrower workspace), so these two are not clamp(). */
   const width = Math.max(Math.min(rect.w, bounds.w), 160);
   const height = Math.max(Math.min(rect.h, bounds.h), 96);
   return {
-    x: Math.round(Math.min(Math.max(rect.x, bounds.x - width + minVisible), bounds.x + bounds.w - minVisible)),
-    y: Math.round(Math.min(Math.max(rect.y, bounds.y), bounds.y + bounds.h - minVisible)),
+    x: Math.round(clamp(rect.x, bounds.x - width + minVisible, bounds.x + bounds.w - minVisible)),
+    y: Math.round(clamp(rect.y, bounds.y, bounds.y + bounds.h - minVisible)),
     w: Math.round(width),
     h: Math.round(height),
   };

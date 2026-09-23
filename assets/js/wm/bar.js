@@ -9,12 +9,13 @@
    disk usage, CPU load, temperature, network SSID, and system uptime.
    (navigator.storage.estimate() reports an origin quota, not a disk.) */
 
-import { element } from "./dom.js?v=20260923";
+import { element, listen } from "./dom.js?v=20260923";
 
 const FAST_MS = 1000;
 const SLOW_MS = 10000;
 
-const formatUptime = (ms) => {
+/* Session uptime as the bar and conky both print it. */
+export const formatUptime = (ms) => {
   const total = Math.floor(ms / 1000);
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
@@ -192,10 +193,12 @@ export const installBar = ({ container, modeNode, clockNode, workspaceLinks, lab
   build();
   start();
 
-  document.addEventListener("visibilitychange", onVisibility);
-  window.addEventListener("resize", onResize, { passive: true });
-  connection?.addEventListener?.("change", onConnection);
-  window.addEventListener("languagechange", onLanguage);
+  const cleanup = [
+    listen(document, "visibilitychange", onVisibility),
+    listen(window, "resize", onResize, { passive: true }),
+    listen(window, "languagechange", onLanguage),
+  ];
+  if (connection?.addEventListener) cleanup.push(listen(connection, "change", onConnection));
 
   navigator.getBattery?.().then((api) => {
     battery.api = api;
@@ -238,10 +241,7 @@ export const installBar = ({ container, modeNode, clockNode, workspaceLinks, lab
     refresh,
     destroy() {
       stop();
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("resize", onResize);
-      connection?.removeEventListener?.("change", onConnection);
-      window.removeEventListener("languagechange", onLanguage);
+      for (const remove of cleanup) remove();
     },
   };
 };

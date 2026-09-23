@@ -2,7 +2,8 @@
    written: a reload always restores a complete desktop, which bounds the worst
    case of any layout experiment to "press F5". */
 
-import { KEYS } from "./session.js?v=20260923";
+import { KEYS, storage } from "./session.js?v=20260923";
+import { listen } from "./dom.js?v=20260923";
 import { STATE_VERSION } from "./defaults.js?v=20260923";
 
 const stripNode = (node) => {
@@ -51,35 +52,33 @@ export const serialize = (state) => ({
 });
 
 export const load = () => {
+  const raw = storage.read(KEYS.layout, null);
+  if (!raw) return null;
   try {
-    const raw = localStorage.getItem(KEYS.layout);
-    if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed || parsed.version !== STATE_VERSION) return null;
-    return parsed;
+    return parsed && parsed.version === STATE_VERSION ? parsed : null;
   } catch {
     return null;
   }
 };
 
-export const clear = () => {
-  try {
-    localStorage.removeItem(KEYS.layout);
-  } catch {
-    /* nothing to do: the layout simply starts from defaults next time */
-  }
-};
+/* The layout simply starts from defaults next time. */
+export const clear = () => storage.remove(KEYS.layout);
 
 export const createSaver = (getState, delay = 400) => {
   let timer = 0;
   const flush = () => {
     if (timer) clearTimeout(timer);
     timer = 0;
+    /* A quota or private mode fails the write quietly: the desktop still works,
+       it just will not persist. */
+    let snapshot;
     try {
-      localStorage.setItem(KEYS.layout, JSON.stringify(serialize(getState())));
+      snapshot = JSON.stringify(serialize(getState()));
     } catch {
-      /* quota or private mode: the desktop still works, it just will not persist */
+      return;
     }
+    storage.write(KEYS.layout, snapshot);
   };
 
   /* Writes are debounced, so a reload or navigation within the debounce window
@@ -90,9 +89,11 @@ export const createSaver = (getState, delay = 400) => {
   const onVisibility = () => {
     if (document.visibilityState === "hidden") flushIfPending();
   };
-  addEventListener("pagehide", flushIfPending);
-  addEventListener("beforeunload", flushIfPending);
-  document.addEventListener("visibilitychange", onVisibility);
+  const cleanup = [
+    listen(window, "pagehide", flushIfPending),
+    listen(window, "beforeunload", flushIfPending),
+    listen(document, "visibilitychange", onVisibility),
+  ];
 
   const save = () => {
     if (timer) clearTimeout(timer);
@@ -101,9 +102,7 @@ export const createSaver = (getState, delay = 400) => {
   save.flush = flush;
   save.destroy = () => {
     flushIfPending();
-    removeEventListener("pagehide", flushIfPending);
-    removeEventListener("beforeunload", flushIfPending);
-    document.removeEventListener("visibilitychange", onVisibility);
+    for (const remove of cleanup) remove();
   };
   return save;
 };

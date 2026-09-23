@@ -5,19 +5,12 @@
 
 import { createWm } from "./wm/boot.js?v=20260923";
 import { isEditable } from "./wm/dom.js?v=20260923";
-import { parseRoute } from "./route.js?v=20260923";
+import { announce, installAnnouncer } from "./wm/a11y.js?v=20260923";
+import { IDENTITY } from "./wm/defaults.js?v=20260923";
+import { media } from "./wm/session.js?v=20260923";
+import { onRouteChange, parseRoute, WORKSPACES as workspaceNames } from "./route.js?v=20260923";
 
-const workspaceNames = [
-  "home",
-  "writing",
-  "projects",
-  "photography",
-  "books",
-  "elsewhere",
-  "about",
-];
-
-const HOME_PATH = "/home/j3w1";
+const HOME_PATH = IDENTITY.home;
 /* The generated <title> is the home workspace's; other workspaces prefix it. */
 const homeTitle = document.title;
 
@@ -34,7 +27,9 @@ const workspaceSections = new Map(
 
 const workspaceLinks = [...document.querySelectorAll("[data-workspace-link]")];
 const statusWorkspace = document.querySelector("#status-workspace");
-const announcer = document.querySelector("#workspace-announcer");
+/* Installed before boot so announcements work on the fallback path too; the
+   window manager installs the same node again. */
+installAnnouncer(document.querySelector("#workspace-announcer"));
 const skipLink = document.querySelector("[data-skip-link]");
 const clock = document.querySelector("#local-clock");
 const helpDialog = document.querySelector("#keyboard-help");
@@ -43,7 +38,6 @@ const commandForm = document.querySelector("#command-form");
 const commandInput = document.querySelector("#command-input");
 const commandPrefix = document.querySelector("#command-prefix");
 const commandResults = document.querySelector("#command-results");
-const mobileQuery = window.matchMedia("(max-width: 767px)");
 
 let activeWorkspace = "home";
 let launcherReturnFocus = null;
@@ -57,7 +51,7 @@ const workspaceFromHash = () => parseRoute(window.location.hash).workspace;
 
 const activateWorkspace = (
   name,
-  { announce = false, moveFocus = false } = {},
+  { announce: shouldAnnounce = false, moveFocus = false } = {},
 ) => {
   const nextName = workspaceNames.includes(name) ? name : "home";
   activeWorkspace = nextName;
@@ -77,7 +71,7 @@ const activateWorkspace = (
     else link.removeAttribute("aria-current");
   });
 
-  if (mobileQuery.matches) {
+  if (media.mobile.matches) {
     document
       .querySelector(`.workspace-strip [data-workspace-link="${nextName}"]`)
       ?.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -99,7 +93,7 @@ const activateWorkspace = (
     if (id) wm.focusWindow(id);
     else workspaceSections.get(nextName)?.focus({ preventScroll: true });
   }
-  if (announce && announcer) announcer.textContent = `${nextName} workspace active`;
+  if (shouldAnnounce) announce(`${nextName} workspace active`);
 };
 
 const navigateToWorkspace = (
@@ -115,10 +109,6 @@ const navigateToWorkspace = (
   }
 
   activateWorkspace(name, { announce: true, moveFocus });
-};
-
-const syncWorkspaceFromLocation = () => {
-  activateWorkspace(workspaceFromHash() ?? "home", { announce: true });
 };
 
 document.addEventListener("click", (event) => {
@@ -137,8 +127,7 @@ skipLink?.addEventListener("click", (event) => {
   workspaceSections.get(activeWorkspace)?.focus({ preventScroll: true });
 });
 
-window.addEventListener("popstate", syncWorkspaceFromLocation);
-window.addEventListener("hashchange", syncWorkspaceFromLocation);
+onRouteChange(({ workspace }) => activateWorkspace(workspace ?? "home", { announce: true }));
 
 /* Tabbing into a window makes it the focused one, so keyboard navigation and
    the window manager's idea of focus never disagree. */
@@ -407,7 +396,7 @@ const executeCommand = (index = selectedCommandIndex) => {
   }
   if (typed && wm) {
     const result = wm.runCommand(typed);
-    if (result) announcer && (announcer.textContent = `i3-msg: ${result}`);
+    if (result) announce(`i3-msg: ${result}`);
   }
 };
 
