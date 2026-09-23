@@ -139,6 +139,11 @@ test("the pass-through copies roles and scales under their canonical names", asy
   const lock = JSON.parse(await read(THEME_LOCK_FILE));
   const vendor = await read(...THEME_VENDOR_FILE.split("/"));
   const mapped = declarations(buildThemeCss(vendor, lock));
+  /* Roles only: the theme marks its primitives inspection-only. The ANSI slots
+     come from the terminal roles, which carry the same heritage values. */
+  for (const [legacy, token] of LEGACY_THEME_MAP) {
+    assert.doesNotMatch(token, /^--color-primitive-/, legacy + " maps to a primitive");
+  }
   for (const token of THEME_PASSTHROUGH) {
     assert.doesNotMatch(token, /^--color-primitive-/, token + " is a primitive");
     assert.ok(mapped.has(token), token + " missing from the generated block");
