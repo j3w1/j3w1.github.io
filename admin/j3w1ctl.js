@@ -28,7 +28,7 @@ const ensureStyle = () => {
   const link = document.createElement("link");
   link.id = "j3w1ctl-style";
   link.rel = "stylesheet";
-  link.href = "/admin/j3w1ctl.css?v=20260831";
+  link.href = "/admin/j3w1ctl.css?v=20260923";
   document.head.append(link);
 };
 

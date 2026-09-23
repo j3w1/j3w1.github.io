@@ -3,21 +3,23 @@
  * Everything the window manager draws lives here; site.css keeps the site's
  * appearance and is left alone. All window-manager geometry is scoped under
  * html.wm-active, which is added only after a successful synchronous boot, so
- * "no JavaScript", "plain mode" and "the window manager threw" all collapse into
- * the single fallback selector html:not(.wm-active).
+ * "no JavaScript" and "the window manager threw" both collapse into the single
+ * fallback selector html:not(.wm-active).
  *
- * No new colours: every value below comes from site.css's :root palette.
+ * No new colours: every value below is a theme token or a legacy alias from
+ * site.css's generated :root block; the stacking order lives there too.
  */
 
 :root {
   --wm-tab-height: 23px;
   --wm-stack-row: 23px;
   --wm-grip: 6px;
-  --wm-z-tile: 1;
-  --wm-z-deco: 60;
-  --wm-z-full: 70;
-  --wm-z-dunst: 800;
-  --wm-z-curtain: 900;
+  /* feh's wallpapers, in theme surfaces: the ember glow is chrome-alt fading
+     through chrome, the ridge is the marquee tint ruled over a raised ground. */
+  --wallpaper-ember: radial-gradient(130% 95% at 50% 0%, var(--chrome-alt) 0%, var(--chrome) 48%, var(--desktop) 100%);
+  --wallpaper-ridge:
+    repeating-linear-gradient(180deg, var(--color-interaction-marquee) 0 2px, transparent 2px 88px),
+    radial-gradient(120% 100% at 18% 0%, var(--surface-raised) 0%, var(--chrome) 55%, var(--desktop) 100%);
 }
 
 /* ---------------------------------------------------------------- wallpaper */
@@ -30,15 +32,8 @@
   pointer-events: none;
 }
 
-html[data-wallpaper="ember"] .wallpaper {
-  background: radial-gradient(130% 95% at 50% 0%, #1a0a0a 0%, #0b0505 48%, var(--desktop) 100%);
-}
-
-html[data-wallpaper="ridge"] .wallpaper {
-  background:
-    repeating-linear-gradient(180deg, rgb(145 20 16 / 6%) 0 2px, transparent 2px 88px),
-    radial-gradient(120% 100% at 18% 0%, #200c0c 0%, #0a0505 55%, var(--desktop) 100%);
-}
+html[data-wallpaper="ember"] .wallpaper { background: var(--wallpaper-ember); }
+html[data-wallpaper="ridge"] .wallpaper { background: var(--wallpaper-ridge); }
 
 /* The desktop wordmark, set in a 4 KB bold face that holds exactly these six
    characters (see scripts/lib/fonts.mjs). */
@@ -195,7 +190,7 @@ html.wm-dragging * {
 }
 
 .wm-tab:focus-visible {
-  outline: 1px dashed var(--focus);
+  outline: var(--focus-ring);
   outline-offset: -3px;
 }
 
@@ -229,13 +224,13 @@ html.wm-dragging * {
   top: 0;
   left: 0;
   border: 1px dashed var(--focus);
-  background: rgb(145 20 16 / 12%);
+  background: var(--color-interaction-marquee);
   pointer-events: none;
 }
 
 html.wm-active .window.is-floating {
   border-color: var(--border-strong);
-  box-shadow: 0 6px 22px rgb(0 0 0 / 55%);
+  box-shadow: var(--shadow-floating);
 }
 
 /* ----------------------------------------------- real title bar controls */
@@ -277,13 +272,6 @@ html.wm-active .window.is-floating {
 
 .wm-empty p { margin: 0 0 10px; }
 .wm-empty-title { color: var(--foreground-bright); }
-.wm-empty kbd {
-  padding: 1px 5px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--foreground-bright);
-  font: inherit;
-}
 
 .wm-restore {
   min-height: 32px;
@@ -389,8 +377,6 @@ html[data-bar="hide"] .desktop-shell {
   html[data-bar="hide"] .wm-bar { transition: none; }
 }
 
-.i3tray { display: flex; align-items: center; }
-
 /* j3w1ctl lives in the file manager's Network section now, so the anchor-shaped
    .place-row has to accept a real <button> too. */
 button.place-row {
@@ -412,12 +398,7 @@ button.place-row:disabled { color: var(--inactive); cursor: default; }
 
 /* The tray buttons were reading as one control: give each its own breathing
    room, a stronger divider, and space between glyph and label. */
-html.wm-active .system-status > * {
-  gap: 7px;
-  padding-inline: 11px;
-  border-left-color: var(--border-strong);
-}
-
+html.wm-active .system-status > *,
 html.wm-active .status-control {
   gap: 7px;
   padding-inline: 11px;
@@ -430,25 +411,27 @@ html.wm-active #power-menu-toggle[aria-expanded="true"] {
 }
 
 /* urgent_workspace from the config: border color0, background fg, text color0. */
-.workspace-link.is-urgent { background: var(--xfg); color: var(--color0); }
+.workspace-link.is-urgent { background: var(--foreground); color: var(--color0); }
 .workspace-link.is-urgent::after { margin-left: 4px; content: "!"; }
 
 /* conky: own_window_transparent in the config, over a wallpaper. Here it can
    float over windows, so it keeps a translucent ground rather than bleeding
    the window beneath through its figures. */
-html.wm-active .conky-window { background: rgb(12 9 9 / 90%); border-color: transparent; }
+html.wm-active .conky-window { background: var(--color-surface-backdrop); border-color: transparent; }
 .conky-window .app-statusline { display: none; }
-.conky { padding: 14px 16px; color: var(--xfg); font-size: 11px; line-height: 1.5; }
+/* The conkyrc's rules and labels were #AE1914, a heritage-only value; color1
+   is the nearest approved role. */
+.conky { padding: 14px 16px; color: var(--foreground); font-size: var(--font-size-caption); line-height: 1.5; }
 .conky p { margin: 0; }
-.conky-date { padding-bottom: 8px; border-bottom: 1px solid #ae1914; margin-bottom: 14px; text-align: right; }
-.conky-weekday { color: #ae1914; font-size: 16px; }
+.conky-date { padding-bottom: 8px; border-bottom: 1px solid var(--color1); margin-bottom: 14px; text-align: right; }
+.conky-weekday { color: var(--color1); font-size: var(--font-size-h2); }
 .conky-day { font-size: 38px; line-height: 1; }
-.conky-month { color: #ae1914; font-size: 18px; }
-.conky-year { font-size: 20px; }
+.conky-month { color: var(--color1); font-size: 18px; }
+.conky-year { font-size: var(--font-size-h1); }
 .conky-row { display: flex; justify-content: space-between; gap: 12px; padding-left: 24px; }
-.conky-label { color: #ae1914; }
-.conky-strong { color: var(--xfg); font-weight: 700; }
-.conky-value { color: var(--xfg); }
+.conky-label { color: var(--color1); }
+.conky-strong { color: var(--foreground); font-weight: 700; }
+.conky-value { color: var(--foreground); }
 .conky-sections { display: flex; flex-direction: column; gap: 2px; }
 .conky-foot { margin-top: 14px; text-align: right; }
 .conky-foot .conky-row { justify-content: flex-end; padding-left: 0; }
@@ -474,8 +457,9 @@ html.wm-active .conky-window { background: rgb(12 9 9 / 90%); border-color: tran
 /* dunstrc geometry "0x4-25+25": top right, 25px in — but 25px *below the
    title-bar row* of a window touching the top edge, so a toast lands in that
    window's body and never on its minimize / maximize / close buttons (the
-   reason toasts once lived bottom right). Frame 1px #AE1914, separator fg,
-   padding 8/10, transparency 15. */
+   reason toasts once lived bottom right). Frame 1px (the overlay border role
+   stands in for the dunstrc's heritage red), separator fg, padding 8/10,
+   transparency 15. */
 .dunst {
   position: fixed;
   z-index: var(--wm-z-dunst);
@@ -494,27 +478,27 @@ html.wm-active .conky-window { background: rgb(12 9 9 / 90%); border-color: tran
   max-width: 100%;
   flex-direction: column;
   padding: 8px 10px;
-  border: 1px solid #ae1914;
+  border: 1px solid var(--color-border-overlay);
   background: var(--color0);
-  color: var(--xfg);
+  color: var(--foreground);
   opacity: 0.85;
   overflow: hidden;
   pointer-events: auto;
-  font-size: 13px;
+  font-size: var(--font-size-ui-md);
   line-height: 1.35;
 }
 
-.dunst-toast + .dunst-toast { border-top: 1px solid var(--xfg); }
+.dunst-toast + .dunst-toast { border-top: 1px solid var(--foreground); }
 .dunst-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dunst-body { color: var(--color2); white-space: pre-line; }
-.dunst-body[hidden] { display: none; }
 
-/* urgency_low: bg color15, black text (the config's color0 on color15 sits
-   just under the contrast floor). urgency_critical: #DC282E / #F9FAF9, no timeout. */
-.dunst-toast.is-low { background: var(--color15); color: #000; opacity: 0.95; }
-.dunst-toast.is-low .dunst-body { color: #1a0505; }
-.dunst-toast.is-critical { border-color: #f9faf9; background: #dc282e; color: #f9faf9; opacity: 1; }
-.dunst-toast.is-critical .dunst-body { color: #f9faf9; }
+/* urgency_low is the neutral status fill (color15 with black text: the
+   config's color0 on color15 sits just under the contrast floor);
+   urgency_critical is the danger fill, no timeout. */
+.dunst-toast.is-low { background: var(--color-status-neutral-fill); color: var(--color-status-neutral-on-fill); opacity: 0.95; }
+.dunst-toast.is-low .dunst-body { color: var(--color-status-neutral-on-fill); }
+.dunst-toast.is-critical { border-color: var(--color-status-danger-on-fill); background: var(--color-status-danger-fill); color: var(--color-status-danger-on-fill); opacity: 1; }
+.dunst-toast.is-critical .dunst-body { color: var(--color-status-danger-on-fill); }
 
 /* ----------------------------------------------------------------- greeter */
 
@@ -540,7 +524,6 @@ html.wm-active .conky-window { background: rgb(12 9 9 / 90%); border-color: tran
   gap: 0;
 }
 
-.greeter[hidden] { display: none; }
 
 /* The pre-paint script sets data-boot before greeter.js has loaded, so for a
    few frames the desktop would paint and then be covered. This curtain paints
@@ -566,7 +549,6 @@ html[data-boot] .desktop-shell { pointer-events: none; }
   color: var(--muted);
 }
 
-.greeter-boot[hidden] { display: none; }
 
 .greeter-banner {
   margin: 0 0 10px;
@@ -583,7 +565,6 @@ html[data-boot] .desktop-shell { pointer-events: none; }
   padding: 24px;
 }
 
-.greeter-login-screen[hidden] { display: none; }
 
 .greeter-panel {
   width: min(320px, 100%);
@@ -648,7 +629,7 @@ html[data-boot] .desktop-shell { pointer-events: none; }
    "[ OK ]" and the log stops looking like a real console. */
 .greeter-ok,
 .greeter-pending { white-space: pre; }
-.greeter-ok { color: #7fbf7a; }
+.greeter-ok { color: var(--color-status-success-text); }
 .greeter-pending { color: var(--quiet); }
 
 .greeter-hint {
@@ -661,7 +642,6 @@ html[data-boot] .desktop-shell { pointer-events: none; }
   text-align: center;
 }
 
-.greeter-hint[hidden] { display: none; }
 
 /* The login panel waits for a real click or keypress, so keys must not reach
    the desktop underneath while it is up. */
@@ -678,7 +658,7 @@ html.wm-greeting .desktop-shell { pointer-events: none; }
 .greeter[data-phase="sleep"],
 .greeter[data-phase="off"] {
   z-index: calc(var(--wm-z-curtain) + 1);
-  background: #000;
+  background: var(--desktop);
   cursor: default;
 }
 
@@ -699,13 +679,12 @@ html.wm-greeting .desktop-shell { pointer-events: none; }
 }
 
 .greeter-power:hover,
-.greeter-power:focus-visible { border-color: var(--foreground-bright); color: var(--foreground-bright); outline: 0; }
-.greeter-power[hidden] { display: none; }
+.greeter-power:focus-visible { border-color: var(--foreground-bright); color: var(--foreground-bright); outline: var(--focus-ring); outline-offset: 4px; }
 
 /* ---------------------------------------------------------------- i3lock */
 
-.lock { background: rgb(5 3 3 / 94%); gap: 6px; }
-.lock[hidden] { display: none; }
+/* i3lock paints an opaque screen; the session beneath is hidden, not dimmed. */
+.lock { background: var(--desktop); gap: 6px; }
 
 .lock-ring {
   width: 96px;
@@ -752,7 +731,7 @@ html.wm-locked .desktop-shell { pointer-events: none; }
 .neofetch-info dd { margin: 0; color: var(--prose); }
 .neofetch-swatches { display: flex; margin-top: 10px; }
 .neofetch-swatch { width: 22px; height: 12px; }
-.neofetch-swatch.s0 { background: #2b0a0a; }
+.neofetch-swatch.s0 { background: var(--color0); }
 .neofetch-swatch.s1 { background: var(--inactive); }
 .neofetch-swatch.s2 { background: var(--selection-dark); }
 .neofetch-swatch.s3 { background: var(--selection); }
@@ -775,16 +754,24 @@ html.wm-locked .desktop-shell { pointer-events: none; }
 .feh-thumb.is-selected { border-color: var(--focus); color: var(--prose); }
 .feh-preview { display: block; height: 74px; border: 1px solid var(--border); }
 .feh-preview.wallpaper-black { background: var(--desktop); }
-.feh-preview.wallpaper-ember { background: radial-gradient(130% 95% at 50% 0%, #1a0a0a 0%, #0b0505 48%, var(--desktop) 100%); }
-.feh-preview.wallpaper-ridge { background: repeating-linear-gradient(180deg, rgb(145 20 16 / 10%) 0 2px, transparent 2px 14px), #0a0505; }
+.feh-preview.wallpaper-ember { background: var(--wallpaper-ember); }
+/* The ridge repeats every 88px; a 74px thumbnail shows it at a tighter pitch. */
+.feh-preview.wallpaper-ridge { background: repeating-linear-gradient(180deg, var(--color-interaction-marquee) 0 2px, transparent 2px 14px), var(--chrome); }
 .feh-label { display: block; margin-top: 5px; }
 
-/* --------------------------------------- fallback: no JS, plain, boot failed */
+/* ---------------------------------------- before boot, and when it never comes */
 
+/* Until the window manager has laid the windows out, the routed workspace's
+   windows sit in a static grid with i3's gaps. Document mode (no JavaScript,
+   or a boot that failed) is site.css's: it stacks the same windows and needs
+   only the padding from here. */
 html:not(.wm-active) .workspace-layer {
+  padding: max(0px, calc(var(--gaps-inner) + var(--gaps-outer)));
+}
+
+html.js:not(.wm-active):not([data-wm="off"]) .workspace-layer {
   display: grid;
   gap: var(--gaps-inner);
-  padding: max(0px, calc(var(--gaps-inner) + var(--gaps-outer)));
 }
 
 html:not(.wm-active) .writing-grid,
@@ -805,31 +792,6 @@ html:not(.wm-active) .wm-empty {
   display: none;
 }
 
-/* Failure fallback, not a mode anyone chooses: when JavaScript is off or the
-   window manager throws during boot, the site renders as one stacked scrolling
-   document — the progressive-enhancement layout it has always had. */
-html[data-wm="off"] body {
-  height: auto;
-  overflow: auto;
-}
-
-html[data-wm="off"] .desktop-shell {
-  height: auto;
-  overflow: visible;
-}
-
-/* A fragment link scrolls the bar out of view in a scrolling document, so the
-   workspace navigation has to stick. */
-html[data-wm="off"] .wm-bar {
-  position: sticky;
-  top: 0;
-}
-
-html[data-wm="off"].js .workspace:not(.is-active),
-.no-js .workspace {
-  display: block;
-}
-
 /* i3-nagbar: the session menu, as i3 answers $mod+Shift+E. */
 .nagbar {
   position: fixed;
@@ -845,7 +807,6 @@ html[data-wm="off"].js .workspace:not(.is-active),
   gap: 8px;
 }
 
-.nagbar[hidden] { display: none; }
 
 .nagbar-message {
   min-width: 0;
@@ -877,31 +838,6 @@ html[data-wm="off"].js .workspace:not(.is-active),
   .nagbar { flex-wrap: wrap; }
   .nagbar-message { flex-basis: 100%; }
   .nagbar-action { min-height: 40px; }
-}
-
-html[data-wm="off"] .workspace {
-  display: block;
-  min-height: auto;
-  margin-bottom: 18px;
-}
-
-html[data-wm="off"] .workspace-layer,
-.no-js .workspace-layer {
-  display: block;
-  height: auto;
-}
-
-html[data-wm="off"] .window,
-.no-js .window {
-  height: auto;
-  min-height: 12rem;
-  margin-bottom: var(--gap);
-}
-
-html[data-wm="off"] .project-detail,
-.no-js .project-detail {
-  display: block;
-  margin-bottom: 18px;
 }
 
 /* -------------------------------------------------------------- responsive */
@@ -949,7 +885,6 @@ html[data-wm="off"] .project-detail,
 
 @media (max-width: 420px) {
   .workspace-link { padding-inline: 9px; }
-  .tray-label { display: none; }
 }
 
 /* Landscape phones lose so much height to chrome that the app furniture has to

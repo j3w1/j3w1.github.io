@@ -126,7 +126,10 @@ test("the pre-paint decision script and session.js agree on storage keys", async
 test("the fallback path covers no-JS and a failed boot", async () => {
   const css = await read("assets", "css", "desktop.css");
   assert.match(css, /html:not\(\.wm-active\)/, "missing the unified fallback selector");
-  assert.match(css, /html\[data-wm="off"\] body/, "a failed boot must restore document scrolling");
+  /* Document mode lives in site.css so the static pages, which never load
+     desktop.css, share it. */
+  const siteCss = await read("assets", "css", "site.css");
+  assert.match(siteCss, /html\[data-wm="off"\] body/, "a failed boot must restore document scrolling");
 
   /* Plain mode was removed: it is not an i3 feature. The stacked layout survives
      only as the no-JS and boot-failure fallback, never as a mode anyone selects. */
@@ -138,7 +141,6 @@ test("the fallback path covers no-JS and a failed boot", async () => {
   assert.match(html, /id="power-menu"/, "the session menu replaces it");
 
   /* The old ad-hoc mobile tabs are gone; nothing may hide a window by that name. */
-  const siteCss = await read("assets", "css", "site.css");
   assert.doesNotMatch(siteCss, /is-mobile-active/, "stale mobile pane rules remain");
   assert.doesNotMatch(siteCss, /mobile-buffer-tabs/, "stale buffer tab rules remain");
 });

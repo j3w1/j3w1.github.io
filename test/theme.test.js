@@ -185,6 +185,28 @@ test("site.css commits the current generated block and keeps host variables auth
   assert.doesNotMatch(authored, /^\s*--color-/m, "theme tokens must come from the generated block");
 });
 
+/* Every colour the site paints resolves through the generated block. A literal
+   that slipped back in would silently keep an old surface after the next pin
+   moves the theme — exactly what the True Black / Rose upgrade found. The two
+   ::backdrop literals are Safari fallbacks and equal the token's own value. */
+test("no colour literal survives outside the generated theme block", async () => {
+  const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const allowed = new Set(["rgb(0 0 0 / 65%)"]);
+  const siteCss = (await read("assets", "css", "site.css")).toString("utf8");
+  const authored = siteCss.slice(siteCss.indexOf(THEME_END) + THEME_END.length);
+  const sheets = [
+    ["assets/css/site.css", authored],
+    ["assets/css/desktop.css", (await read("assets", "css", "desktop.css")).toString("utf8")],
+    ["admin/j3w1ctl.css", (await read("admin", "j3w1ctl.css")).toString("utf8")],
+  ];
+  for (const [name, css] of sheets) {
+    const literals = [...stripComments(css).matchAll(/#[0-9a-f]{3,8}\b|rgba?\([^)]*\)/gi)]
+      .map((match) => match[0])
+      .filter((literal) => !allowed.has(literal));
+    assert.deepEqual(literals, [], name + " paints colours the theme did not resolve");
+  }
+});
+
 test("theme parsing and validation fail closed", async () => {
   assert.throws(
     () => parseDefaultProperties(":root {\n  --color-a: #000000;\n  --color-a: #111111;\n}\n"),

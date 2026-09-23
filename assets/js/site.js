@@ -243,7 +243,7 @@ document.querySelector("#j3w1ctl-launch")?.addEventListener("click", async (even
   const button = event.currentTarget;
   button.disabled = true;
   try {
-    const module = await import("/admin/j3w1ctl.js?v=20260831");
+    const module = await import("/admin/j3w1ctl.js?v=20260923");
     await module.openJ3w1ctl({ mount: document.querySelector("#j3w1ctl-root"), launcher: button });
   } finally {
     button.disabled = false;

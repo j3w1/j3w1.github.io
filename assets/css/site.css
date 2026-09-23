@@ -154,10 +154,6 @@
 
 :root {
   color-scheme: dark;
-  /* The Xresources foreground/background aliases remain for rules that name
-     them historically; the generated theme block owns the mapped palette. */
-  --xbg: #0c0909;
-  --xfg: #e99499;
   --bar-height: 28px;
   --title-height: 23px;
   --status-height: 23px;
@@ -173,6 +169,14 @@
   --gaps-inner: 14px;
   --gaps-outer: -2px;
   --font: "SauceCodePro NFM", "SauceCodePro NFM fallback Cascadia Mono", "SauceCodePro NFM fallback Consolas", "SauceCodePro NFM fallback Liberation Mono", "SauceCodePro NFM fallback DejaVu Sans Mono", monospace;
+  /* i3 stacking order, bottom to top. The theme's --z-raised (sticky headers)
+     and --z-skip-link cover the two layers that are not window-manager chrome. */
+  --wm-z-deco: 60;
+  --wm-z-bar: 100;
+  --wm-z-launcher: 500;
+  --wm-z-admin: 700;
+  --wm-z-dunst: 800;
+  --wm-z-curtain: 900;
 }
 
 * {
@@ -193,7 +197,7 @@ body {
   background: var(--desktop);
   color: var(--foreground);
   font-family: var(--font);
-  font-size: 12px;
+  font-size: var(--font-size-ui-sm);
   font-weight: 400;
   line-height: 1.45;
   text-rendering: optimizeLegibility;
@@ -251,6 +255,16 @@ dl {
   display: none !important;
 }
 
+kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--foreground-bright);
+  font: inherit;
+  white-space: nowrap;
+}
+
 .sr-only {
   position: absolute !important;
   width: 1px !important;
@@ -265,7 +279,7 @@ dl {
 
 .skip-link {
   position: fixed;
-  z-index: 1000;
+  z-index: var(--z-skip-link);
   top: 2px;
   left: 2px;
   padding: 5px 9px;
@@ -306,9 +320,11 @@ dl {
 
 /* i3 bar */
 
+/* The bar sits at 13px rather than 14: the extra pixel costs the mem reading
+   at 1440px, which the original bar always showed. */
 .wm-bar {
   position: relative;
-  z-index: 100;
+  z-index: var(--wm-z-bar);
   display: flex;
   width: 100%;
   height: var(--bar-height);
@@ -317,6 +333,7 @@ dl {
   border-bottom: 1px solid var(--border-active);
   background: var(--chrome-alt);
   color: var(--foreground);
+  font-size: var(--font-size-bar);
   white-space: nowrap;
 }
 
@@ -340,7 +357,7 @@ dl {
   flex: 0 0 auto;
   align-items: center;
   padding: 0 8px;
-  border-right: 1px solid #290d0c;
+  border-right: 1px solid var(--color-border-divider);
   color: var(--muted);
   text-decoration: none;
 }
@@ -455,13 +472,6 @@ html.wm-active .window:not([hidden]) {
   pointer-events: auto;
 }
 
-.workspace-grid {
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-}
-
 .home-grid {
   display: grid;
   grid-template-columns: minmax(21rem, 0.42fr) minmax(30rem, 0.58fr);
@@ -562,7 +572,7 @@ html.wm-active .window.is-only:not(.is-floating) {
   gap: 22px;
   padding: 0 9px;
   overflow: hidden;
-  border-bottom: 1px solid #24100f;
+  border-bottom: 1px solid var(--color-border-divider);
   background: var(--terminal);
   color: var(--muted);
   white-space: nowrap;
@@ -607,12 +617,6 @@ html.wm-active .window.is-only:not(.is-floating) {
 .nagbar,
 .command-launcher {
   font-size: var(--font-size-i3);
-}
-
-/* The bar sits at 13px rather than 14: the extra pixel costs the mem reading
-   at 1440px, which the original bar always showed. */
-.wm-bar {
-  font-size: var(--font-size-bar);
 }
 
 .terminal-buffer {
@@ -676,7 +680,7 @@ html.wm-active .window.is-only:not(.is-floating) {
 
 .identity-name {
   color: var(--prose);
-  font-size: 18px;
+  font-size: var(--font-size-h2);
 }
 
 .readable-output {
@@ -736,13 +740,16 @@ html.wm-active .window.is-only:not(.is-floating) {
 
 /* Thunar-style file manager */
 
-.file-toolbar {
+.file-toolbar,
+.project-toolbar,
+.library-toolbar {
   display: flex;
-  min-height: 35px;
+  min-height: 36px;
   flex: 0 0 auto;
   align-items: center;
   gap: 5px;
-  padding: 3px 6px;
+  padding: 4px 6px;
+  overflow: hidden;
   border-bottom: 1px solid var(--border);
   background: var(--chrome);
 }
@@ -769,8 +776,8 @@ html.wm-active .window.is-only:not(.is-floating) {
   align-items: center;
   padding: 0 8px;
   overflow: hidden;
-  border: 1px solid #321110;
-  background: #090606;
+  border: 1px solid var(--border);
+  background: var(--terminal);
   color: var(--foreground);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -831,7 +838,7 @@ html.wm-active .window.is-only:not(.is-floating) {
   min-height: 28px;
   grid-template-columns: minmax(16rem, 1fr) 9rem 7rem;
   align-items: center;
-  border-bottom: 1px solid #190b0b;
+  border-bottom: 1px solid var(--color-border-divider);
   color: var(--foreground);
   text-decoration: none;
 }
@@ -846,7 +853,7 @@ html.wm-active .window.is-only:not(.is-floating) {
 
 .file-header {
   position: sticky;
-  z-index: 2;
+  z-index: var(--z-raised);
   top: 0;
   min-height: 27px;
   border-bottom-color: var(--border-strong);
@@ -862,11 +869,6 @@ html.wm-active .window.is-only:not(.is-floating) {
 .file-icon {
   margin-right: 7px;
   color: var(--focus);
-}
-
-.empty-file-view {
-  display: flex;
-  flex-direction: column;
 }
 
 .empty-directory {
@@ -953,32 +955,12 @@ html.wm-active .window.is-only:not(.is-floating) {
   overflow-wrap: anywhere;
 }
 
-.line-number {
-  padding-right: 10px;
-  color: var(--inactive);
-  text-align: right;
-  user-select: none;
-}
-
 .current-line {
   background: var(--chrome-alt);
 }
 
-.current-line .line-number {
+.syntax-heading {
   color: var(--focus);
-}
-
-.syntax-heading,
-.syntax-key {
-  color: var(--focus);
-}
-
-.syntax-string {
-  color: var(--muted);
-}
-
-.syntax-comment {
-  color: var(--quiet);
 }
 
 .vim-statusline {
@@ -999,19 +981,6 @@ html.wm-active .window.is-only:not(.is-floating) {
 
 /* Projects application */
 
-.project-toolbar,
-.library-toolbar {
-  display: flex;
-  min-height: 36px;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 6px;
-  overflow: hidden;
-  border-bottom: 1px solid var(--border);
-  background: var(--chrome);
-}
-
 .toolbar-label,
 .library-toolbar span {
   display: inline-flex;
@@ -1019,7 +988,7 @@ html.wm-active .window.is-only:not(.is-floating) {
   flex: 0 0 auto;
   align-items: center;
   padding: 0 8px;
-  border: 1px solid #2b0e0d;
+  border: 1px solid var(--color-border-divider);
   color: var(--muted);
 }
 
@@ -1053,14 +1022,6 @@ html.wm-active .window.is-only:not(.is-floating) {
   opacity: 1;
 }
 
-.project-app-body {
-  display: grid;
-  min-width: 0;
-  min-height: 0;
-  flex: 1 1 auto;
-  grid-template-rows: minmax(220px, 0.58fr) minmax(180px, 0.42fr);
-}
-
 .project-table-pane,
 .project-detail-pane {
   min-width: 0;
@@ -1091,8 +1052,8 @@ html.wm-active .window.is-only:not(.is-floating) {
   height: 29px;
   padding: 3px 8px;
   overflow: hidden;
-  border-right: 1px solid #38100f;
-  border-bottom: 1px solid #190b0b;
+  border-right: 1px solid var(--color-border-divider);
+  border-bottom: 1px solid var(--color-border-divider);
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1100,7 +1061,7 @@ html.wm-active .window.is-only:not(.is-floating) {
 
 .project-table th {
   position: sticky;
-  z-index: 2;
+  z-index: var(--z-raised);
   top: 0;
   height: 28px;
   border-bottom: 2px solid var(--border-strong);
@@ -1174,7 +1135,7 @@ html.wm-active .window.is-only:not(.is-floating) {
 
 .project-detail-pane {
   padding: 10px 13px;
-  background: #0a0707;
+  background: var(--surface);
 }
 
 .project-detail {
@@ -1185,6 +1146,16 @@ html.wm-active .window.is-only:not(.is-floating) {
   display: block;
 }
 
+/* One callout shape: the project detail's header, the reader's entry header,
+   and the static pages' notes. */
+.callout,
+.project-detail header,
+.content-detail-header {
+  border-left: 3px solid var(--focus);
+  background: var(--surface-raised);
+  color: var(--prose);
+}
+
 .project-detail header {
   display: flex;
   min-height: 28px;
@@ -1192,9 +1163,6 @@ html.wm-active .window.is-only:not(.is-floating) {
   justify-content: space-between;
   gap: 18px;
   padding: 0 8px;
-  border-left: 3px solid var(--focus);
-  background: var(--surface-raised);
-  color: var(--prose);
 }
 
 .project-detail header span:last-child {
@@ -1242,7 +1210,7 @@ html.wm-active .window.is-only:not(.is-floating) {
   min-width: 0;
   min-height: 0;
   flex: 1 1 auto;
-  grid-template-columns: 210px minmax(0, 1fr);
+  grid-template-columns: 210px minmax(320px, 0.48fr) minmax(0, 0.52fr);
 }
 
 .library-sidebar {
@@ -1292,7 +1260,7 @@ html.wm-active .window.is-only:not(.is-floating) {
 .library-header span {
   height: 100%;
   padding: 5px 8px;
-  border-right: 1px solid #5b1714;
+  border-right: 1px solid var(--border);
 }
 
 /* Elsewhere */
@@ -1321,7 +1289,7 @@ html.wm-active .window.is-only:not(.is-floating) {
 }
 
 .link-list .permissions {
-  color: var(--inactive);
+  color: var(--quiet);
 }
 
 .link-list a {
@@ -1341,7 +1309,7 @@ html.wm-active .window.is-only:not(.is-floating) {
 .prose-line::before {
   content: attr(data-line);
   padding-right: 10px;
-  color: var(--inactive);
+  color: var(--quiet);
   text-align: right;
   user-select: none;
 }
@@ -1361,12 +1329,12 @@ html.wm-active .window.is-only:not(.is-floating) {
   max-width: 116ch;
   margin: 0;
   color: var(--prose);
-  font-size: 14px;
+  font-size: var(--font-size-ui-lg);
   line-height: 1.65;
 }
 
 .prose-line .syntax-heading {
-  font-size: 15px;
+  font-size: var(--font-size-reading);
 }
 
 .about-role {
@@ -1400,12 +1368,9 @@ html.wm-active .window.is-only:not(.is-floating) {
 
 /* Git-managed public content */
 
-.content-workspace { display: flex; flex-direction: column; }
-.content-split { display: grid; min-height: 0; flex: 1 1 auto; grid-template-columns: minmax(260px, 0.38fr) minmax(0, 0.62fr); }
-.content-split > :first-child { border-right: 1px solid var(--border); }
 .content-index { min-width: 0; min-height: 0; overflow: auto; background: var(--terminal); }
 .content-index-heading { padding: 5px 10px; color: var(--muted); }
-.content-entry { display: grid; min-height: 34px; align-items: center; border: 0; border-bottom: 1px solid #190b0b; background: var(--terminal); color: var(--foreground); text-decoration: none; cursor: pointer; }
+.content-entry { display: grid; min-height: 34px; align-items: center; border: 0; border-bottom: 1px solid var(--color-border-divider); background: var(--terminal); color: var(--foreground); text-decoration: none; cursor: pointer; }
 .content-entry:hover { background: var(--chrome-alt); }
 .content-entry.is-selected { background: var(--selection); color: var(--prose); }
 .content-entry.is-selected .content-title,
@@ -1422,14 +1387,14 @@ html.wm-active .window.is-only:not(.is-floating) {
 .photography-entry > .file-icon { padding-right: 0; }
 .photography-entry > .content-title { padding-left: 6px; }
 .content-entry > span { min-width: 0; padding: 5px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.content-number { color: var(--inactive); text-align: right; }
+.content-number { color: var(--quiet); text-align: right; }
 .content-title { color: var(--foreground-bright); }
 .content-meta { color: var(--quiet); }
-.content-reader { min-width: 0; min-height: 0; padding: 12px 16px 24px; overflow: auto; background: #0a0707; color: var(--prose); }
-.content-detail-header { margin-bottom: 15px; padding: 8px 10px; border-left: 3px solid var(--focus); background: var(--surface-raised); }
+.content-reader { min-width: 0; min-height: 0; padding: 12px 16px 24px; overflow: auto; background: var(--surface); color: var(--prose); }
+.content-detail-header { margin-bottom: 15px; padding: 8px 10px; }
 .content-detail-header h3, .content-detail-header p { margin: 0; }
 .content-detail-header p { margin-top: 3px; color: var(--muted); }
-.content-permalink { display: inline-block; margin-top: 4px; color: var(--quiet); font-size: 12px; }
+.content-permalink { display: inline-block; margin-top: 4px; color: var(--quiet); font-size: var(--font-size-ui-sm); }
 .content-permalink:hover { color: var(--foreground-bright); }
 .rendered-content { max-width: 84ch; line-height: 1.65; }
 .rendered-content pre { padding: 10px; overflow: auto; border: 1px solid var(--border); background: var(--terminal); }
@@ -1441,9 +1406,10 @@ html.wm-active .window.is-only:not(.is-floating) {
 .photo-thumb:hover { border-color: var(--border-strong); background: var(--chrome-alt); }
 .photo-thumb img { display: block; width: 100%; height: auto; }
 .photo-thumb span { display: block; margin-top: 5px; text-align: left; }
-.library-body { grid-template-columns: 210px minmax(320px, 0.48fr) minmax(0, 0.52fr); }
 .photo-viewer { width: min(1100px, calc(100vw - 30px)); height: min(820px, calc(100dvh - 50px)); padding: 0; border: 1px solid var(--focus); border-radius: 0; background: var(--terminal); color: var(--prose); }
-.photo-viewer::backdrop { background: rgb(0 0 0 / 72%); }
+/* Safari before 17.4 cannot read a custom property on ::backdrop; the literal
+   is the token's own value, kept as the fallback. */
+.photo-viewer::backdrop { background: rgb(0 0 0 / 65%); background: var(--color-surface-backdrop); }
 .photo-viewer figure { display: grid; height: calc(100% - var(--title-height)); margin: 0; grid-template-rows: minmax(0, 1fr) auto; }
 .photo-viewer img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
 .photo-viewer figcaption { padding: 7px 10px; border-top: 1px solid var(--border); color: var(--muted); }
@@ -1452,7 +1418,7 @@ html.wm-active .window.is-only:not(.is-floating) {
 
 .command-launcher {
   position: fixed;
-  z-index: 500;
+  z-index: var(--wm-z-launcher);
   top: var(--bar-height);
   left: 0;
   width: 100%;
@@ -1524,7 +1490,7 @@ html.wm-active .window.is-only:not(.is-floating) {
 /* dmenurc: selected background #630F0D with the same foreground. */
 .command-results button.is-selected {
   background: var(--selection-dark);
-  color: var(--xfg);
+  color: var(--foreground);
 }
 
 /* Floating keyboard help */
@@ -1544,7 +1510,8 @@ html.wm-active .window.is-only:not(.is-floating) {
 }
 
 .help-window::backdrop {
-  background: rgb(0 0 0 / 62%);
+  background: rgb(0 0 0 / 65%);
+  background: var(--color-surface-backdrop);
 }
 
 .window-close {
@@ -1598,39 +1565,168 @@ html.wm-active .window.is-only:not(.is-floating) {
   color: var(--quiet);
 }
 
-/* Progressive enhancement: all substantive workspaces remain readable. */
+/* Document mode: with JavaScript off, or when the window manager fails to
+   boot (html[data-wm="off"]), every workspace renders in order as one stacked
+   scrolling document — the progressive-enhancement layout the site has always
+   had, never a mode anyone selects. The static pages (wiki, 404, entry pages)
+   opt in with the same no-js class. */
 
-.no-js body {
+.no-js body,
+html[data-wm="off"] body {
   height: auto;
   overflow: auto;
 }
 
-.no-js .wm-bar {
+/* A fragment link scrolls the bar out of view in a scrolling document, so the
+   workspace navigation has to stick. */
+.no-js .wm-bar,
+html[data-wm="off"] .wm-bar {
   position: sticky;
   top: 0;
 }
 
-.no-js .desktop-shell {
+.no-js .desktop-shell,
+html[data-wm="off"] .desktop-shell {
   height: auto;
   overflow: visible;
 }
 
-.no-js .workspace {
+.no-js .workspace,
+html[data-wm="off"] .workspace,
+html[data-wm="off"].js .workspace:not(.is-active) {
   display: block;
-  min-height: calc(100vh - var(--bar-height));
+  min-height: auto;
+  margin-bottom: var(--gaps-inner);
+}
+
+.no-js .workspace-layer,
+html[data-wm="off"] .workspace-layer {
+  display: block;
+  height: auto;
+}
+
+.no-js .window,
+html[data-wm="off"] .window {
+  height: auto;
+  min-height: 12rem;
   margin-bottom: var(--gap);
 }
 
-.no-js .project-detail {
+.no-js .project-detail,
+html[data-wm="off"] .project-detail {
   display: block;
-  margin-bottom: 18px;
+  margin-bottom: var(--gaps-inner);
+}
+
+/* Static pages: the wiki, 404 and the generated entry pages are one scrolling
+   document styled from this sheet; body.page scopes what the desktop must not
+   inherit. */
+
+body.page {
+  padding-bottom: 60px;
+  font-size: var(--font-size-ui-md);
+  line-height: 1.6;
+}
+
+.page-bar {
+  position: sticky;
+  z-index: var(--wm-z-bar);
+  top: 0;
+  display: flex;
+  height: var(--bar-height);
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border-active);
+  background: var(--chrome-alt);
+  white-space: nowrap;
+}
+
+.page-bar a { color: var(--muted); text-decoration: none; }
+.page-bar a:hover { background: transparent; color: var(--prose); }
+.page-bar .is-here { color: var(--prose); }
+.page-bar .spacer { flex: 1 1 auto; }
+.page-bar .desktop-link { color: var(--foreground-bright); }
+
+.page-wrap {
+  width: min(880px, calc(100% - 32px));
+  margin: 0 auto;
+  padding-top: 30px;
+}
+
+.callout { padding: 12px 16px; }
+.callout p { margin: 0; }
+.callout + .callout { margin-top: 10px; }
+.page-desktop { margin-top: 34px; }
+
+.page-foot {
+  margin-top: 44px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+  color: var(--quiet);
+}
+
+.page-foot p { margin: 0; }
+.page-foot a { color: var(--muted); }
+
+/* Entry and collection pages. */
+body.page .content-detail-header h1 { margin: 0; color: var(--prose); font-size: 22px; line-height: 1.3; }
+body.page .rendered-content { max-width: 80ch; color: var(--prose); }
+body.page .rendered-content p,
+body.page .rendered-content li { max-width: 80ch; }
+body.page .rendered-content pre { padding: 10px 12px; }
+body.page .photo-caption { max-width: 80ch; margin: 0 0 16px; color: var(--muted); }
+body.page .photo-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+body.page .photo-thumb { display: block; text-decoration: none; }
+.entry-list { margin: 20px 0 0; padding: 0; list-style: none; }
+.entry-list li { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.entry-list a { color: var(--foreground-bright); font-size: var(--font-size-reading); text-decoration: none; }
+.entry-list a:hover { text-decoration: underline; }
+.entry-list p { max-width: 80ch; margin: 4px 0 0; color: var(--muted); }
+.entry-list .content-meta { display: block; margin-top: 2px; }
+
+/* The wiki's own furniture. */
+.page-hero { padding: 44px 0 26px; }
+.page-hero h1 { margin: 0 0 10px; color: var(--prose); font-size: 27px; line-height: 1.25; }
+.page-hero p { max-width: 78ch; margin: 0; color: var(--muted); }
+.page-toc { margin-bottom: 34px; padding: 14px 16px; border: 1px solid var(--border); background: var(--surface); }
+.page-toc p { margin: 0 0 8px; color: var(--foreground-bright); }
+.page-toc ul { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; }
+.page-toc a { color: var(--muted); }
+.page-wiki section { margin-bottom: 40px; scroll-margin-top: calc(var(--bar-height) + 12px); }
+.page-wiki h2 { margin: 0 0 6px; color: var(--foreground-bright); font-size: 19px; }
+.page-wiki h3 { margin: 26px 0 8px; color: var(--prose); font-size: var(--font-size-reading); }
+.page-wiki p { max-width: 80ch; }
+.page-wiki .lede { max-width: 80ch; margin: 0 0 18px; color: var(--muted); }
+.page-cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.page-card { padding: 14px 16px; border: 1px solid var(--border); background: var(--surface); }
+.page-card h3 { margin: 0 0 6px; color: var(--foreground-bright); font-size: var(--font-size-ui-lg); }
+.page-card p { margin: 0; color: var(--muted); }
+.page-wiki table { width: 100%; margin: 10px 0 0; border-collapse: collapse; }
+.page-wiki caption { padding-bottom: 6px; color: var(--quiet); text-align: left; }
+.page-wiki th,
+.page-wiki td { padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.page-wiki th { background: var(--selection-dark); color: var(--prose); }
+.page-wiki td:first-child { width: 34%; white-space: nowrap; }
+.page-wiki tbody tr:hover { background: var(--chrome-alt); }
+.page-wiki .scroller { overflow-x: auto; }
+.page-wiki code { color: var(--foreground-bright); }
+.page-wiki ol.steps { padding-left: 20px; }
+.page-wiki ol.steps li { margin-bottom: 9px; }
+
+@media (max-width: 640px) {
+  .page-wrap { padding-top: 22px; }
+  body.page .content-detail-header h1 { font-size: 19px; }
+  .page-hero { padding-top: 30px; }
+  .page-hero h1 { font-size: 22px; }
+  .page-wiki td:first-child { width: auto; white-space: normal; }
 }
 
 /* Tablet */
 
 @media (max-width: 1199px) {
-  .status-github,
-  .status-branch {
+  .status-github {
     display: none !important;
   }
 
@@ -1657,10 +1753,6 @@ html.wm-active .window.is-only:not(.is-floating) {
 }
 
 @media (max-width: 900px) and (min-width: 768px) {
-  .status-path {
-    display: none !important;
-  }
-
   .home-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -1697,7 +1789,7 @@ html.wm-active .window.is-only:not(.is-floating) {
   }
 
   body {
-    font-size: 13px;
+    font-size: var(--font-size-ui-md);
   }
 
   .workspace-strip {
@@ -1834,10 +1926,6 @@ html.wm-active .window.is-only:not(.is-floating) {
     grid-column: auto;
   }
 
-  .library-body {
-    display: block;
-  }
-
   .library-header {
     grid-template-columns: 2fr 1fr;
   }
@@ -1877,16 +1965,12 @@ html.wm-active .window.is-only:not(.is-floating) {
     grid-template-columns: 36px minmax(0, 1fr);
   }
 
-  .line-number {
-    padding-right: 7px;
-  }
-
   .prose-line {
     padding: 6px 8px 6px 0;
   }
 
   .prose-line p {
-    font-size: 13px;
+    font-size: var(--font-size-ui-md);
     line-height: 1.58;
   }
 
@@ -1946,10 +2030,6 @@ html.wm-active .window.is-only:not(.is-floating) {
 
   .file-row > :nth-child(2) {
     display: none;
-  }
-
-  .identity-name {
-    font-size: 16px;
   }
 
   .help-content dl div {

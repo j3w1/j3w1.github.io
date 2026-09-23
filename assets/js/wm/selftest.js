@@ -109,8 +109,12 @@ export const runSelfTest = () => {
   });
 
   const failed = results.filter((result) => !result.ok);
+  /* The console cannot resolve CSS variables, so the badge takes the theme's
+     success colours as computed values. */
+  const cssValue = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const badge = `background:${cssValue("--color-status-success-text")};color:${cssValue("--color-status-neutral-on-fill")}`;
   results.forEach((result) => {
-    if (result.ok) console.log(`%c PASS %c ${result.name}`, "background:#2f7d32;color:#fff", "");
+    if (result.ok) console.log(`%c PASS %c ${result.name}`, badge, "");
     else console.error(`FAIL ${result.name}: ${result.error}`);
   });
   console.log(`[wm] selftest: ${results.length - failed.length}/${results.length} passed`);
