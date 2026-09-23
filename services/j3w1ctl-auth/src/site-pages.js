@@ -62,6 +62,8 @@ const entryDescription = (collection, entry) => {
   return `${entry.author} · ${entry.year} · ${entry.status}`;
 };
 
+/* The line under an entry's title. The desktop reader (assets/js/public-content.js)
+   draws the same line; test/browser/prerender.spec.js holds the two equal. */
 const entryMetaLine = (collection, entry) => {
   if (collection === "writing") return [entry.date, ...(entry.tags ?? [])].filter(Boolean).join(" · ");
   if (collection === "photography") return [entry.date, entry.location, entry.camera].filter(Boolean).join(" · ");
@@ -165,11 +167,18 @@ export const renderPageFoot = () => `  <footer class="page-foot page-wrap">
     <p><span lang="zh">${text(AUTHOR.name)}</span> / ${text(AUTHOR.alternateName)} · <a href="/${FEED_PATH}">feed</a> · <a href="${attr(AUTHOR.github)}" rel="me">GitHub</a> · <a href="/wiki/">wiki</a></p>
   </footer>`;
 
+/* The page grid is at most three 280px columns inside an 880px column, and one
+   full-width column on a phone. */
+const PAGE_PHOTO_SIZES = "(max-width: 640px) calc(100vw - 32px), 280px";
+
 const photographyBody = (entry) => {
   const figures = entry.images.map((image) => {
     const size = image.thumbnailWidth && image.thumbnailHeight ? ` width="${image.thumbnailWidth}" height="${image.thumbnailHeight}"` : "";
+    const srcset = image.width && image.thumbnailWidth
+      ? ` srcset="${attr(`${image.thumbnailSrc} ${image.thumbnailWidth}w, ${image.src} ${image.width}w`)}" sizes="${PAGE_PHOTO_SIZES}"`
+      : "";
     const caption = image.caption ? `<figcaption>${text(image.caption)}</figcaption>` : "";
-    return `        <figure class="photo-thumb"><a href="${attr(image.src)}"><img src="${attr(image.thumbnailSrc)}" alt="${attr(image.alt)}"${size} loading="lazy" decoding="async"></a>${caption}</figure>`;
+    return `        <figure class="photo-thumb"><a href="${attr(image.src)}"><img src="${attr(image.thumbnailSrc)}" alt="${attr(image.alt)}"${size}${srcset} loading="lazy" decoding="async"></a>${caption}</figure>`;
   });
   return `      <p class="photo-caption">${text(entry.caption)}</p>
       <div class="photo-grid">
@@ -201,7 +210,7 @@ ${renderPageBar({ crumbs: [{ href: collectionUrl(collection), label: COLLECTION_
       <header class="content-detail-header">
         <h1>${text(entry.title)}</h1>
         <p class="content-meta">${text(entryMetaLine(collection, entry))}</p>
-      </header>
+${collection === "writing" ? `        <p class="content-summary">${text(entry.summary)}</p>\n` : ""}      </header>
 ${body}
     </article>
     <p class="callout page-desktop">This entry also lives on the desktop: <a data-desktop-link href="${attr(desktopHref)}">open ${text(entry.slug)} in the workstation</a>, a working i3 window manager in the browser.</p>

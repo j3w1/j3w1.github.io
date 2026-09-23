@@ -25,6 +25,15 @@ const setState = (collection, message, unavailable = false) => {
   detail?.replaceChildren();
 };
 
+/* The line under an entry's title, exactly as the entry's own page prints it
+   (services/j3w1ctl-auth/src/site-pages.js); test/browser/prerender.spec.js
+   holds the two equal. */
+const metaLine = (collection, entry) => {
+  if (collection === "writing") return [entry.date, ...(entry.tags ?? [])].filter(Boolean).join(" · ");
+  if (collection === "photography") return [entry.date, entry.location, entry.camera].filter(Boolean).join(" · ");
+  return [entry.author, entry.year, entry.status, entry.rating ? `${entry.rating}/5` : null].filter(Boolean).join(" · ");
+};
+
 const hashRoute = () => {
   const { workspace, slug } = parseRoute(location.hash);
   return { collection: workspace, slug };
@@ -63,9 +72,8 @@ const selectRoute = () => {
   const permalink = element("a", "content-permalink", "permalink");
   permalink.href = `/${collection}/${target.slug}/`;
   header.append(permalink);
-  if (collection === "writing") header.append(element("p", "", `${target.date} · ${target.summary}`));
-  if (collection === "books") header.append(element("p", "", `${target.author} · ${target.year} · ${target.status}`));
-  if (collection === "photography") header.append(element("p", "", [target.date, target.location, target.camera].filter(Boolean).join(" · ")));
+  header.append(element("p", "content-meta", metaLine(collection, target)));
+  if (collection === "writing") header.append(element("p", "content-summary", target.summary));
   detail.append(header);
   if (collection === "writing") renderAst(target.blocks, detail.appendChild(element("div", "rendered-content")));
   if (collection === "books") renderAst(target.notes, detail.appendChild(element("div", "rendered-content")));

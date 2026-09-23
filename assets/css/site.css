@@ -1439,6 +1439,7 @@ tr.is-selected .project-selector:focus-visible {
 .content-detail-header { margin-bottom: 15px; padding: 8px 10px; }
 .content-detail-header h3, .content-detail-header p { margin: 0; }
 .content-detail-header p { margin-top: 3px; color: var(--muted); }
+.content-detail-header .content-summary { margin-top: 6px; color: var(--foreground); }
 .content-permalink { display: inline-block; margin-top: 4px; color: var(--quiet); font-size: var(--font-size-ui-sm); }
 .content-permalink:hover,
 .content-permalink:focus-visible { color: var(--foreground-bright); }
