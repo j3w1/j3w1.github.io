@@ -158,7 +158,7 @@ ${noindex ? '  <meta name="robots" content="noindex">\n' : ""}  <link rel="canon
   <meta name="twitter:description" content="${attr(description)}">
   <meta name="twitter:image" content="${attr(image)}">
 ${published ? `  <meta property="article:published_time" content="${attr(published)}">\n` : ""}  <link rel="alternate" type="application/atom+xml" title="${SITE_NAME}" href="/${FEED_PATH}">
-  <meta name="theme-color" content="#0c0909">
+  <meta name="theme-color" content="#000000">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon.ico" sizes="32x32">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">

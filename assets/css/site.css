@@ -225,24 +225,31 @@ button {
   line-height: 1;
 }
 
+/* Links: the strong red with a persistent underline, near-white on hover
+   (j3w1/theme D-024). Components that draw their own rows and tabs set their
+   own colour and drop the underline. */
 a {
-  color: var(--foreground-bright);
-  text-decoration-color: var(--focus-dim);
+  color: var(--color-text-link);
+  text-decoration: underline;
+  text-decoration-color: var(--color-text-link-underline);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
 
 a:hover {
-  color: var(--prose);
+  color: var(--color-text-link-hover);
   background-color: var(--selection-dark);
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 2px;
 }
 
+/* Focus is a ring, never removed without another ring taking its place. */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 [tabindex]:focus-visible {
-  outline: 1px dashed var(--focus);
-  outline-offset: -2px;
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 p,
@@ -362,7 +369,8 @@ kbd {
   text-decoration: none;
 }
 
-.workspace-link:hover {
+.workspace-link:hover,
+.workspace-link:focus-visible {
   background: var(--selection-soft);
   color: var(--foreground-bright);
 }
@@ -402,7 +410,8 @@ kbd {
   cursor: pointer;
 }
 
-.status-control:hover {
+.status-control:hover,
+.status-control:focus-visible {
   background: var(--surface-raised);
   color: var(--prose);
 }
@@ -500,18 +509,21 @@ html.wm-active .window:not([hidden]) {
 }
 
 .pane:focus-visible {
-  outline: 2px solid var(--foreground-bright);
-  outline-offset: -3px;
+  outline: var(--focus-ring-container);
+  outline-offset: var(--focus-offset-container);
 }
 
 /* client.focused: border color14, child_border color4; the title bar's
-   underline is the color14 indicator. Text stays at the contrast floor. */
+   underline is the color14 indicator and, on a true-black canvas, its
+   chrome-alt ground is what tells the focused window from its neighbours.
+   Text stays at the contrast floor. */
 .pane.is-focused {
   border-color: var(--color4);
 }
 
 .pane.is-focused .window-titlebar {
   border-bottom-color: var(--color14);
+  background: var(--chrome-alt);
   color: var(--foreground-bright);
 }
 
@@ -527,9 +539,10 @@ html.wm-active .window.wm-border-none {
   border-color: transparent;
 }
 
-/* smart_borders: the only window on a workspace draws no border. */
+/* smart_borders: the only window on a workspace draws no border — a hairline
+   at the divider role, so a black window does not melt into a black desktop. */
 html.wm-active .window.is-only:not(.is-floating) {
-  border-color: transparent;
+  border-color: var(--color-border-divider);
 }
 
 .window-titlebar {
@@ -543,7 +556,7 @@ html.wm-active .window.is-only:not(.is-floating) {
   overflow: hidden;
   border-bottom: 1px solid var(--border);
   background: var(--chrome);
-  color: var(--quiet);
+  color: var(--muted);
   line-height: 1;
   white-space: nowrap;
 }
@@ -820,6 +833,12 @@ html.wm-active .window.is-only:not(.is-floating) {
 .place-row .ui-icon,
 .file-icon.ui-icon { font-size: 16px; }
 
+.place-row:hover,
+.place-row:focus-visible {
+  background: var(--chrome-alt);
+  color: var(--foreground-bright);
+}
+
 .place-row.is-selected {
   background: var(--selection-soft);
   color: var(--foreground-bright);
@@ -861,9 +880,22 @@ html.wm-active .window.is-only:not(.is-floating) {
   color: var(--foreground-bright);
 }
 
+.file-row:hover,
+.file-row:focus-visible {
+  background: var(--chrome-alt);
+}
+
 .file-row.is-selected {
   background: var(--selection);
   color: var(--prose);
+}
+
+/* On a selection fill the dashed ring takes the on-fill text colour. */
+.file-row.is-selected:focus-visible,
+.content-entry.is-selected:focus-visible,
+.workspace-link.is-active:focus-visible,
+.place-row.is-selected:focus-visible {
+  outline-color: var(--color-interaction-focus-ring-container);
 }
 
 .file-icon {
@@ -1006,6 +1038,12 @@ html.wm-active .window.is-only:not(.is-floating) {
   color: var(--focus);
 }
 
+.filter-field:focus-within {
+  border-color: var(--focus);
+  outline: var(--focus-ring);
+  outline-offset: -1px;
+}
+
 .filter-field input {
   width: 100%;
   min-width: 0;
@@ -1112,8 +1150,13 @@ html.wm-active .window.is-only:not(.is-floating) {
 }
 
 .project-selector:focus-visible {
-  border-color: var(--focus);
-  outline: 0;
+  border-color: transparent;
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+
+tr.is-selected .project-selector:focus-visible {
+  outline-color: var(--color-interaction-focus-ring-container);
 }
 
 .project-filter-button {
@@ -1122,7 +1165,8 @@ html.wm-active .window.is-only:not(.is-floating) {
   cursor: pointer;
 }
 
-.project-filter-button:hover {
+.project-filter-button:hover,
+.project-filter-button:focus-visible {
   background: var(--chrome-alt);
   color: var(--foreground-bright);
 }
@@ -1371,7 +1415,8 @@ html.wm-active .window.is-only:not(.is-floating) {
 .content-index { min-width: 0; min-height: 0; overflow: auto; background: var(--terminal); }
 .content-index-heading { padding: 5px 10px; color: var(--muted); }
 .content-entry { display: grid; min-height: 34px; align-items: center; border: 0; border-bottom: 1px solid var(--color-border-divider); background: var(--terminal); color: var(--foreground); text-decoration: none; cursor: pointer; }
-.content-entry:hover { background: var(--chrome-alt); }
+.content-entry:hover,
+.content-entry:focus-visible { background: var(--chrome-alt); }
 .content-entry.is-selected { background: var(--selection); color: var(--prose); }
 .content-entry.is-selected .content-title,
 .file-row.is-selected > span,
@@ -1395,7 +1440,8 @@ html.wm-active .window.is-only:not(.is-floating) {
 .content-detail-header h3, .content-detail-header p { margin: 0; }
 .content-detail-header p { margin-top: 3px; color: var(--muted); }
 .content-permalink { display: inline-block; margin-top: 4px; color: var(--quiet); font-size: var(--font-size-ui-sm); }
-.content-permalink:hover { color: var(--foreground-bright); }
+.content-permalink:hover,
+.content-permalink:focus-visible { color: var(--foreground-bright); }
 .rendered-content { max-width: 84ch; line-height: 1.65; }
 .rendered-content pre { padding: 10px; overflow: auto; border: 1px solid var(--border); background: var(--terminal); }
 .rendered-content blockquote { margin-inline: 0; padding-left: 12px; border-left: 2px solid var(--border-strong); color: var(--muted); }
@@ -1403,7 +1449,8 @@ html.wm-active .window.is-only:not(.is-floating) {
 .photography-body { grid-template-columns: 170px minmax(270px, 0.38fr) minmax(0, 0.62fr); }
 .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
 .photo-thumb { padding: 6px; border: 1px solid var(--border); background: var(--terminal); color: var(--muted); cursor: pointer; }
-.photo-thumb:hover { border-color: var(--border-strong); background: var(--chrome-alt); }
+.photo-thumb:hover,
+.photo-thumb:focus-visible { border-color: var(--border-strong); background: var(--chrome-alt); }
 .photo-thumb img { display: block; width: 100%; height: auto; }
 .photo-thumb span { display: block; margin-top: 5px; text-align: left; }
 .photo-viewer { width: min(1100px, calc(100vw - 30px)); height: min(820px, calc(100dvh - 50px)); padding: 0; border: 1px solid var(--focus); border-radius: 0; background: var(--terminal); color: var(--prose); }
@@ -1424,7 +1471,7 @@ html.wm-active .window.is-only:not(.is-floating) {
   width: 100%;
   border-top: 1px solid var(--focus);
   border-bottom: 1px solid var(--focus);
-  background: var(--terminal);
+  background: var(--surface);
   color: var(--foreground-bright);
 }
 
@@ -1487,6 +1534,7 @@ html.wm-active .window.is-only:not(.is-floating) {
 }
 
 .command-results button:hover,
+.command-results button:focus-visible,
 /* dmenurc: selected background #630F0D with the same foreground. */
 .command-results button.is-selected {
   background: var(--selection-dark);
@@ -1525,6 +1573,12 @@ html.wm-active .window.is-only:not(.is-floating) {
   background: var(--selection);
   color: var(--prose);
   cursor: pointer;
+}
+
+.window-close:hover,
+.window-close:focus-visible {
+  background: var(--selection-dark);
+  outline-color: var(--color-interaction-focus-ring-container);
 }
 
 .help-content {
@@ -2034,6 +2088,31 @@ body.page .photo-thumb { display: block; text-decoration: none; }
 
   .help-content dl div {
     grid-template-columns: 105px minmax(0, 1fr);
+  }
+}
+
+/* Forced colours replace every background with the system palette, which
+   erases a selection drawn as a fill; an outline survives. */
+@media (forced-colors: active) {
+  .workspace-link.is-active,
+  .file-row.is-selected,
+  .place-row.is-selected,
+  .content-entry.is-selected,
+  .project-table tbody tr.is-selected,
+  .project-filter-button[aria-pressed="true"],
+  .library-sidebar .is-selected,
+  .vim-tabline .is-active,
+  .command-results button.is-selected {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .pane.is-focused {
+    border-color: Highlight;
+  }
+
+  a {
+    text-decoration: underline;
   }
 }
 

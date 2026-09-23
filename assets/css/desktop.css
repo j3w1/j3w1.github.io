@@ -69,6 +69,16 @@ html[data-wallpaper="ridge"] .wallpaper { background: var(--wallpaper-ridge); }
     color: CanvasText;
     opacity: 0.55;
   }
+
+  .wm-tab.is-active,
+  #power-menu-toggle[aria-expanded="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .wm-confocus {
+    border-color: Highlight;
+  }
 }
 
 /* ------------------------------------------------------------ tiling layout */
@@ -248,12 +258,14 @@ html.wm-active .window.is-floating {
   line-height: 1;
 }
 
-.window-mark:hover {
+.window-mark:hover,
+.window-mark:focus-visible {
   background: var(--selection-dark);
   color: var(--prose);
 }
 
-.window-mark-close:hover { background: var(--selection); }
+.window-mark-close:hover,
+.window-mark-close:focus-visible { background: var(--selection); }
 
 .window-marks { display: inline-flex; gap: 1px; letter-spacing: normal; }
 
@@ -265,12 +277,16 @@ html.wm-active .window.is-floating {
   top: 32%;
   left: 50%;
   width: min(30rem, calc(100% - 2rem));
+  padding: 16px;
+  border: 1px solid var(--color-border-divider);
+  background: var(--surface);
   color: var(--muted);
   text-align: center;
   transform: translate(-50%, -50%);
 }
 
 .wm-empty p { margin: 0 0 10px; }
+.wm-empty p:last-child { margin-bottom: 0; }
 .wm-empty-title { color: var(--foreground-bright); }
 
 .wm-restore {
@@ -281,7 +297,8 @@ html.wm-active .window.is-floating {
   color: var(--foreground-bright);
 }
 
-.wm-restore:hover { background: var(--selection-dark); color: var(--prose); }
+.wm-restore:hover,
+.wm-restore:focus-visible { background: var(--selection-dark); color: var(--prose); }
 
 /* --------------------------------------------------------------- i3 status */
 
@@ -388,11 +405,6 @@ button.place-row {
   text-align: left;
 }
 
-button.place-row:hover,
-a.place-row:hover {
-  background: var(--chrome-alt);
-  color: var(--foreground-bright);
-}
 
 button.place-row:disabled { color: var(--inactive); cursor: default; }
 
@@ -577,7 +589,7 @@ html[data-boot] .desktop-shell { pointer-events: none; }
 .greeter-panel p { margin: 0 0 8px; }
 .greeter-host { color: var(--muted); }
 .greeter-desktop { color: var(--quiet); }
-.greeter-user { padding-top: 6px; color: var(--prose); font-size: 15px; }
+.greeter-user { padding-top: 6px; color: var(--prose); font-size: var(--font-size-reading); }
 
 .greeter-pass {
   display: flex;
@@ -606,7 +618,8 @@ html[data-boot] .desktop-shell { pointer-events: none; }
   color: var(--prose);
 }
 
-.greeter-login:hover { background: var(--selection); }
+.greeter-login:hover,
+.greeter-login:focus-visible { background: var(--selection); }
 
 .greeter-auth { min-height: 1.2em; color: var(--muted); }
 
@@ -827,7 +840,8 @@ html:not(.wm-active) .wm-empty {
   color: var(--prose);
 }
 
-.nagbar-action:hover { background: var(--selection); }
+.nagbar-action:hover,
+.nagbar-action:focus-visible { background: var(--selection); }
 .nagbar-cancel { background: var(--surface); color: var(--foreground); }
 
 @media (max-width: 767px) {
