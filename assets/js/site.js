@@ -1,4 +1,5 @@
-/* Routing, the command launcher, the help dialog, and the projects application.
+/* Routing, the help dialog, and the key dispatcher, with the launcher
+   (launcher.js) and the projects application (projects.js) wired in.
    Window management lives in ./wm/ and is imported statically: a dynamic import
    would resolve after first paint and guarantee a visible reflow from the
    fallback grid to the window manager's layout. */
@@ -9,6 +10,8 @@ import { announce, installAnnouncer } from "./wm/a11y.js?v=20260923";
 import { IDENTITY } from "./wm/defaults.js?v=20260923";
 import { media } from "./wm/session.js?v=20260923";
 import { onRouteChange, parseRoute, WORKSPACES as workspaceNames } from "./route.js?v=20260923";
+import { createLauncher } from "./launcher.js?v=20260923";
+import { installProjects } from "./projects.js?v=20260923";
 
 const HOME_PATH = IDENTITY.home;
 /* The generated <title> is the home workspace's; other workspaces prefix it. */
@@ -33,18 +36,9 @@ installAnnouncer(document.querySelector("#workspace-announcer"));
 const skipLink = document.querySelector("[data-skip-link]");
 const clock = document.querySelector("#local-clock");
 const helpDialog = document.querySelector("#keyboard-help");
-const commandLauncher = document.querySelector("#command-launcher");
-const commandForm = document.querySelector("#command-form");
-const commandInput = document.querySelector("#command-input");
-const commandPrefix = document.querySelector("#command-prefix");
-const commandResults = document.querySelector("#command-results");
 
 let activeWorkspace = "home";
-let launcherReturnFocus = null;
 let helpReturnFocus = null;
-let filteredCommands = [];
-let selectedCommandIndex = 0;
-let projectVisibility = "all";
 let wm = null;
 
 const workspaceFromHash = () => parseRoute(window.location.hash).workspace;
@@ -148,84 +142,8 @@ const activateFocusedItem = () => {
   selected?.click();
 };
 
-const selectProject = (projectId) => {
-  const row = document.querySelector(`[data-project-row="${projectId}"]`);
-  const detail = document.querySelector(`[data-project-detail="${projectId}"]`);
-  if (!row || !detail) return;
-
-  document.querySelectorAll("[data-project-row]").forEach((candidate) => {
-    candidate.classList.toggle("is-selected", candidate === row);
-  });
-  document.querySelectorAll(".project-selector").forEach((selector) => {
-    selector.setAttribute(
-      "aria-pressed",
-      String(selector.dataset.project === projectId),
-    );
-  });
-  document.querySelectorAll("[data-project-detail]").forEach((candidate) => {
-    candidate.classList.toggle("is-selected", candidate === detail);
-  });
-
-  /* Both windows' statuslines report the selection. */
-  const name = row.cells[1]?.textContent.trim() ?? projectId;
-  document.querySelectorAll("[data-project-selection]").forEach((status) => { status.textContent = name; });
-};
-
-const applyProjectFilters = () => {
-  const query = document.querySelector("#project-filter")?.value.trim().toLowerCase() ?? "";
-  const rows = [...document.querySelectorAll("[data-project-row]")];
-  rows.forEach((row) => {
-    const categoryMatches = projectVisibility === "all" || row.dataset.visibility === projectVisibility;
-    const textMatches = !query || row.textContent.toLowerCase().includes(query);
-    row.hidden = !(categoryMatches && textMatches);
-  });
-  const visible = rows.filter((row) => !row.hidden);
-  const selectedRow = document.querySelector("[data-project-row].is-selected");
-  if (!selectedRow || selectedRow.hidden) {
-    if (visible[0]) selectProject(visible[0].dataset.projectRow);
-    else {
-      document.querySelectorAll("[data-project-row].is-selected, [data-project-detail].is-selected").forEach((node) => node.classList.remove("is-selected"));
-      document.querySelectorAll(".project-selector").forEach((button) => button.setAttribute("aria-pressed", "false"));
-    }
-  }
-  const empty = document.querySelector("#project-no-results");
-  if (empty) empty.hidden = visible.length > 0;
-};
-
-document.querySelectorAll("[data-project-count]").forEach((target) => {
-  const visibility = target.dataset.projectCount;
-  const count = visibility === "all" ? document.querySelectorAll("[data-project-row]").length : document.querySelectorAll(`[data-project-row][data-visibility="${visibility}"]`).length;
-  target.textContent = `(${count})`;
-});
-
-document.querySelectorAll("[data-project-visibility]").forEach((button) => {
-  button.addEventListener("click", () => {
-    projectVisibility = button.dataset.projectVisibility;
-    document.querySelectorAll("[data-project-visibility]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
-    applyProjectFilters();
-  });
-});
-
-document.querySelectorAll(".project-selector").forEach((selector) => {
-  selector.addEventListener("click", () => {
-    selectProject(selector.dataset.project);
-    wm?.focusWindow("projects-detail", { moveBrowserFocus: false });
-  });
-});
-
-document.querySelectorAll("[data-project-row]").forEach((row) => {
-  row.addEventListener("click", (event) => {
-    if (event.target.closest("a, button")) return;
-    selectProject(row.dataset.projectRow);
-  });
-
-  row.addEventListener("focusin", () => {
-    selectProject(row.dataset.projectRow);
-  });
-});
-
-document.querySelector("#project-filter")?.addEventListener("input", () => {
-  applyProjectFilters();
+const projects = installProjects({
+  onSelect: () => wm?.focusWindow("projects-detail", { moveBrowserFocus: false }),
 });
 
 document.querySelector("#j3w1ctl-launch")?.addEventListener("click", async (event) => {
@@ -240,7 +158,6 @@ document.querySelector("#j3w1ctl-launch")?.addEventListener("click", async (even
 });
 
 const dialogIsOpen = () => helpDialog?.hasAttribute("open");
-const launcherIsOpen = () => commandLauncher && !commandLauncher.hidden;
 const curtainIsOpen = () =>
   document.querySelector("#photo-viewer")?.open ||
   document.querySelector("#greeter")?.hidden === false ||
@@ -298,161 +215,18 @@ const baseCommands = [
   { label: "help", aliases: "keys keyboard shortcuts man", run: openHelp },
 ];
 
-let commands = baseCommands;
-
-const isSubsequence = (haystack, needle) => {
-  let cursor = 0;
-  for (const character of haystack) {
-    if (character === needle[cursor]) cursor += 1;
-    if (cursor === needle.length) return true;
-  }
-  return false;
-};
-
-/* Rank rather than merely filter. Subsequence matching is generous enough that
-   typing an exact label can match a different command first — "exec feh" is a
-   subsequence of "exec neofetch" — so a literal match has to outrank it. */
-const commandScore = (command, query) => {
-  if (!query) return 0;
-  const label = command.label.toLowerCase();
-  const needle = query.toLowerCase();
-  if (label === needle) return 0;
-  if (label.startsWith(needle)) return 1;
-  if (label.includes(needle)) return 2;
-  if ((command.aliases ?? "").toLowerCase().includes(needle)) return 3;
-  if (isSubsequence(label, needle)) return 4;
-  if (isSubsequence(`${label} ${command.aliases ?? ""}`.toLowerCase(), needle)) return 5;
-  return -1;
-};
-
-const renderCommandResults = () => {
-  if (!commandResults || !commandInput) return;
-  const query = commandInput.value.trim();
-  filteredCommands = commands
-    .map((command, index) => ({ command, index, score: commandScore(command, query) }))
-    .filter((entry) => entry.score >= 0)
-    .sort((a, b) => a.score - b.score || a.index - b.index)
-    .map((entry) => entry.command);
-  selectedCommandIndex = Math.min(
-    selectedCommandIndex,
-    Math.max(filteredCommands.length - 1, 0),
-  );
-
-  commandResults.replaceChildren();
-  filteredCommands.forEach((command, index) => {
-    const item = document.createElement("li");
-    item.setAttribute("role", "presentation");
-    const button = document.createElement("button");
-    button.type = "button";
-    button.id = `command-result-${index}`;
-    button.setAttribute("role", "option");
-    button.setAttribute("aria-selected", String(index === selectedCommandIndex));
-    button.classList.toggle("is-selected", index === selectedCommandIndex);
-    button.tabIndex = -1;
-    button.textContent = command.label;
-    button.addEventListener("pointerenter", () => {
-      if (selectedCommandIndex === index) return;
-      selectedCommandIndex = index;
-      commandResults.querySelectorAll("[role='option']").forEach((option, optionIndex) => {
-        const isSelected = optionIndex === selectedCommandIndex;
-        option.classList.toggle("is-selected", isSelected);
-        option.setAttribute("aria-selected", String(isSelected));
-      });
-      commandInput.setAttribute("aria-activedescendant", button.id);
-    });
-    button.addEventListener("click", () => executeCommand(index));
-    item.append(button);
-    commandResults.append(item);
-  });
-
-  const activeOption = commandResults.querySelector(".is-selected");
-  if (activeOption) {
-    commandInput.setAttribute("aria-activedescendant", activeOption.id);
-    activeOption.scrollIntoView({ block: "nearest", inline: "nearest" });
-  } else {
-    commandInput.removeAttribute("aria-activedescendant");
-  }
-};
-
-const closeLauncher = ({ restoreFocus = true } = {}) => {
-  if (!commandLauncher || !launcherIsOpen()) return;
-  commandLauncher.hidden = true;
-  commandInput?.setAttribute("aria-expanded", "false");
-  if (restoreFocus && launcherReturnFocus instanceof HTMLElement) {
-    launcherReturnFocus.focus({ preventScroll: true });
-  }
-};
-
-/* dmenu passes what you typed to the shell when nothing matches; here the
-   typed text goes to i3-msg, so `gaps inner set 20`, `resize set 600 400` or
-   `[con_mark=x] focus` work without a catalogue entry for every argument. */
-const executeCommand = (index = selectedCommandIndex) => {
-  const command = filteredCommands[index];
-  const typed = commandInput?.value.trim() ?? "";
-  closeLauncher();
-  if (command) {
-    command.run();
-    return;
-  }
-  if (typed && wm) {
-    const result = wm.runCommand(typed);
+const launcher = createLauncher({
+  root: document.querySelector("#command-launcher"),
+  form: document.querySelector("#command-form"),
+  input: document.querySelector("#command-input"),
+  prefix: document.querySelector("#command-prefix"),
+  results: document.querySelector("#command-results"),
+  run: (typed) => {
+    const result = wm?.runCommand(typed);
     if (result) announce(`i3-msg: ${result}`);
-  }
-};
-
-const openLauncher = (prefix) => {
-  if (!commandLauncher || !commandInput) return;
-  if (!launcherIsOpen()) launcherReturnFocus = document.activeElement;
-  commandLauncher.hidden = false;
-  commandPrefix.textContent = prefix;
-  commandInput.value = "";
-  commandInput.setAttribute("aria-expanded", "true");
-  selectedCommandIndex = 0;
-  renderCommandResults();
-  commandInput.focus({ preventScroll: true });
-};
-
-commandInput?.addEventListener("input", () => {
-  selectedCommandIndex = 0;
-  renderCommandResults();
+  },
 });
-
-commandInput?.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    event.preventDefault();
-    closeLauncher();
-    return;
-  }
-
-  if (event.key === "Enter") {
-    event.preventDefault();
-    executeCommand();
-    return;
-  }
-
-  if (["ArrowDown", "ArrowRight"].includes(event.key)) {
-    event.preventDefault();
-    if (filteredCommands.length) {
-      selectedCommandIndex = (selectedCommandIndex + 1) % filteredCommands.length;
-      renderCommandResults();
-    }
-    return;
-  }
-
-  if (["ArrowUp", "ArrowLeft"].includes(event.key)) {
-    event.preventDefault();
-    if (filteredCommands.length) {
-      selectedCommandIndex =
-        (selectedCommandIndex - 1 + filteredCommands.length) % filteredCommands.length;
-      renderCommandResults();
-    }
-  }
-});
-
-commandForm?.addEventListener("submit", (event) => {
-  event.preventDefault();
-  executeCommand();
-});
+launcher.setCommands(baseCommands);
 
 document.addEventListener("keydown", (event) => {
   if (event.defaultPrevented) return;
@@ -465,10 +239,10 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
-  if (launcherIsOpen()) {
+  if (launcher.isOpen()) {
     if (event.key === "Escape") {
       event.preventDefault();
-      closeLauncher();
+      launcher.close();
     }
     return;
   }
@@ -478,7 +252,7 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key === "/" || event.key === ":") {
     event.preventDefault();
-    openLauncher(event.key);
+    launcher.open(event.key);
     return;
   }
 
@@ -499,8 +273,8 @@ document.addEventListener("keydown", (event) => {
 try {
   wm = createWm({
     onWorkspaceRequest: (index) => navigateToWorkspace(workspaceNames[index - 1], { moveFocus: true }),
-    isBlocked: () => Boolean(dialogIsOpen() || launcherIsOpen() || curtainIsOpen()),
-    openLauncher,
+    isBlocked: () => Boolean(dialogIsOpen() || launcher.isOpen() || curtainIsOpen()),
+    openLauncher: launcher.open,
   });
 } catch (error) {
   console.error("[wm] boot failed; rendering the stacked fallback", error);
@@ -508,7 +282,7 @@ try {
 }
 
 if (wm) {
-  commands = [...baseCommands, ...wm.commands()];
+  launcher.setCommands([...baseCommands, ...wm.commands()]);
   renderHelpBindings();
 } else {
   /* Boot failed or the browser is too old: fall back to the same stacked,
@@ -536,4 +310,4 @@ if (!workspaceFromHash()) {
   );
 }
 activateWorkspace(initialWorkspace);
-applyProjectFilters();
+projects.applyFilters();

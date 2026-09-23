@@ -297,7 +297,8 @@ test("every shared-token asset, including dynamic imports and index.html, uses o
   const uses = [...shared.values()].flat();
   assert.ok(uses.some((use) => use.startsWith("index.html → /assets/js/wm/boot.js")), "index.html must preload boot.js with the shared token");
   assert.ok(uses.some((use) => use.startsWith("assets/js/site.js → ./wm/boot.js")), "site.js must import boot.js with the shared token");
-  assert.ok(uses.some((use) => use.startsWith("assets/js/wm/boot.js → ./greeter.js")), "dynamic imports must carry the shared token too");
+  assert.ok(uses.some((use) => use.startsWith("assets/js/wm/curtains.js → ./greeter.js")), "dynamic imports must carry the shared token too");
+  assert.ok(uses.some((use) => use.startsWith("assets/js/wm/boot.js → ./touch.js")), "boot.js's own dynamic imports carry it as well");
 });
 
 test("404.html mirrors the workspace list and slug pattern it cannot import", async () => {

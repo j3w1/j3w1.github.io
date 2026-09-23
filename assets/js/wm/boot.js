@@ -18,16 +18,7 @@ import { installBar } from "./bar.js?v=20260923";
 import { installNotify } from "./notify.js?v=20260923";
 import { announce, describeWindow, focusIsInside, installAnnouncer, refocus } from "./a11y.js?v=20260923";
 import { element, readGaps } from "./dom.js?v=20260923";
-import {
-  clearGreetFlag,
-  endSession,
-  isSelfTest,
-  media,
-  prefs,
-  shouldGreet,
-  startSession,
-  supported,
-} from "./session.js?v=20260923";
+import { isSelfTest, media, prefs, supported } from "./session.js?v=20260923";
 import { clear as clearStore, createSaver, load as loadStore } from "./store.js?v=20260923";
 import {
   defaultState,
@@ -39,6 +30,7 @@ import { APP_NAMES, APPS, buildAppWindow } from "./apps/index.js?v=20260923";
 import { commandList, runCommand } from "./commands.js?v=20260923";
 import { installChrome } from "./chrome.js?v=20260923";
 import { installFeatures } from "./features.js?v=20260923";
+import { installCurtains } from "./curtains.js?v=20260923";
 
 const TITLE_BUTTONS = [
   ["minimize", "─", "Send to scratchpad"],
@@ -188,6 +180,15 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   };
 
   const bounds = () => renderer.measure(active) ?? { x: 0, y: 0, w: 0, h: 0 };
+
+  const curtains = installCurtains({
+    wm: () => wm,
+    renderer,
+    dunst,
+    restoreFocus,
+    isBlocked,
+    beforeShutdown: closeSpawnedWindows,
+  });
 
   const wm = {
 
@@ -619,96 +620,10 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
 
     openLauncher: () => openLauncher(":"),
 
-    /* i3 answers $mod+Shift+E with a nagbar rather than exiting outright, so
-       the session actions live behind one too. */
-    togglePowerMenu(force) {
-      const menu = document.querySelector("#power-menu");
-      const toggle = document.querySelector("#power-menu-toggle");
-      if (!menu) return false;
-      const open = force ?? menu.hidden;
-      menu.hidden = !open;
-      toggle?.setAttribute("aria-expanded", String(open));
-      if (open) menu.querySelector("[data-power]")?.focus({ preventScroll: true });
-      else toggle?.focus({ preventScroll: true });
-      return open;
-    },
-
-    powerMenuIsOpen: () => document.querySelector("#power-menu")?.hidden === false,
+    /* The session menu, i3exit's power sequences, logout: curtains.js. */
+    ...curtains.facade,
 
     mediaQueries: () => [media.mobile],
-
-    /* i3exit: every session action, from the system mode, the nagbar, the
-       launcher and the shell alike. The power sequences arrive with power.js;
-       until then the actions that exist today are honoured and the rest are
-       announced honestly. */
-    power(action) {
-      if (action === "lock") return Boolean(lock?.lock());
-      if (action === "logout" || action === "exit") return wm.logout();
-      if (action === "restart") return wm.restart();
-      if (action === "switch_user") return (showGreeter("login"), true);
-      if (["reboot", "shutdown", "suspend", "hibernate"].includes(action)) return wm.runPower(action);
-      return false;
-    },
-
-    /* The power sequences live in power.js and borrow the greeter's screen.
-       A reboot or shutdown ends the stored session at the *start*, so a reload
-       mid-sequence lands on the boot screen — the right outcome for a machine
-       that was going down — and closes every spawned window, as a real reboot
-       would; the saved layout survives, like persisted i3 layout files. */
-    runPower(action) {
-      powerInstance?.destroy();
-      greeterInstance?.destroy();
-      greeterInstance = null;
-      import("./power.js?v=20260923").then(({ runPower }) => {
-        powerInstance = runPower({
-          node: document.querySelector("#greeter"),
-          action,
-          reducedMotion: media.reducedMotion.matches,
-          hooks: {
-            beforeShutdown: () => {
-              save.flush();
-              for (const [id, app] of apps) {
-                const node = windows.get(id);
-                if (!node?.classList.contains("wm-spawned")) continue;
-                app.destroy?.();
-                apps.delete(id);
-                for (const name of WORKSPACES) tree.detachLeaf(state.workspaces[name], id);
-                windows.delete(id);
-                node.remove();
-              }
-              state.scratchpad = state.scratchpad.filter((leaf) => windows.has(leaf.id));
-              endSession();
-              dunst.closeAll();
-              renderer.renderNow();
-            },
-            showGreeter: (mode) => {
-              powerInstance = null;
-              showGreeter(mode);
-            },
-            lock: () => {
-              powerInstance = null;
-              lock?.lock();
-              announce("screen locked");
-            },
-          },
-        });
-      }).catch(() => {
-        powerInstance = null;
-        dunst.notify(`${action}: power management unavailable`, { key: "power" });
-      });
-      dunst.notify(`i3exit ${action}`, { key: "power" });
-      return true;
-    },
-
-    /* Ends the stored session and returns to the greeter's login panel — no
-       boot log, exactly as logging out of a running X session behaves. */
-    logout() {
-      endSession();
-      dunst.notify("logging out", { key: "session" });
-      announce("logged out; showing the login screen");
-      showGreeter("login");
-      return true;
-    },
 
     wallpaper: () => state.wallpaper,
 
@@ -818,10 +733,8 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       pointer.destroy();
       bar.destroy();
       dunst.destroy();
-      lock?.destroy();
+      curtains.destroy();
       touch?.destroy();
-      greeterInstance?.destroy();
-      powerInstance?.destroy();
       for (const [, app] of apps) app.destroy?.();
       apps.clear();
       removeChrome();
@@ -842,8 +755,8 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     wallpapers: WALLPAPERS,
     onWorkspaceRequest,
     keys: () => keys,
-    lock: () => lock,
-    showGreeter: (mode) => showGreeter(mode),
+    lock: curtains.lock,
+    showGreeter: curtains.showGreeter,
     openCms: () => document.querySelector("#j3w1ctl-launch")?.click(),
     openWiki: () => window.open("/wiki/", "_blank", "noopener"),
     prefs,
@@ -859,43 +772,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
     isEnabled: () => !blocked(),
   });
 
-  let lock = null;
   let touch = null;
-  let greeterInstance = null;
-  let powerInstance = null;
-
-  let greeterLoading = null;
-  const showGreeter = (mode) => {
-    /* One instance at a time: a second `exec lightdm` while the first is up, or
-       while the module is still loading, must not stack a second boot log and a
-       second set of key listeners over the first. */
-    greeterInstance?.destroy();
-    greeterInstance = null;
-    if (greeterLoading) return greeterLoading;
-    greeterLoading = import("./greeter.js?v=20260923").then(({ runGreeter }) => {
-      greeterLoading = null;
-      greeterInstance = runGreeter({
-        node: document.querySelector("#greeter"),
-        mode,
-        reducedMotion: media.reducedMotion.matches,
-        onLogin: () => {
-          greeterInstance = null;
-          startSession();
-          clearGreetFlag();
-          renderer.invalidate();
-          renderer.renderNow();
-          announce("logged in to the i3 session");
-          restoreFocus(null);
-        },
-      });
-    }).catch(() => {
-      /* If the greeter cannot load, do not strand the visitor behind it. */
-      greeterLoading = null;
-      startSession();
-      clearGreetFlag();
-    });
-    return greeterLoading;
-  };
 
   /* The chrome handlers live in chrome.js; this is the teardown they return. */
   const removeChrome = installChrome({
@@ -923,6 +800,22 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
   renderer.renderNow();
   updateCounts();
 
+  /* A reboot or shutdown closes every spawned window, as a real one would;
+     authored windows and the saved layout survive. */
+  function closeSpawnedWindows() {
+    save.flush();
+    for (const [id, app] of apps) {
+      const node = windows.get(id);
+      if (!node?.classList.contains("wm-spawned")) continue;
+      app.destroy?.();
+      apps.delete(id);
+      for (const name of WORKSPACES) tree.detachLeaf(state.workspaces[name], id);
+      windows.delete(id);
+      node.remove();
+    }
+    state.scratchpad = state.scratchpad.filter((leaf) => windows.has(leaf.id));
+  }
+
   /* The home terminal is authored markup, so its transcript survives with no
      JavaScript. Here it gains a real prompt and becomes an interactive shell. */
   function attachHomeShell() {
@@ -947,18 +840,7 @@ export const createWm = ({ onWorkspaceRequest, isBlocked, openLauncher }) => {
       .catch(() => {});
   }
 
-  import("./idle-lock.js?v=20260923")
-    .then(({ installIdleLock }) => {
-      lock = installIdleLock({
-        node: document.querySelector("#lockscreen"),
-        isBusy: () => isBlocked() || Boolean(greeterInstance) || Boolean(powerInstance),
-        onLock: () => dunst.notify("i3lock", { key: "lock" }),
-      });
-    })
-    .catch(() => {});
-
-  if (shouldGreet() && prefs.boot) showGreeter("boot");
-  else startSession();
+  curtains.start();
 
   if (isSelfTest()) {
     import("./selftest.js?v=20260923")
