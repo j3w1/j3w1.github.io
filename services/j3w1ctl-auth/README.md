@@ -80,4 +80,4 @@ Automatic Git deployment and automatic production-domain assignment for staged d
 - Recover published content through Git history and rebuild the deterministic index after manual corrections.
 - Disable publication by suspending/uninstalling the GitHub App or removing Production credentials. Do not reactivate the retired DigitalOcean publisher.
 
-The DigitalOcean App is handed to the separate CE Metadata Reconciler workstream only after this service is accepted on Vercel. This repository does not document or activate that system.
+The DigitalOcean App is handed to the separate CE Meta workstream only after this service is accepted on Vercel. This repository does not document or activate that system.

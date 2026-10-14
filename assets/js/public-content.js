@@ -1,8 +1,8 @@
 import { renderAst } from "./content-renderer.js?v=20260824";
 import { closePhotoViewer, isPhotoViewerBackdropClick } from "./photo-viewer.js?v=20260825b";
-import { COLLECTIONS as collections, loadContentIndex } from "./content-index.js?v=20260923";
-import { onRouteChange, parseRoute } from "./route.js?v=20260923";
-import { element } from "./wm/dom.js?v=20260923";
+import { COLLECTIONS as collections, loadContentIndex } from "./content-index.js?v=20261014";
+import { onRouteChange, parseRoute } from "./route.js?v=20261014";
+import { element } from "./wm/dom.js?v=20261014";
 
 let index;
 let photoReturnFocus = null;

@@ -5,7 +5,7 @@
    a copy of any of them; the original machine's dotfiles are fetched the
    first time one is read. */
 
-import { loadContentIndex } from "../../content-index.js?v=20260923";
+import { loadContentIndex } from "../../content-index.js?v=20261014";
 
 /* whoami and README are the home terminal's authored output, generated from
    content/site.json; the shell reads them from the page rather than carrying

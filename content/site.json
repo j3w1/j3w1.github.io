@@ -19,7 +19,7 @@
   "home": {
     "readme": [
       "I build calm, dependable software for real work: governed execution tooling, business platforms, developer environments, and design systems — with clear contracts, useful evidence, and foundations meant to last.",
-      "Building now: pod, CE Systems, and CE Metadata. Public work: theme, j3w1zsh, and this site."
+      "Building now: pod, CE Systems, and CE Meta. Public work: theme, j3w1zsh, and this site."
     ],
     "focus": [
       { "name": "systems", "text": "business platforms for real operations" },
@@ -32,7 +32,7 @@
     "paragraphs": [
       "I work on software that has to survive contact with real organizations: business systems, operational workflows, and the tools engineers use to build and maintain them.",
       "My interests connect software architecture with writing and developer environments. I care about clear contracts, recoverable workflows, evidence that can be checked, and systems that remain understandable after the original implementation context is gone.",
-      "Current work includes [pod](https://github.com/j3w1/pod), which turns an Orca coding session into the coordinator of a pod of agents; CE Systems, Casa Elida's modular enterprise platform; CE Governed Delivery, a credential-isolated controller for governed review, merge, and delivery; and CE Metadata, a deterministic control plane for GitHub metadata.",
+      "Current work includes [pod](https://github.com/j3w1/pod), which turns an Orca coding session into the coordinator of a pod of agents; CE Systems, Casa Elida's modular enterprise platform; CE Governed Delivery, a credential-isolated controller for governed review, merge, and delivery; and CE Meta, a deterministic control plane for GitHub metadata.",
       "Public work includes [theme](https://github.com/j3w1/theme), the canonical j3w1 design system this site is dressed in; [j3w1zsh](https://github.com/j3w1/j3w1zsh), a portable, resumable workstation framework for Arch Linux, Arch WSL 2, and Termux; [ce-signage](https://github.com/j3w1/ce-signage), digital signage for Casa Elida's cashier PCs; [1688toCSV](https://github.com/j3w1/1688toCSV), a focused browser extension for order-data export; and [the source for this site](https://github.com/j3w1/j3w1.github.io)."
     ],
     "interests": [
@@ -89,8 +89,8 @@
         "facts": [["Practice", "Governed review · Bounded merge · Delivery reconciliation"], ["Context", "Engineering governance"]]
       },
       {
-        "id": "ce-metadata",
-        "name": "CE Metadata",
+        "id": "ce-meta",
+        "name": "CE Meta",
         "stack": "GitHub · Metadata · Control plane",
         "state": "Active",
         "visibility": "internal",

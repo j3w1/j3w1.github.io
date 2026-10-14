@@ -1,8 +1,8 @@
 /* Default desktop. The percents match the CSS grid fractions the static site
    uses, so the handoff from fallback layout to window manager is sub-pixel. */
 
-import { makeCon, makeLeaf, normalize } from "./tree.js?v=20260923";
-import { WORKSPACES } from "../route.js?v=20260923";
+import { makeCon, makeLeaf, normalize } from "./tree.js?v=20261014";
+import { WORKSPACES } from "../route.js?v=20261014";
 
 /* The workspace list is route.js's; it is re-exported so the window manager
    keeps one import for its defaults. (A bare `export … from` would escape the

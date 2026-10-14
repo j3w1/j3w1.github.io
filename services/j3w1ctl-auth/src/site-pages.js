@@ -27,7 +27,7 @@ export const DEFAULT_SOCIAL_IMAGE = `${SITE_ORIGIN}/assets/social/default.png`;
 export const THEME_COLOR = "#000000";
 /* The shared stylesheet with its cache token: a literal, because
    scripts/bump-cache-token rewrites it with the rest of the shell. */
-export const STYLESHEET = "/assets/css/site.css?v=20260923";
+export const STYLESHEET = "/assets/css/site.css?v=20261014";
 export const INDEX_PATH = "assets/data/content-index.json";
 export const FEED_PATH = "feed.xml";
 export const SITEMAP_PATH = "sitemap.xml";

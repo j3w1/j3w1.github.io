@@ -2,10 +2,10 @@
    ?wm=selftest. Costs nothing when the flag is absent, adds no dependency, and
    mirrors the node test suite so the browser and the CI runner agree. */
 
-import * as tree from "./tree.js?v=20260923";
-import { computeWorkspace, GEOMETRY } from "./layout.js?v=20260923";
-import { defaultState, defaultWindowIds, WORKSPACES } from "./defaults.js?v=20260923";
-import { COLLECTIONS } from "../content-index.js?v=20260923";
+import * as tree from "./tree.js?v=20261014";
+import { computeWorkspace, GEOMETRY } from "./layout.js?v=20261014";
+import { defaultState, defaultWindowIds, WORKSPACES } from "./defaults.js?v=20261014";
+import { COLLECTIONS } from "../content-index.js?v=20261014";
 
 const BOUNDS = { x: 0, y: 0, w: 1200, h: 800 };
 

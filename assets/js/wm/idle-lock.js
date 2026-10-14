@@ -8,8 +8,8 @@
    asks for no password, and — like the greeter — is aria-hidden and inert, so it
    never moves focus in or out and <main> is untouched throughout. */
 
-import { LOCK_THRESHOLDS, media, prefs } from "./session.js?v=20260923";
-import { listen, throttle } from "./dom.js?v=20260923";
+import { LOCK_THRESHOLDS, media, prefs } from "./session.js?v=20261014";
+import { listen, throttle } from "./dom.js?v=20261014";
 
 /* Activity that counts as "still here" for the idle timer. Dismissing the
    lock is deliberately narrower — see onUnlockKey. */
