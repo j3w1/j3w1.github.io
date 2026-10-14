@@ -9,7 +9,7 @@
    executes those against the facade and answers with "" for success or a
    short reason, the way i3-msg prints its result. */
 
-import { LAYOUTS } from "./tree.js?v=20260923";
+import { LAYOUTS } from "./tree.js?v=20261014";
 
 export const parseCommand = (text) =>
   String(text ?? "")

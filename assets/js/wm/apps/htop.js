@@ -5,8 +5,8 @@
    percentage, because a fabricated number sitting three inches above a portfolio
    costs more credibility than the widget is worth. */
 
-import { element, listen } from "../dom.js?v=20260923";
-import { clamp } from "../tree.js?v=20260923";
+import { element, listen } from "../dom.js?v=20261014";
+import { clamp } from "../tree.js?v=20261014";
 
 const bar = (ratio, width = 20) => {
   const filled = clamp(Math.round(ratio * width), 0, width);

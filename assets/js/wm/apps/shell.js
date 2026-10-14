@@ -8,10 +8,10 @@
    no new way for content to reach the DOM as markup. */
 
 import { renderAst } from "../../content-renderer.js?v=20260824";
-import { BOOT_BANNER, BOOT_LOG } from "../console.js?v=20260923";
-import { element } from "../dom.js?v=20260923";
-import { IDENTITY, USER_AT_HOST } from "../defaults.js?v=20260923";
-import { buildTree, readDotfile, readIdentity, WORKSPACE_FOR_DIR } from "./vfs.js?v=20260923";
+import { BOOT_BANNER, BOOT_LOG } from "../console.js?v=20261014";
+import { element } from "../dom.js?v=20261014";
+import { IDENTITY, USER_AT_HOST } from "../defaults.js?v=20261014";
+import { buildTree, readDotfile, readIdentity, WORKSPACE_FOR_DIR } from "./vfs.js?v=20261014";
 
 const HOME = IDENTITY.home;
 

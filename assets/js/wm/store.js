@@ -2,9 +2,9 @@
    written: a reload always restores a complete desktop, which bounds the worst
    case of any layout experiment to "press F5". */
 
-import { KEYS, storage } from "./session.js?v=20260923";
-import { listen } from "./dom.js?v=20260923";
-import { STATE_VERSION } from "./defaults.js?v=20260923";
+import { KEYS, storage } from "./session.js?v=20261014";
+import { listen } from "./dom.js?v=20261014";
+import { STATE_VERSION } from "./defaults.js?v=20261014";
 
 const stripNode = (node) => {
   if (node.type === "win") {

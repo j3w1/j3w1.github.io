@@ -1,8 +1,8 @@
 /* neofetch. Every field is read from this browser; anything it does not expose
    prints "unknown" rather than a plausible-looking invention. */
 
-import { element } from "../dom.js?v=20260923";
-import { USER_AT_HOST } from "../defaults.js?v=20260923";
+import { element } from "../dom.js?v=20261014";
+import { USER_AT_HOST } from "../defaults.js?v=20261014";
 
 const LOGO = [
   "██████████████████  ████████",

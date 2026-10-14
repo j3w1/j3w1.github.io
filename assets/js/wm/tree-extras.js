@@ -3,7 +3,7 @@
    rect setters. Kept out of tree.js so the core stays within its budget and
    its tests stay focused. No DOM, imports only tree.js. */
 
-import { findCon, findLeaf, floatingNode, leafIds, pathTo } from "./tree.js?v=20260923";
+import { findCon, findLeaf, floatingNode, leafIds, pathTo } from "./tree.js?v=20261014";
 
 const MARK_PATTERN = /^[a-z0-9_-]{1,32}$/;
 

@@ -4,14 +4,14 @@
    would resolve after first paint and guarantee a visible reflow from the
    fallback grid to the window manager's layout. */
 
-import { createWm } from "./wm/boot.js?v=20260923";
-import { isEditable } from "./wm/dom.js?v=20260923";
-import { announce, installAnnouncer } from "./wm/a11y.js?v=20260923";
-import { IDENTITY } from "./wm/defaults.js?v=20260923";
-import { media } from "./wm/session.js?v=20260923";
-import { onRouteChange, parseRoute, WORKSPACES as workspaceNames } from "./route.js?v=20260923";
-import { createLauncher } from "./launcher.js?v=20260923";
-import { installProjects } from "./projects.js?v=20260923";
+import { createWm } from "./wm/boot.js?v=20261014";
+import { isEditable } from "./wm/dom.js?v=20261014";
+import { announce, installAnnouncer } from "./wm/a11y.js?v=20261014";
+import { IDENTITY } from "./wm/defaults.js?v=20261014";
+import { media } from "./wm/session.js?v=20261014";
+import { onRouteChange, parseRoute, WORKSPACES as workspaceNames } from "./route.js?v=20261014";
+import { createLauncher } from "./launcher.js?v=20261014";
+import { installProjects } from "./projects.js?v=20261014";
 
 const HOME_PATH = IDENTITY.home;
 /* The generated <title> is the home workspace's; other workspaces prefix it. */

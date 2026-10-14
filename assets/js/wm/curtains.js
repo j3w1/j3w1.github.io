@@ -7,8 +7,8 @@
    The greeter, the power sequences and the lock screen are fetched the first
    time they are needed; this module is only the switchboard. */
 
-import { announce } from "./a11y.js?v=20260923";
-import { clearGreetFlag, endSession, media, prefs, shouldGreet, startSession } from "./session.js?v=20260923";
+import { announce } from "./a11y.js?v=20261014";
+import { clearGreetFlag, endSession, media, prefs, shouldGreet, startSession } from "./session.js?v=20261014";
 
 /* ctx: { wm(), renderer, dunst, restoreFocus, isBlocked, beforeShutdown } */
 export const installCurtains = (ctx) => {
@@ -25,7 +25,7 @@ export const installCurtains = (ctx) => {
     greeterInstance?.destroy();
     greeterInstance = null;
     if (greeterLoading) return greeterLoading;
-    greeterLoading = import("./greeter.js?v=20260923").then(({ runGreeter }) => {
+    greeterLoading = import("./greeter.js?v=20261014").then(({ runGreeter }) => {
       greeterLoading = null;
       greeterInstance = runGreeter({
         node: document.querySelector("#greeter"),
@@ -87,7 +87,7 @@ export const installCurtains = (ctx) => {
       powerInstance?.destroy();
       greeterInstance?.destroy();
       greeterInstance = null;
-      import("./power.js?v=20260923").then(({ runPower }) => {
+      import("./power.js?v=20261014").then(({ runPower }) => {
         powerInstance = runPower({
           node: document.querySelector("#greeter"),
           action,
@@ -137,7 +137,7 @@ export const installCurtains = (ctx) => {
     /* After the desktop is up: arm i3lock, then either greet or resume the
        stored session. */
     start() {
-      import("./idle-lock.js?v=20260923")
+      import("./idle-lock.js?v=20261014")
         .then(({ installIdleLock }) => {
           lock = installIdleLock({
             node: document.querySelector("#lockscreen"),
